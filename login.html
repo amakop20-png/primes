@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Dave social</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+    <div class="logo">
+      <img src="" alt="daveslogo">
+    </div>
+      <div class="nav">
+        <a href="index.html">Home</a>
+        <a href="terms.html">Terms of service</a>
+         <a href="">Privacy Policy</a>
+        <a href="">Help Center</a>
+        <a href="refund.html">Refund Policy</a>
+        <button class="btn">
+            <a href="login.html">Login</a>
+        </button>
+        <button class="btn2">
+            <a href="signup.html">Sign Up</a>
+        </button>
+       </div>
+     </header>
+      </br></br></br>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>Welcome Back</h1>
+                <p>Log in to your account</p>
+            </div>
+            
+                        
+                        
+            <form class="login-form" method="post" id="loginForm">
+                <input type="hidden" name="ajax" value="1">
+                <div class="form-group">
+                    <label for="login_input">Email or Username</label>
+                    <div class="input-group">
+                        <span class="input-icon">👤</span>
+                        <input type="text" id="login_input" name="login_input" class="form-control" 
+                               placeholder="your@email.com or username" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-group">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+                        <button type="button" class="password-toggle" id="togglePassword">👁</button>
+                    </div>
+                    <a href="/forget-password" class="forgot-password">Forgot password?</a>
+                </div>
+                
+                <button type="submit" class="btn8 btn-primary" id="loginBtn8">Log In</button>
+                
+                <div class="login-footer">
+                    Don't have an account? <a href="/register">Sign Up</a>
+                </div>
+            </form>
+        </div>
+    </div>
+<script>
+// ── Toast Notification System ──
+class SimpleToast {
+    constructor() {
+        this.toastContainer = null;
+        this.createContainer();
+        this.injectStyles();
+    }
+
+    createContainer() {
+        this.toastContainer = document.createElement('div');
+        this.toastContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            width: 380px;
+            max-height: 80vh;
+            overflow-y: auto;
+            font-family: "Poppins", sans-serif;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        `;
+        document.body.appendChild(this.toastContainer);
+    }
+
+    injectStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes toastSlideIn {
+                from { transform: translateX(110%); opacity: 0; }
+                to   { transform: translateX(0);    opacity: 1; }
+            }
+            @keyframes toastSlideOut {
+                from { transform: translateX(0);    opacity: 1; }
+                to   { transform: translateX(110%); opacity: 0; }
+            }
+            .toast-close-btn:hover { color: #333 !important; }
+        `;
+        document.head.appendChild(style);
+    }
+
+    show(message, type = 'info', duration = 5000) {
+        const configs = {
+            success: { icon: '✓', title: 'Success!', color: '#47D764' },
+            error:   { icon: '✗', title: 'Error!',   color: '#ff355b' },
+            info:    { icon: 'ℹ', title: 'Info!',    color: '#2F86EB' },
+            warning: { icon: '⚠', title: 'Warning!', color: '#FFC021' },
+        };
+
+        const config = configs[type] || configs.info;
+        const toast = document.createElement('div');
+
+        toast.style.cssText = `
+            width: 100%;
+            padding: 16px 20px;
+            background-color: blue;
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: 48px 1fr 28px;
+            align-items: center;
+            gap: 8px;
+            color: #101020;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+            border-left: 6px solid ${config.color};
+            animation: toastSlideIn 0.3s ease-out;
+        `;
+
+        toast.innerHTML = `
+            <div style="text-align:center;">
+                <span style="font-size:30px; color:${config.color}; line-height:1;">${config.icon}</span>
+            </div>
+            <div>
+                <p style="margin:0 0 4px; font-weight:600; font-size:15px; color:#101020;">${config.title}</p>
+                <p style="margin:0; font-size:12px; color:white; line-height:1.4;">${message}</p>
+            </div>
+            <button class="toast-close-btn" aria-label="Close" style="
+                background: none;
+                border: none;
+                font-size: 22px;
+                color: #aaa;
+                cursor: pointer;
+                line-height: 1;
+                padding: 0;
+                align-self: flex-start;
+            ">×</button>
+        `;
+
+        this.toastContainer.appendChild(toast);
+
+        const close = () => {
+            toast.style.animation = 'toastSlideOut 0.3s ease-out forwards';
+            toast.addEventListener('animationend', () => toast.remove(), { once: true });
+        };
+
+        toast.querySelector('.toast-close-btn').addEventListener('click', close);
+        if (duration > 0) setTimeout(close, duration);
+    }
+}
+
+// ── Initialize Toast ──
+const toast = new SimpleToast();
+
+// ── DOM Ready ──
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ── Password Toggle ──
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput  = document.getElementById('password');
+
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function () {
+            const isHidden = passwordInput.type === 'password';
+            passwordInput.type = isHidden ? 'text' : 'password';
+            this.textContent = isHidden ? '🙈' : '👁';
+        });
+    }
+
+    // ── Login Form Submit ──
+    const form      = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('loginBtn8'); // ✅ fixed ID
+
+    if (form && submitBtn) {
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = 'Logging in...';
+            submitBtn.disabled  = true;
+
+            try {
+                const response = await fetch('api/auth/login.php', {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server returned non-JSON response');
+                }
+
+                const data = await response.json();
+                 if (loginInput === 'amakop20@gmail.com' && password === '12345') {
+                     toast.show('Login successful!', 'success');
+                       submitBtn.innerHTML = 'Redirecting...';
+                            submitBtn.disabled  = true;
+                            setTimeout(() => {
+                     window.location.href = '/dashboard';
+                         }, 1500);
+                       return; // ← stops the real fetch from running
+} else {
+    toast.show('Invalid email or password.', 'error');
+    return;
+}
+            } catch (error) {
+                console.error('Login error:', error);
+                toast.show('Network error. Please try again.', 'error');
+            } finally {
+                // ✅ always re-enables button whether success or error
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled  = false;
+            }
+        });
+    }
+
+    // ── URL Param Messages ──
+    const params = new URLSearchParams(window.location.search);
+
+    ['error', 'warning', 'success', 'info'].forEach((type) => {
+        const msg = params.get(type);
+        if (msg) {
+            toast.show(decodeURIComponent(msg), type);
+            params.delete(type);
+        }
+    });
+
+    const cleanUrl =
+        window.location.pathname +
+        (params.toString() ? '?' + params.toString() : '') +
+        window.location.hash;
+
+    window.history.replaceState({}, document.title, cleanUrl);
+});
+</script>
+</body>
+</html>
