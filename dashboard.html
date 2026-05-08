@@ -4,213 +4,174 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>Balance Dashboard</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CSS -->
   <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
 </head>
 
 <body>
-  <nav>
-    <p>Navigation</p>
 
-  </nav>
-  <header>
+  <!-- Screen Loader -->
 
-    <div class="header-logo">
-      <img src="supervisor_account_24dp_1F1F1F.png" alt="daveslogo">
 
-      Dav
-      <span>Social</span>
-      <button class="toggle-btn" id="menu-toggle" aria-label="Toggle menu">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
+  <!-- Aside -->
+  <aside id="aside">
+    <div class="top">
+      <a href="#">
+        <span>
+          <i class="fa-solid fa-gauge-high"></i>
+          Dashboard
+        </span>
+      </a>
+      <a href="#">
+        <span>
+          <i class="fa-solid fa-wallet"></i>
+          Wallet
+        </span>
+      </a>
+      <a href="#">
+        <span>
+          <i class="fa-solid fa-chart-line"></i>
+          Activity
+        </span>
+      </a>
+      <a href="#">
+        <span>
+          <i class="fa-solid fa-gear"></i>
+          Settings
+        </span>
+      </a>
+      <div class="close" id="close-btn">
+        <span class="material-icons">
+          <i class="fa-solid fa-xmark"></i>
+        </span>
+      </div>
     </div>
 
-
-
-    <div class="header-actions">
-      <div class="header-icon-btn">🔔</div>
-      <div class="header-avatar">jhon</div>
+    <div class="mode-tag" onclick="toggleDark()">
+      <div class="mode-dot">
+        <i class="fa-solid fa-moon"></i>
+      </div>
+      <span id="modeText">Light mode</span>
     </div>
-  </header>
+  </aside>
 
-  <div class="container">
-    <!..aside section..>
-      <aside id="aside">
-        <div class="top">
-          <a href="#">
-            <span>
-              <img src="dashboard_24dp_1F1F1F (4).png" alt="dashboard" width="20px">
-              dashboard
-            </span>
-          </a>
-          <a href="#">
-            <span>
-              <img src="add_ic_call_24dp_1F1F1F.png" alt="virtual numbers" width="20px">
-              Virtual numbers
-            </span>
-          </a>
-          <a href="#">
-            <span>
-              <img src="supervisor_account_24dp_1F1F1F.png" alt="virtual numbers" width="20px">
-              Accounts
-            </span>
-          </a>
+  <!-- Main -->
+  <main class="container">
 
-          <a href="#">
-            <span>
-              <img src="supervisor_account_24dp_1F1F1F.png" alt="virtual numbers" width="20px">
-              Us Accounts
-            </span>
-          </a>
-          <div class="close" id="close-btn">
-            <span class="material-icons">
-              <img src="close_24dp_1F1F1F.png" alt="close">
-            </span>
-          </div>
+    <h1>Dashboard</h1>
+    <p>Manage your wallet and account activities.</p>
+
+    <!-- Activities -->
+    <section class="activities">
+
+      <div class="activities-card">
+
+        <h3>Total Balance</h3>
+        <p>$5,420.00</p>
+
+        <div class="bid">
+
+          <button class="btn21" id="openPopup">
+            View Details
+          </button>
+
+          <button class="btn12">
+            Add Funds
+          </button>
+
         </div>
-        <div class="mode-tag" onclick="toggleDark()">
-          <div class="mode-dot">
-            <img src="dark_mode_24dp_1F1F1F (1).png" alt="mode icon" width="20px">
-          </div>
-          <span id="modeText">Light mode</span>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Popup -->
+  <div id="popup_balance">
+
+    <div class="flex">
+
+      <div class="panel">
+
+        <!-- Header -->
+        <div class="panel-header">
+          Wallet Overview
+
+          <button class="panel-close" id="closePopup">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
-      </aside>
-      <!..aside section end..>
-        <main>
-          <h1>Hello precious</h1>
-          <p>Here's an overview of your account's recent activities</p>
-          <div class="activities">
-            <div class="activities-card">
-              <h3>NGN</h3>
-              <p>₦1,234.56</p>
-              <div class="bid">
-                <a href="" class="btn21">Login to Deposite</a>
-                <a href="" class="btn12">Fund Account</a>
-              </div>
-               
+
+        <!-- Balance Row -->
+        <div class="balance-row">
+
+          <div class="balance-left">
+
+            <img src="https://cdn-icons-png.flaticon.com/512/2489/2489756.png" alt="wallet">
+
+            <div>
+              <div class="stat-label">Current Balance</div>
+              <div class="balance-amount">$5,420</div>
             </div>
-              </div>
 
-
-
-        </main>
           </div>
-        <script>
-          document.addEventListener('DOMContentLoaded', () => {
 
-            // ═════════════════════════════
-            // DARK MODE
-            // ═════════════════════════════
+          <button class="btn-add">
+            <i class="fa-solid fa-plus"></i>
+          </button>
 
-            const saved = localStorage.getItem('theme') || 'light';
-            applyTheme(saved);
+        </div>
 
-            function toggleDark() {
-              const current = document.documentElement.getAttribute('data-theme') || 'light';
-              const next = current === 'dark' ? 'light' : 'dark';
-              applyTheme(next);
-              localStorage.setItem('theme', next);
-            }
+        <!-- Stats -->
+        <div class="stat-row">
 
-            function applyTheme(theme) {
-              const isDark = theme === 'dark';
-              const modeText = document.getElementById('modeText');
-              const modeImg = document.querySelector('.mode-dot img');
+          <div class="stat-icon info">
+            <i class="fa-solid fa-cart-shopping"></i>
+          </div>
 
-              document.documentElement.setAttribute('data-theme', theme);
+          <div>
+            <div class="stat-label">Numbers Purchased</div>
+            <span class="stat-value">124</span>
+          </div>
 
-              if (modeText) {
-                modeText.textContent = isDark ? 'Dark mode' : 'Light mode';
-              }
+        </div>
 
-              if (modeImg) {
-                modeImg.src = isDark
-                  ? 'light_mode_24dp_1F1F1F.png'
-                  : 'dark_mode_24dp_1F1F1F (1).png';
+        <div class="stat-row">
 
-                modeImg.alt = isDark
-                  ? 'Switch to light mode'
-                  : 'Switch to dark mode';
-              }
-            }
+          <div class="stat-icon secondary">
+            <i class="fa-solid fa-wallet"></i>
+          </div>
 
-            // Make function global
-            window.toggleDark = toggleDark;
+          <div>
+            <div class="stat-label">Total Recharge</div>
+            <span class="stat-value">$12,500</span>
+          </div>
 
-            // ═════════════════════════════
-            // MENU TOGGLE
-            // ═════════════════════════════
+        </div>
 
-            const menuToggle = document.getElementById('menu-toggle');
-            const aside = document.getElementById('aside');
-            const closeBtn = document.getElementById('close-btn');
-            const container = document.querySelector('.container');
+      </div>
 
-            // Toggle menu button
-            if (menuToggle && aside) {
-              menuToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                menuToggle.classList.toggle('active');
-                aside.classList.toggle('open');
+    </div>
 
-                // Update container class for grid layout
-                if (container) {
-                  container.classList.toggle('has-sidebar');
-                }
-              });
-            }
+  </div>
 
-            // Close button in sidebar
-            if (closeBtn && aside && menuToggle) {
-              closeBtn.addEventListener('click', () => {
-                menuToggle.classList.remove('active');
-                aside.classList.remove('open');
+  <!-- Scroll Top -->
+  <button class="scroll-top" id="scrollTopBtn">
+    <i class="fa-solid fa-arrow-up"></i>
+  </button>
 
-                // Update container class for grid layout
-                if (container) {
-                  container.classList.remove('has-sidebar');
-                }
-              });
-            }
+  <!-- JavaScript -->
+  <script src="script.js"></script>
 
-            // Close menu when clicking on a nav link
-            if (aside && menuToggle) {
-              const navLinks = document.querySelectorAll('aside a');
-              navLinks.forEach(link => {
-                link.addEventListener('click', () => {
-                  menuToggle.classList.remove('active');
-                  aside.classList.remove('open');
-
-                  // Update container class for grid layout
-                  if (container) {
-                    container.classList.remove('has-sidebar');
-                  }
-                });
-              });
-            }
-
-            // Close menu when clicking outside
-            if (aside && menuToggle) {
-              document.addEventListener('click', (e) => {
-                if (!aside.contains(e.target) && !menuToggle.contains(e.target)) {
-                  if (aside.classList.contains('open')) {
-                    menuToggle.classList.remove('active');
-                    aside.classList.remove('open');
-
-                    // Update container class for grid layout
-                    if (container) {
-                      container.classList.remove('has-sidebar');
-                    }
-                  }
-                }
-              });
-            }
-
-          });
-        </script>
 </body>
 
 </html>
