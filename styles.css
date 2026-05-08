@@ -22,13 +22,33 @@ body {
 /* ============================================================
    Layout Container
    ============================================================ */
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 20px;
+header{
+  width: 100%;
+  padding: 16px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-
+.profile{
+  align-items: center;
+  gap: 12px;
+}
+.profile img{
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.notifications{
+  display: flex;
+}
+.match{
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
 aside {
   width: 260px;
   min-height: 100vh;
