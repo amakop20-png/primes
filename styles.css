@@ -25,7 +25,7 @@ body {
 header{
   width: 100%;
   padding: 16px 24px;
-  background: #ffffff;
+ background: linear-gradient(135deg, #6b21a8, #7c3aed);
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
@@ -47,7 +47,7 @@ header{
 .match{
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 2px;
 }
 aside {
   width: 260px;
@@ -361,7 +361,15 @@ main>p {
   gap: 12px;
   flex-wrap: wrap;
 }
+.fa-gauge-high{
+  color: #6b21a8;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
 
+.fa-gauge-high:hover{
+  color: #9333ea;
+  transform: scale(1.1);
+}
 /* ============================================================
    Buttons
    ============================================================ */
