@@ -22,33 +22,54 @@ body {
 /* ============================================================
    Layout Container
    ============================================================ */
-header{
+header {
   width: 100%;
   padding: 16px 24px;
- background: linear-gradient(135deg, #6b21a8, #7c3aed);
+  background: linear-gradient(135deg, #6b21a8, #7c3aed);
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.profile{
+
+.profile {
   align-items: center;
   gap: 12px;
 }
-.profile img{
+
+.profile img {
   width: 32px;
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
 }
-.notifications{
+
+.notifications {
   display: flex;
 }
-.match{
+
+.match {
   display: flex;
   align-items: center;
   gap: 2px;
 }
+
+.toggle-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 aside {
   width: 260px;
   min-height: 100vh;
@@ -90,7 +111,7 @@ aside .top a span {
   gap: 10px;
 }
 
-aside .close {
+.close {
   margin-top: 14px;
   align-self: flex-end;
   width: 38px;
@@ -258,10 +279,6 @@ main>p {
   transform: scale(1.05);
 }
 
-/* ============================================================
-   Stat Rows (Number Purchased / Recharge)
-   ============================================================ */
-
 .stat-row {
   display: flex;
   align-items: center;
@@ -312,7 +329,7 @@ main>p {
    ============================================================ */
 
 .activities {
-  display: flex;
+  
   justify-content: center;
   align-items: center;
   padding: 24px 0;
@@ -332,6 +349,98 @@ main>p {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+
+
+
+.active {
+  justify-content: center;
+  align-items: center;
+  padding: 24px 0;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px 32px;
+  width: 100%;
+  max-width: 800px;
+  overflow: hidden;
+  transition: transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.cart{
+  
+ display: grid;
+ grid-template-columns: repeat(3, 1fr);
+ 
+}
+
+.referral-card{
+      background: white;
+          background: white;
+    border-radius: 16px;
+    padding: 5px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+    margin: 12px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.referral-card h3 {
+  font-size: 12px;
+  font-weight: 700;
+  color: #d8d8df;
+  margin-bottom: 12px;
+}
+.referral-card a{
+  text-decoration: none;
+}
+    /* Top gradient bar */
+    .referral-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+      border-radius: 16px 16px 0 0;
+    }
+ 
+    /* Glow behind the card */
+    .referral-card::after {
+      content: "";
+      position: absolute;
+      inset: -8px;
+      border-radius: 22px;
+      background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+      opacity: 0.15;
+      filter: blur(16px);
+      z-index: -1;
+    }
+.referral-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 10px;
+  filter: hue-rotate(210deg);
+}
+.referral-card:hover {
+  transform: translateY(-3px);
+  border-color: #e9d5ff;
+  box-shadow: 0 4px 12px rgba(107, 33, 168, 0.08),
+    0 12px 28px rgba(107, 33, 168, 0.06);
+}
+.referral-icon {
+  width: 40px;
+  background-color: #060818;
+  height: 40px;
+  margin-bottom: 10px;
+}
 .activities-card:hover {
   transform: translateY(-3px);
   border-color: #e9d5ff;
@@ -361,15 +470,17 @@ main>p {
   gap: 12px;
   flex-wrap: wrap;
 }
-.fa-gauge-high{
+
+.fa-gauge-high {
   color: #6b21a8;
   transition: color 0.3s ease, transform 0.3s ease;
 }
 
-.fa-gauge-high:hover{
+.fa-gauge-high:hover {
   color: #9333ea;
   transform: scale(1.1);
 }
+
 /* ============================================================
    Buttons
    ============================================================ */
@@ -609,44 +720,98 @@ main>p {
   background: #060818;
 }
 
-aside.closed {
-  transform: translateX(-120%);
-  transition: transform 0.3s ease;
-}
 
 /* ============================================================
-   Responsive
+   MOBILE RESPONSIVENESS - styles.css
    ============================================================ */
 
-@media (max-width: 768px) {
+/* ==================== MOBILE (Small screens) ==================== */
+@media (max-width: 767px) {
+  .toggle-btn {
+    display: block;
+  }
+
   aside {
-    position: relative;
-    width: 100%;
-    min-height: auto;
-    border-right: none;
-    box-shadow: none;
+    transform: translateX(-120%);
+    transition: transform 0.3s ease;
+    width: 260px;           /* Better width for mobile menu */
+  }
+
+  aside.open {
+    transform: translateX(0);
   }
 
   main.container {
-    margin-left: 0;
+    margin-left: 0 !important;
     padding: 20px 16px;
   }
 
-  .activities-card {
-    padding: 20px 18px;
+  header {
+    padding: 12px 16px;
+  }
+
+  main h1 {
+    font-size: 18px;
+  }
+
+  .panel {
+    width: 100%;
+    max-width: none;
+  }
+
+  .balance-amount {
+    font-size: 22px;
+  }
+
+  .btn12,
+  .btn21 {
+    padding: 10px 16px;
+    font-size: 14px;
   }
 
   .activities-card p {
-    font-size: 24px;
+    font-size: 22px;
+  }
+}
+
+/* ==================== TABLET (768px - 1024px) ==================== */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .toggle-btn {
+    display: none;           /* Hide toggle on tablet */
   }
 
-  .bid {
-    flex-direction: column;
+  aside {
+    transform: translateX(0);
+    width: 200px;
+    padding: 20px 16px;
   }
 
-  .btn21,
-  .btn12 {
-    width: 100%;
-    text-align: center;
+  main.container {
+    margin-left: 220px;
+    padding: 24px 20px;
+  }
+
+  main h1 {
+    font-size: 22px;
+  }
+
+  .panel {
+    width: 95%;
+    max-width: 480px;
+  }
+
+  .activities-card {
+    padding: 20px;
+  }
+}
+
+/* ==================== Optional: Extra Large Tablets / Small Laptops ==================== */
+@media (min-width: 1025px) {
+  aside {
+    width: 260px;            /* Default desktop sidebar width */
+  }
+
+  main.container {
+    margin-left: 280px;
   }
 }

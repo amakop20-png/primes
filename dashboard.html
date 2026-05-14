@@ -19,24 +19,27 @@
 <body>
 
   <!-- Screen Loader -->
-  
-<header>
-  <div class="logo">
-    <img src="" alt="Daves Social">
-  </div>
-  <div class="match">
-    
-  
-  <div class="notification">
-    <i class="fa-solid fa-bell"></i>
-    <span class="badge">3</span>
-  </div>
-  <div class="profile">
-    <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
-    <span class="username">John Doe</span>
-  </div>
-  </div>
-</header>
+
+  <header>
+    <div class="logo">
+      <img src="" alt="Daves Social">
+    </div>
+    <div class="toggle-btn" id="toggle-btn">
+      <i class="fa-solid fa-bars"></i>
+    </div>
+    <div class="match">
+
+
+      <div class="notification">
+        <i class="fa-solid fa-bell"></i>
+        <span class="badge">3</span>
+      </div>
+      <div class="profile">
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
+        <span class="username">John Doe</span>
+      </div>
+    </div>
+  </header>
   <!-- Aside -->
   <aside id="aside">
     <div class="top">
@@ -65,10 +68,16 @@
         </span>
       </a>
       <a href="#">
-      <span>
+        <span>
+          <i class="fa-solid fa-cart-shopping"></i>
+          Buy Numbers
+        </span>
+      </a>
+      <a href="#">
+        <span>
         <i class="fa-solid fa-cart-shopping"></i>
-      Buy Numbers
-      </span>
+          All countries numbers
+        </span>
       </a>
       <div class="close" id="close-btn">
         <span class="material-icons">
@@ -112,9 +121,58 @@
         </div>
 
       </div>
+        <div class="cart">
 
+  <div class="referral-card">
+    <img src="person_add_24dp_FFFF55_FILL0_wght400_GRAD0_opsz24.png" alt="Referral Icon">
+    <h3>Referral and Rewards</h3>
+    <div class="referral-code">
+      <span>REF12345</span>
+      <button class="btn-copy">
+        <i class="fa-solid fa-copy"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="referral-card">
+    <a href="#">
+      <img src="pot2-removebg-preview.png" width="34" alt="Buy Icon" >
+      <h3>Buy Numbers</h3>
+    </a>
+  </div>
+
+  <div class="referral-card">
+    <img src="pan-removebg-preview.png" width="34" alt="PAN Icon">
+    <h3>Referral  balance</h3>
+      <span>$7.00</span>
+      </button>
+    </div>
+  </div>
+
+</div>
     </section>
+    <div class="active">
+<div class="card">
 
+        <h3>Recent Transactions</h3>
+
+        <ul class="transactions">
+          <li>
+            <span class="transaction-type">Recharge</span>
+            <span class="transaction-amount">+ $100.00</span>
+          </li>
+          <li>
+            <span class="transaction-type">Purchase</span>
+            <span class="transaction-amount">- $50.00</span>
+          </li>
+          <li>
+            <span class="transaction-type">Recharge</span>
+            <span class="transaction-amount">+ $200.00</span>
+          </li>
+        </ul>
+
+      </div>
+    </div>
   </main>
 
   <!-- Popup -->
@@ -191,8 +249,8 @@
     <i class="fa-solid fa-arrow-up"></i>
   </button>
 
-  <!-- JavaScript -->
-  <script src="script.js"></script>
+  <div class="pased" <!-- JavaScript -->
+    <script src="script.js"></script>
 
 </body>
 

@@ -4,6 +4,7 @@ const closePopupBtn = document.getElementById('closePopup');
 const scrollTopBtn = document.getElementById('scrollTopBtn');
 const aside = document.getElementById('aside');
 const closeAsideBtn = document.getElementById('close-btn');
+const toggleBtn = document.getElementById('toggle-btn');
 const modeText = document.getElementById('modeText');
 
 function openPopup() {
@@ -48,14 +49,9 @@ function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function closeAside() {
+function toggleAside() {
     if (!aside) return;
-    aside.classList.add('closed');
-}
-
-function openAside() {
-    if (!aside) return;
-    aside.classList.remove('closed');
+    aside.classList.toggle('open');
 }
 
 function initPopupEvents() {
@@ -78,7 +74,10 @@ function initScrollEvents() {
 }
 
 function initAsideEvents() {
-    if (closeAsideBtn) closeAsideBtn.addEventListener('click', closeAside);
+    if (closeAsideBtn) closeAsideBtn.addEventListener('click', () => {
+        aside.classList.remove('open');
+    });
+    if (toggleBtn) toggleBtn.addEventListener('click', toggleAside);
 }
 
 function init() {
