@@ -168,8 +168,16 @@ input[type="date"] {
   .right {
     width: 100%;
   }
+  .stats{
+    
+  gap: 10px;
+  margin: 10px;
+  }
+  .stat{
+     background: var(--surface);
+     height: 200px;
+  }
 }
-
 /* Navigation */
 .nav{
     list-style: none;

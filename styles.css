@@ -720,7 +720,10 @@ main>p {
   background: #060818;
 }
 
-
+aside.closed {
+  transform: translateX(-120%);
+  transition: transform 0.3s ease;
+}
 /* ============================================================
    MOBILE RESPONSIVENESS - styles.css
    ============================================================ */
@@ -740,8 +743,10 @@ main>p {
   aside.open {
     transform: translateX(0);
   }
-
+     
+  
   main.container {
+    
     margin-left: 0 !important;
     padding: 20px 16px;
   }
@@ -771,6 +776,19 @@ main>p {
 
   .activities-card p {
     font-size: 22px;
+  }
+  .cart{
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .card{
+    height: 500px;
+  }
+  .activities-card {
+    justify-content: center;
+    align-items: center;
+  
+    height: 300px;
   }
 }
 
@@ -807,8 +825,13 @@ main>p {
 
 /* ==================== Optional: Extra Large Tablets / Small Laptops ==================== */
 @media (min-width: 1025px) {
-  aside {
-    width: 260px;            /* Default desktop sidebar width */
+  .toggle-btn {
+    display: none;
+  }
+
+
+  #close-btn {
+    
   }
 
   main.container {
