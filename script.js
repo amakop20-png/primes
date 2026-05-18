@@ -66,6 +66,7 @@ function initPopupEvents() {
     }
 }
 
+
 function initScrollEvents() {
     if (!scrollTopBtn) return;
     scrollTopBtn.addEventListener('click', scrollToTop);
@@ -88,3 +89,24 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+/* =========================
+   REMOVE LOADER
+========================= */
+window.addEventListener("load", () => {
+
+    const loader = document.getElementById("loader");
+
+    setTimeout(() => {
+        loader.classList.add("hide");
+    }, 2500);
+
+});
+window.addEventListener("load", () => {
+
+    const loader = document.getElementById("loader");
+
+    setTimeout(() => {
+        loader.classList.add("hide");
+    }, 3000);
+
+});

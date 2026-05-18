@@ -423,6 +423,10 @@ main>p {
       filter: blur(16px);
       z-index: -1;
     }
+    .pride{
+  display: flex;
+  align-items: center;
+    }
 .referral-icon {
   width: 40px;
   height: 40px;
@@ -552,29 +556,6 @@ main>p {
    Screen loader
    ============================================================ */
 
-.screen_loader {
-  position: fixed;
-  inset: 0;
-  background: #fafafa;
-  z-index: 60;
-  display: grid;
-  place-content: center;
-}
-
-.loader {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #4361ee;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 
 /* ============================================================
    Dark mode
@@ -781,8 +762,19 @@ aside.closed {
     display: grid;
     grid-template-columns: 1fr;
   }
-  .card{
-    height: 500px;
+  .referral-card{
+    height: 150px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+  .referral-card::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: 22px;
+    background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+    opacity: 0.15;
+    filter: blur(16px);
+    z-index: -1;
   }
   .activities-card {
     justify-content: center;
@@ -791,6 +783,7 @@ aside.closed {
     height: 300px;
   }
 }
+
 
 /* ==================== TABLET (768px - 1024px) ==================== */
 @media (min-width: 768px) and (max-width: 1024px) {
