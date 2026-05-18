@@ -9,7 +9,8 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: linear-gradient(135deg, #6b21a8, #7c3aed);
+        background:white;
+        color: black;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         padding: 20px;
       }
@@ -27,7 +28,7 @@
 
       .nav a {
         text-decoration: none;
-        color: black;
+        color:white;
         align-items: center;
       }
        
@@ -230,7 +231,7 @@
 
 
       .section {
-        background-color: rgb(203, 203, 209);
+        background-color:rgb(229, 229, 230);
 
       }
 
@@ -256,7 +257,7 @@
       }
 
       .refund-content {
-        background: white;
+        background: rgb(243, 226, 226);
         padding: 2rem;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
@@ -957,6 +958,7 @@
 
 
   header {
+    background: rgb(205, 205, 223);
     padding: 12px 15px;
     flex-wrap: wrap;
     gap: 10px;
@@ -1048,6 +1050,8 @@
   }
 
   header {
+    background-color: blue;
+    color: white;
     padding: 10px;
     gap: 8px;
   }
@@ -1086,7 +1090,7 @@
 
   .global,
   .features {
-    padding: 25px 12px;
+    padding: 45px 12px;
   }
 
   .global h1,
