@@ -150,6 +150,7 @@ aside .close:hover {
 }
 
 main.container {
+  background-color: #0f172a;
   padding: 32px 24px;
   margin-left: 280px;
 }
@@ -157,7 +158,7 @@ main.container {
 main h1 {
   font-size: 24px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #ffffff;
   margin-bottom: 6px;
 }
 
@@ -336,7 +337,8 @@ main>p {
 }
 
 .activities-card {
-  background: #ffffff;
+  background:  #1e293b;
+  color: white;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 28px 32px;
@@ -359,7 +361,7 @@ main>p {
 }
 
 .card {
-  background: #ffffff;
+  background: #1e293b;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 28px 32px;
@@ -371,7 +373,16 @@ main>p {
     border-color 0.22s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
+.card h3{
+  color: white;
+}
 
+.transaction-type{
+  color: white;
+}
+.transaction-amount{
+  color: white;
+}
 .cart{
   
  display: grid;
@@ -380,10 +391,10 @@ main>p {
 }
 
 .referral-card{
-      background: white;
-          background: white;
+    background:  #1e293b;
     border-radius: 16px;
     padding: 5px;
+    color: white;
     border: 1px solid #e5e7eb;
     transition: all 0.3s ease;
     margin: 12px;
@@ -464,7 +475,7 @@ main>p {
 .activities-card p {
   font-size: 32px;
   font-weight: 800;
-  color: #1a1a2e;
+  color: white;
   margin-bottom: 24px;
   letter-spacing: -1px;
 }
