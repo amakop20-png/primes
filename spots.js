@@ -1,6 +1,4 @@
-const menuToggle = document.getElementById("menu-toggle");
-const nav = document.getElementById("nav");
-
-menuToggle.addEventListener("click", () => {
-  nav.classList.toggle("active");
-});
+function toggleAside() {
+    if (!aside) return;
+    aside.classList.toggle('open');
+}

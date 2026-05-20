@@ -14,7 +14,7 @@ body {
   font-family: 'Nunito', sans-serif;
   font-size: 14px;
   line-height: 1.6;
-  background-color: #f0f2f5;
+  background-color:white;
   color: #1a1a2e;
   overflow-x: hidden;
 }
@@ -25,13 +25,16 @@ body {
 header {
   width: 100%;
   padding: 16px 24px;
-  background: blue;
+  background: rgb(0, 0, 0);
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
+header p{
+color: white;
+} 
 .profile {
   align-items: center;
   gap: 12px;
@@ -150,7 +153,7 @@ aside .close:hover {
 }
 
 main.container {
-  background-color: #0f172a;
+    background-color:#F07060;
   padding: 32px 24px;
   margin-left: 280px;
 }
@@ -164,7 +167,7 @@ main h1 {
 
 main>p {
   font-size: 14px;
-  color: #6b7280;
+  color: white;
   margin-bottom: 32px;
 }
 
@@ -265,7 +268,7 @@ main>p {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #4361ee;
+  background:#9B8EF4;
   border: none;
   cursor: pointer;
   display: flex;
@@ -337,13 +340,12 @@ main>p {
 }
 
 .activities-card {
-  background:  #1e293b;
+    background-color:rgb(30, 30, 31);
   color: white;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 28px 32px;
   width: 100%;
-  max-width: 800px;
   overflow: hidden;
   transition: transform 0.22s ease,
     box-shadow 0.22s ease,
@@ -361,10 +363,11 @@ main>p {
 }
 
 .card {
-  background: #1e293b;
+  
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 28px 32px;
+  background:rgb(35, 35, 36);
   width: 100%;
   max-width: 800px;
   overflow: hidden;
@@ -526,7 +529,7 @@ main>p {
 }
 
 .btn12 {
-  background: #4361ee;
+  background:#9B8EF4;
   color: #ffffff;
   border: 1px solid transparent;
 }
@@ -563,154 +566,7 @@ main>p {
   color: #ffffff;
 }
 
-/* ============================================================
-   Screen loader
-   ============================================================ */
 
-
-/* ============================================================
-   Dark mode
-   ============================================================ */
-
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #060818;
-    color: #e5e7eb;
-  }
-
-  main h1 {
-    color: #f9fafb;
-  }
-
-  .panel {
-    background: #121c2c;
-  }
-
-  .panel-header {
-    background: #121c2c;
-    color: #f9fafb;
-    border-color: #1e293b;
-  }
-
-  .panel-close:hover {
-    background: #1e293b;
-    color: #f9fafb;
-  }
-
-  .balance-amount {
-    color: #f9fafb;
-  }
-
-  .stat-label {
-    color: #9ca3af;
-  }
-
-  .stat-value {
-    color: #f9fafb;
-  }
-
-  .stat-icon.info {
-    background: #0369a1;
-    color: #e0f2fe;
-  }
-
-  .stat-icon.secondary {
-    background: #7c3aed;
-    color: #ede9fe;
-  }
-
-  .activities-card {
-    background: #121c2c;
-    border-color: #1e293b;
-  }
-
-  .activities-card p {
-    color: #f9fafb;
-  }
-
-  .btn21 {
-    background: #1e293b;
-    color: #e5e7eb;
-    border-color: #334155;
-  }
-
-  .btn21:hover {
-    background: #334155;
-  }
-
-  .screen_loader {
-    background: #060818;
-  }
-}
-
-.dark-theme {
-  background: #060818;
-  color: #e5e7eb;
-}
-
-.dark-theme main h1 {
-  color: #f9fafb;
-}
-
-.dark-theme .panel {
-  background: #121c2c;
-}
-
-.dark-theme .panel-header {
-  background: #121c2c;
-  color: #f9fafb;
-  border-color: #1e293b;
-}
-
-.dark-theme .panel-close:hover {
-  background: #1e293b;
-  color: #f9fafb;
-}
-
-.dark-theme .balance-amount {
-  color: #f9fafb;
-}
-
-.dark-theme .stat-label {
-  color: #9ca3af;
-}
-
-.dark-theme .stat-value {
-  color: #f9fafb;
-}
-
-.dark-theme .stat-icon.info {
-  background: #0369a1;
-  color: #e0f2fe;
-}
-
-.dark-theme .stat-icon.secondary {
-  background: #7c3aed;
-  color: #ede9fe;
-}
-
-.dark-theme .activities-card {
-  background: #121c2c;
-  border-color: #1e293b;
-}
-
-.dark-theme .activities-card p {
-  color: #f9fafb;
-}
-
-.dark-theme .btn21 {
-  background: #1e293b;
-  color: #e5e7eb;
-  border-color: #334155;
-}
-
-.dark-theme .btn21:hover {
-  background: #334155;
-}
-
-.dark-theme .screen_loader {
-  background: #060818;
-}
 
 aside.closed {
   transform: translateX(-120%);
@@ -737,8 +593,8 @@ aside.closed {
   }
      
   
-  main.container {
-    
+  .container {
+    margin: 0 auto;
     margin-left: 0 !important;
     padding: 20px 16px;
   }
@@ -790,8 +646,8 @@ aside.closed {
   .activities-card {
     justify-content: center;
     align-items: center;
-  
-    height: 300px;
+    margin: 20px auto;
+
   }
 }
 
