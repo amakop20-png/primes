@@ -5,48 +5,66 @@
       }
 
       header {
-        padding-left: 10px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background:white;
+        background: white;
         color: black;
+        padding: 16px 24px;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        padding: 30px;
+        position: relative;
+        z-index: 100;
       }
 
       .nav {
-
         font-size: 13px;
         display: flex;
         align-items: center;
-        justify-content: center;
-
         gap: 10px;
         font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
       }
 
       .nav a {
         text-decoration: none;
-        color:white;
-        align-items: center;
+        color: black;
+        /* was white — invisible on white header */
       }
-       
-.menu-toggle {
-  display: none;
-  flex-direction: column;
-  cursor: pointer;
-  gap: 5px;
-  z-index: 1000;
-}
 
-.menu-toggle span {
-  width: 28px;
-  height: 3px;
-  background: #000;
-  border-radius: 5px;
-  transition: 0.3s ease;
-}
+      /* ── Menu Toggle ── */
+      .menu-toggle {
+        display: none;
+        /* hidden on desktop */
+        flex-direction: column;
+        cursor: pointer;
+        gap: 5px;
+        z-index: 1000;
+        background: none;
+        border: none;
+        padding: 4px;
+      }
+
+      .menu-toggle span {
+        width: 28px;
+        height: 3px;
+        background: #000;
+        border-radius: 5px;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        display: block;
+      }
+
+      /* Animate into X when open */
+      .menu-toggle.open span:nth-child(1) {
+        transform: translateY(8px) rotate(45deg);
+      }
+
+      .menu-toggle.open span:nth-child(2) {
+        opacity: 0;
+      }
+
+      .menu-toggle.open span:nth-child(3) {
+        transform: translateY(-8px) rotate(-45deg);
+      }
+
       .btn {
         width: 70px;
         border-color: blue;
@@ -116,7 +134,8 @@
         background-color: #555;
         transform: scale(1.05);
       }
-      .btn4 a{
+
+      .btn4 a {
         text-decoration: none;
       }
 
@@ -140,8 +159,6 @@
         text-align: center;
         align-items: center;
         gap: 12px;
-        padding: 60px 20px;
-
         margin: 0 auto;
       }
 
@@ -231,7 +248,7 @@
 
 
       .section {
-        background-color:rgb(229, 229, 230);
+        background-color: rgb(229, 229, 230);
 
       }
 
@@ -873,286 +890,286 @@
       /* ============================================================
    MOBILE RESPONSIVENESS - style.css
    ============================================================ */
-/* =========================================================
+      /* =========================================================
    RESPONSIVE DESIGN
 ========================================================= */
 
-/* =========================
+      /* =========================
    TABLETS (1024px and below)
 ========================= */
-@media screen and (max-width: 1024px) {
+      @media screen and (max-width: 1024px) {
 
-  .container,
-  .container2 {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    padding: 1.5rem;
-  }
+        .container,
+        .container2 {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 20px;
+          padding: 1.5rem;
+        }
 
-  .cards,
-  .cards2 {
-    width: 300px;
-    height: auto;
-    margin: 0;
-    padding: 18px;
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 14px;
-    overflow: hidden;
-    transition: 0.3s ease;
-  }
+        .cards,
+        .cards2 {
+          width: 300px;
+          height: auto;
+          margin: 0;
+          padding: 18px;
+          background: #fff;
+          border: 1px solid #e5e5e5;
+          border-radius: 14px;
+          overflow: hidden;
+          transition: 0.3s ease;
+        }
 
-  .global,
-  .features {
-    padding: 40px 20px;
-  }
+        .global,
+        .features {
+          padding: 40px 20px;
+        }
 
-  .global h1,
-  .features h1 {
-    font-size: 2rem;
-  }
+        .global h1,
+        .features h1 {
+          font-size: 2rem;
+        }
 
-  .nav {
-    gap: 10px;
-    font-size: 13px;
-    flex-wrap: wrap;
-  }
+        .nav {
+          gap: 10px;
+          font-size: 13px;
+          flex-wrap: wrap;
+        }
 
-  .btn,
-  .btn2,
-  .btn3,
-  .btn4,
-  .btn5 {
-    padding: 10px 14px;
-    font-size: 13px;
-    min-width: 80px;
-  }
-}
+        .btn,
+        .btn2,
+        .btn3,
+        .btn4,
+        .btn5 {
+          padding: 10px 14px;
+          font-size: 13px;
+          min-width: 80px;
+        }
+      }
 
 
-/* =========================
+      /* =========================
    MOBILE DEVICES (768px and below)
 ========================= */
-@media screen and (max-width: 768px) {
+      @media screen and (max-width: 768px) {
 
-  html, body {
-    font-size: 14px;
-  }
+        html,
+        body {
+          font-size: 14px;
+        }
 
- .nav {
-  display: flex;          /* was missing */
-  position: absolute;
-  top: 70px;
-  left: -100%;            /* hidden off-screen */
-  width: 260px;
-  height: 100vh;
-  background: #fff;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 30px 20px;
-  gap: 20px;
-  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
-  transition: left 0.3s ease;  /* was 'right', should be 'left' */
-  z-index: 100;           /* was -1, negative hides it behind other elements */
-}
+        .menu-toggle {
+          display: flex;
+        }
 
-/* Make sure you have this to actually show the nav */
-.nav.active {
-  left: 0;
-}
+        .nav {
+          display: none;
+          flex-direction: column;
+          position: absolute;
+          top: 100%;
+          left: 0;
+          width: 100%;
+          background: white;
+          padding: 16px 24px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          gap: 16px;
+        }
 
-.container,
-  .container2 {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 1rem;
-  }
+        .nav.open {
+          display: flex;
+        }
+      
 
-  .cards,
-  .cards2 {
-    width: 100%;
-    height: auto;
-    padding: 16px;
-    border-radius: 12px;
-  }
+      .container,
+      .container2 {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 1rem;
+      }
 
-  .global,
-  .features {
-    padding: 30px 15px;
-    text-align: center;
-  }
+      .cards,
+      .cards2 {
+        width: 100%;
+        height: auto;
+        padding: 16px;
+        border-radius: 12px;
+      }
 
-  .global h1,
-  .features h1 {
-    font-size: 1.7rem;
-  }
+      .global,
+      .features {
+        padding: 30px 15px;
+        text-align: center;
+      }
 
-  .global p,
-  .features p {
-    font-size: 0.95rem;
-  }
+      .global h1,
+      .features h1 {
+        font-size: 1.7rem;
+      }
 
-  .btn,
-  .btn2,
-  .btn3,
-  .btn4,
-  .btn5 {
-    padding: 10px 16px;
-    font-size: 13px;
-    min-height: 44px;
-  }
+      .global p,
+      .features p {
+        font-size: 0.95rem;
+      }
 
-  .login-container,
-  .register-container {
-    padding: 20px;
-    min-height: auto;
-  }
+      .btn,
+      .btn2,
+      .btn3,
+      .btn4,
+      .btn5 {
+        padding: 10px 16px;
+        font-size: 13px;
+        min-height: 44px;
+      }
 
-  .login-card,
-  .register-card {
-    width: 100%;
-    padding: 1.5rem;
-    border-radius: 14px;
-  }
+      .login-container,
+      .register-container {
+        padding: 20px;
+        min-height: auto;
+      }
 
-  .form-control {
-    font-size: 16px;
-  }
+      .login-card,
+      .register-card {
+        width: 100%;
+        padding: 1.5rem;
+        border-radius: 14px;
+      }
 
-  .btn8,
-  .btn9 {
-    min-height: 44px;
-  }
-}
+      .form-control {
+        font-size: 16px;
+      }
+
+      .btn8,
+      .btn9 {
+        min-height: 44px;
+      }
+      }
 
 
-/* =========================
+      /* =========================
    SMALL MOBILE DEVICES (480px and below)
 ========================= */
-@media screen and (max-width: 480px) {
+      @media screen and (max-width: 480px) {
 
- html, body {
-    font-size: 13px;
-  }
-    
-
-  header {
-    background-color: blue;
-    color: white;
-    padding: 10px;
-    gap: 8px;
-  }
-
-  .nav {
-    justify-content: center;
-    gap: 8px;
-    font-size: 11px;
-  }
-
-  .container,
-  .container2 {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 30px;
-  }
-
-  .cards,
-  .cards2 {
-    width: 300px;
-    height: 200px;
-    padding:  1rem;
-    margin: 20px auto;
-    border-radius: 12px;
-  }
-
-  .cards h1,
-  .cards2 h1 {
-    font-size: 15px;
-  }
-
-  .cards p,
-  .cards2 p {
-    font-size: 12px;
-  }
-
-  .global,
-  .features {
-    padding: 45px 12px;
-  }
-
-  .global h1,
-  .features h1 {
-    font-size: 1.4rem;
-  }
-
-  .global p,
-  .features p {
-    font-size: 0.85rem;
-  }
-
-  .btn,
-  .btn2,
-  .btn3,
-  .btn4,
-  .btn5 {
-    width: 50px;
-    padding: 12px;
-    font-size: 12px;
-    min-height: 44px;
-  }
-
-  .login-card,
-  .register-card {
-    padding: 1rem;
-    border-radius: 12px;
-  }
-
-  .login-header h1,
-  .register-header h1 {
-    font-size: 1.3rem;
-  }
-
-  .form-control {
-    padding: 0.7rem 0.9rem;
-    font-size: 16px;
-  }
-
-  .btn8,
-  .btn9 {
-    width: 100%;
-    padding: 12px;
-    font-size: 13px;
-  }
-
-  .refund-container,
-  .terms-container {
-    padding: 1rem;
-    margin: 1rem auto;
-  }
-
-  .refund-content,
-  .terms-content {
-    padding: 1rem;
-    border-radius: 10px;
-  }
-
-  .refund-header h1,
-  .terms-header h1 {
-    font-size: 1.2rem;
-  }
-
-  .refund-section h2,
-  .terms-section h2 {
-    font-size: 1rem;
-  }
-
-  .contact-info p,
-  .info p {
-    font-size: 0.85rem;
-  }
-}
+        html,
+        body {
+          font-size: 13px;
+        }
 
 
-/* =========================
+        header {
+          background-color: blue;
+          color: white;
+          padding: 10px;
+          gap: 8px;
+        }
+
+        .nav {
+          justify-content: center;
+          gap: 8px;
+          font-size: 11px;
+        }
+
+        .container,
+        .container2 {
+          grid-template-columns: 1fr;
+          gap: 12px;
+          padding: 30px;
+        }
+
+        .cards,
+        .cards2 {
+          width: 300px;
+          height: 200px;
+          padding: 1rem;
+          margin: 20px auto;
+          border-radius: 12px;
+        }
+
+        .cards h1,
+        .cards2 h1 {
+          font-size: 15px;
+        }
+
+        .cards p,
+        .cards2 p {
+          font-size: 12px;
+        }
+
+        .global,
+        .features {
+          padding: 45px 12px;
+        }
+
+        .global h1,
+        .features h1 {
+          font-size: 1.4rem;
+        }
+
+        .global p,
+        .features p {
+          font-size: 0.85rem;
+        }
+
+        .btn,
+        .btn2,
+        .btn3,
+        .btn4,
+        .btn5 {
+          width: 50px;
+          padding: 12px;
+          font-size: 12px;
+          min-height: 44px;
+        }
+
+        .login-card,
+        .register-card {
+          padding: 1rem;
+          border-radius: 12px;
+        }
+
+        .login-header h1,
+        .register-header h1 {
+          font-size: 1.3rem;
+        }
+
+        .form-control {
+          padding: 0.7rem 0.9rem;
+          font-size: 16px;
+        }
+
+        .btn8,
+        .btn9 {
+          width: 100%;
+          padding: 12px;
+          font-size: 13px;
+        }
+
+        .refund-container,
+        .terms-container {
+          padding: 1rem;
+          margin: 1rem auto;
+        }
+
+        .refund-content,
+        .terms-content {
+          padding: 1rem;
+          border-radius: 10px;
+        }
+
+        .refund-header h1,
+        .terms-header h1 {
+          font-size: 1.2rem;
+        }
+
+        .refund-section h2,
+        .terms-section h2 {
+          font-size: 1rem;
+        }
+
+        .contact-info p,
+        .info p {
+          font-size: 0.85rem;
+        }
+      }
+      /* =========================
   
