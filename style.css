@@ -25,87 +25,28 @@
         gap: 10px;
         font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
       }
-.toggle-btn {
-  display: none;
-  background: none;
-  border: none;
-  color: #ffffff;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  transition: background 0.2s ease;
-}
-
-.toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-aside {
-  width: 260px;
-  min-height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  padding: 32px 20px;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
-  box-shadow: 2px 0 20px rgba(15, 23, 42, 0.08);
-  z-index: 10;
-}
-
-aside .top {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-aside .top a {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  color: #1f2937;
-  text-decoration: none;
-  border-radius: 14px;
-  background: #f8fafc;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-aside .top a:hover {
-  background: #eef2ff;
-}
-
-aside .top a span {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.close {
-  margin-top: 14px;
-  align-self: flex-end;
-  width: 38px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-aside .close:hover {
-  background: #f3f4f6;
-}
 
       .nav a {
         text-decoration: none;
         color:white;
         align-items: center;
       }
-        
+       
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  gap: 5px;
+  z-index: 1000;
+}
 
+.menu-toggle span {
+  width: 28px;
+  height: 3px;
+  background: #000;
+  border-radius: 5px;
+  transition: 0.3s ease;
+}
       .btn {
         width: 70px;
         border-color: blue;
@@ -1108,20 +1049,7 @@ aside .close:hover {
     gap: 8px;
     font-size: 11px;
   }
-  .toggle-btn {
-    display: block;
-  }
 
-  aside {
-    transform: translateX(-120%);
-    transition: transform 0.3s ease;
-    width: 260px;           /* Better width for mobile menu */
-  }
-
-  aside.open {
-    transform: translateX(0);
-  }
-     
   .container,
   .container2 {
     grid-template-columns: 1fr;
