@@ -152,8 +152,8 @@ aside .close:hover {
   color: #4361ee;
 }
 
-main.container {
-    background-color:#F07060;
+.container {
+    background-color:#ad5d52;
   padding: 32px 24px;
   margin-left: 280px;
 }
@@ -161,13 +161,13 @@ main.container {
 main h1 {
   font-size: 24px;
   font-weight: 700;
-  color: #ffffff;
+  color:#CDD6F4;
   margin-bottom: 6px;
 }
 
-main>p {
+main p {
   font-size: 14px;
-  color: white;
+  color: #CDD6F4;
   margin-bottom: 32px;
 }
 
@@ -367,7 +367,7 @@ main>p {
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 28px 32px;
-  background:rgb(35, 35, 36);
+  background:blu;
   width: 100%;
   max-width: 800px;
   overflow: hidden;
