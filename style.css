@@ -155,7 +155,7 @@
 
 
       .global {
-        background-color: rgb(203, 203, 209);
+        background: linear-gradient(135deg, #8000ff, #000000);
         text-align: center;
         align-items: center;
         gap: 12px;
@@ -217,7 +217,7 @@
         padding: 10px;
         width: 300px;
         height: 200px;
-        background: white;
+    background: linear-gradient(135deg, #8000ff, #000000);
         border: 0.5px solid #e5e5e5;
         border-radius: 12px;
         overflow: hidden;
@@ -978,70 +978,70 @@
         .nav.open {
           display: flex;
         }
-      
 
-      .container,
-      .container2 {
-        grid-template-columns: 1fr;
-        gap: 16px;
-        padding: 1rem;
-      }
 
-      .cards,
-      .cards2 {
-        width: 100%;
-        height: auto;
-        padding: 16px;
-        border-radius: 12px;
-      }
+        .container,
+        .container2 {
+          grid-template-columns: 1fr;
+          gap: 16px;
+          padding: 1rem;
+        }
 
-      .global,
-      .features {
-        padding: 30px 15px;
-        text-align: center;
-      }
+        .cards,
+        .cards2 {
+          width: 100%;
+          height: auto;
+          padding: 16px;
+          border-radius: 12px;
+        }
 
-      .global h1,
-      .features h1 {
-        font-size: 1.7rem;
-      }
+        .global,
+        .features {
+          padding: 30px 15px;
+          text-align: center;
+        }
 
-      .global p,
-      .features p {
-        font-size: 0.95rem;
-      }
+        .global h1,
+        .features h1 {
+          font-size: 1.7rem;
+        }
 
-      .btn,
-      .btn2,
-      .btn3,
-      .btn4,
-      .btn5 {
-        padding: 10px 16px;
-        font-size: 13px;
-        min-height: 44px;
-      }
+        .global p,
+        .features p {
+          font-size: 0.95rem;
+        }
 
-      .login-container,
-      .register-container {
-        padding: 20px;
-        min-height: auto;
-      }
+        .btn,
+        .btn2,
+        .btn3,
+        .btn4,
+        .btn5 {
+          padding: 10px 16px;
+          font-size: 13px;
+          min-height: 44px;
+        }
 
-      .login-card,
-      .register-card {
-        width: 100%;
-        padding: 1.5rem;
-        border-radius: 14px;
-      }
+        .login-container,
+        .register-container {
+          padding: 20px;
+          min-height: auto;
+        }
 
-      .form-control {
-        font-size: 16px;
-      }
+        .login-card,
+        .register-card {
+          width: 100%;
+          padding: 1.5rem;
+          border-radius: 14px;
+        }
 
-      .btn8,
-      .btn9 {
-        min-height: 44px;
-      }
+        .form-control {
+          font-size: 16px;
+        }
+
+        .btn8,
+        .btn9 {
+          min-height: 44px;
+        }
       }
 
 
@@ -1171,5 +1171,6 @@
           font-size: 0.85rem;
         }
       }
+
       /* =========================
   
