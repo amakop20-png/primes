@@ -6,154 +6,143 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dave social</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+ 
+  </style>
 </head>
 
 <body>
+
+  <!-- Loader (first thing inside body) -->
+  <div class="loader-wrapper" id="loaderWrapper">
+    <div class="loader"></div>
+  </div>
+
+  <!-- Header -->
   <header>
-    <div class="menu-toggle" id="menu-toggle">
-      <span></span>
-      <span></span>
-      <span></span>
+    <div class="price">
+      <div class="menu-toggle" id="menu-toggle">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
     </div>
+
     <div class="logo">
       <img src="" alt="daveslogo">
     </div>
-  <nav class="nav" id="nav">
+
+    <nav class="nav" id="nav">
       <a href="index.html">Home</a>
       <a href="">Terms of service</a>
       <a href="">Privacy Policy</a>
       <a href="">Help Center</a>
       <a href="refund.html">Refund Policy</a>
-    
     </nav>
-      <button class="btn">
-        <a href="login.html">Login</a>
-      </button>
-      <button class="btn2">
-        <a href="signup.html">Sign Up</a>
-      </button>
+
+    <button class="btn"><a href="login.html">Login</a></button>
+    <button class="btn2"><a href="signup.html">Sign Up</a></button>
   </header>
+
+  <!-- Hero Section -->
   <section class="global">
     <h1>Global Phone Number Made Simple</h1>
-    <p>Get instance acess to virtual phone number from 70+ countries
+    <p>
+      Get instant access to virtual phone numbers from 70+ countries
       <br>
-      business, privacy, and international communication.
+      for business, privacy, and international communication.
     </p>
-    <button class="btn3">
-      <a href="login.html">Login</a>
-    </button>
-   
-         <button class="btn4">
-      <a href="signup.html">sign up</a>
-    </button>
-
-    <button class="btn5">Sign IN</button>
+    <button class="btn3"><a href="login.html">Login</a></button>
+    <button class="btn4"><a href="signup.html">Sign Up</a></button>
+    <button class="btn5">Sign In</button>
   </section>
+
+  <!-- Features Section -->
   <section class="features">
     <h1>Powerful Features Built for SMS Business Success</h1>
-    <p>Unlock the full potential of SMS marketing and customer engagement with
+    <p>
+      Unlock the full potential of SMS marketing and customer engagement with
       <br>
       our feature-rich virtual number platform.
     </p>
     <div class="container">
+
       <div class="cards">
-        📱
-        <h1> Virtual Numbers</h1>
-        <p>Get instant access to reliable virtual numbers
-          <br>
-          for SMS verification, marketing,
-          <br>
-          and customer communication.
-        </p>
+        <span>📱</span>
+        <h1>Virtual Numbers</h1>
+        <p>Get instant access to reliable virtual numbers for SMS verification, marketing, and customer communication.</p>
       </div>
 
       <div class="cards">
         <h1>📢 SMS Marketing Tools</h1>
-        <p>
-          Send targeted SMS campaigns that
-          <br>
-          boost engagement, conversions,
-          <br>
-          and customer retention.
-        </p>
+        <p>Send targeted SMS campaigns that boost engagement, conversions, and customer retention.</p>
       </div>
+
       <div class="cards">
         <h1>⚡ Real-Time Delivery</h1>
-        <p>
-          Ensure fast and reliable message
-          <br>
-          delivery with real-time tracking
-          <br>
-          and status updates.
-        </p>
+        <p>Ensure fast and reliable message delivery with real-time tracking and status updates.</p>
       </div>
+
       <div class="cards">
-        <h1>1🌍 Multi-Country Support</h1>
-        <p>
-          Operate globally with numbers
-          <br>
-          available from multiple countries
-          <br>
-          for wider business reach.
-        </p>
+        <h1>🌍 Multi-Country Support</h1>
+        <p>Operate globally with numbers available from multiple countries for wider business reach.</p>
       </div>
+
       <div class="cards">
         <h1>📊 Analytics Dashboard</h1>
-        <p>
-          Track performance, message
-          <br>
-          delivery rates, and user engagement
-          <br>
-          with detailed insights.
-        </p>
+        <p>Track performance, message delivery rates, and user engagement with detailed insights.</p>
       </div>
+
       <div class="cards">
         <h1>🔒 Secure Messaging</h1>
-        <p>
-          Protect your business communication
-          <br>
-          with secure, encrypted messaging
-          <br>
-          and compliance with industry standards.
-        </p>
+        <p>Protect your business communication with secure, encrypted messaging and compliance with industry standards.</p>
       </div>
+
     </div>
   </section>
+
+  <!-- Why Choose Us -->
   <div class="info">
-    <h1>Why Choose Dave’s Logo for Your SMS Business?</h1>
+    <h1>Why Choose Dave's Social for Your SMS Business?</h1>
     <p>
       Experience the difference with our reliable virtual number services, designed to
       <br>
       empower your SMS marketing and customer communication strategies.
     </p>
     <div class="container2">
+
       <div class="cards2">
         <h1>✅ Reliable Service</h1>
-        <p>
-          Count on our robust infrastructure for consistent
-          <br>
-          performance and minimal downtime.
-        </p>
+        <p>Count on our robust infrastructure for consistent performance and minimal downtime.</p>
       </div>
+
       <div class="cards2">
         <h1>💰 Cost-Effective Solutions</h1>
-        <p>
-          Access affordable virtual numbers and
-          <br>
-          competitive pricing for your business needs.
-        </p>
+        <p>Access affordable virtual numbers and competitive pricing for your business needs.</p>
       </div>
+
       <div class="cards2">
         <h1>🌐 Global Reach</h1>
-        <p>
-          Expand your business globally with numbers
-          <br>
-          available from multiple countries.
-        </p>
+        <p>Expand your business globally with numbers available from multiple countries.</p>
       </div>
+
     </div>
   </div>
-</body>
-<script src="spots.js"></script>
 
+  <!-- JavaScript -->
+  <script src="spots.js"></script>
+  <script>
+    // Hide loader when page fully loads
+    window.addEventListener('load', function () {
+      const loader = document.getElementById('loaderWrapper');
+      loader.classList.add('hidden');
+
+      // Remove from DOM completely after fade out
+      setTimeout(function () {
+        loader.remove();
+      }, 500);
+    });
+  </script>
+
+</body>
 </html>

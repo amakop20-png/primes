@@ -18,20 +18,19 @@
 
 <body>
 
-  <!-- Screen Loader -->
 
+  <!-- Header -->
   <header>
     <div class="pride">
-    <div class="logo">
-      <img src="" alt="Daves Social">
+      <div class="logo">
+        <img src="" alt="Daves Social">
+      </div>
+      <div class="toggle-btn" id="toggle-btn">
+        <i class="fa-solid fa-bars"></i>
+      </div>
     </div>
-    <div class="toggle-btn" id="toggle-btn">
-      <i class="fa-solid fa-bars"></i>
-    </div>
-    </div>
+
     <div class="match">
-
-
       <div class="notification">
         <i class="fa-solid fa-bell"></i>
         <span class="badge">3</span>
@@ -42,49 +41,31 @@
       </div>
     </div>
   </header>
-  <!-- Aside -->
+
+  <!-- Sidebar -->
   <aside id="aside">
     <div class="top">
       <a href="#">
-        <span>
-          <i class="fa-solid fa-gauge-high"></i>
-          Dashboard
-        </span>
+        <span><i class="fa-solid fa-gauge-high"></i> Dashboard</span>
       </a>
       <a href="#">
-        <span>
-          <i class="fa-solid fa-wallet"></i>
-          Wallet
-        </span>
+        <span><i class="fa-solid fa-wallet"></i> Wallet</span>
       </a>
       <a href="#">
-        <span>
-          <i class="fa-solid fa-chart-line"></i>
-          Activity
-        </span>
+        <span><i class="fa-solid fa-chart-line"></i> Activity</span>
       </a>
       <a href="#">
-        <span>
-          <i class="fa-solid fa-gear"></i>
-          Settings
-        </span>
+        <span><i class="fa-solid fa-gear"></i> Settings</span>
       </a>
       <a href="#">
-        <span>
-          <i class="fa-solid fa-cart-shopping"></i>
-          Buy Numbers
-        </span>
+        <span><i class="fa-solid fa-cart-shopping"></i> Buy Numbers</span>
       </a>
       <a href="#">
-        <span>
-        <i class="fa-solid fa-cart-shopping"></i>
-          All countries numbers
-        </span>
+        <span><i class="fa-solid fa-globe"></i> All Countries Numbers</span>
       </a>
+
       <div class="close" id="close-btn">
-        <span class="material-icons">
-          <i class="fa-solid fa-xmark"></i>
-        </span>
+        <i class="fa-solid fa-xmark"></i>
       </div>
     </div>
 
@@ -96,68 +77,60 @@
     </div>
   </aside>
 
-  <!-- Main -->
+  <!-- Main Content -->
   <main class="container">
 
     <h1>Dashboard</h1>
     <p>Manage your wallet and account activities.</p>
 
-    <!-- Activities -->
+    <!-- Activities Section -->
     <section class="activities">
 
+      <!-- Balance Card -->
       <div class="activities-card">
-
         <h3>Total Balance</h3>
         <p>$5,420.00</p>
-
         <div class="bid">
+          <button class="btn21" id="openPopup">View Details</button>
+          <button class="btn12">Add Funds</button>
+        </div>
+      </div>
 
-          <button class="btn21" id="openPopup">
-            View Details
-          </button>
+      <!-- Referral Cards -->
+      <div class="cart">
 
-          <button class="btn12">
-            Add Funds
-          </button>
+        <div class="referral-card">
+          <img src="person_add_24dp_FFFF55_FILL0_wght400_GRAD0_opsz24.png" alt="Referral Icon">
+          <h3>Referral and Rewards</h3>
+          <div class="referral-code">
+            <span>REF12345</span>
+            <button class="btn-copy">
+              <i class="fa-solid fa-copy"></i>
+            </button>
+          </div>
+        </div>
 
+        <div class="referral-card">
+          <a href="#">
+            <img src="pot2-removebg-preview.png" width="34" alt="Buy Icon">
+            <h3>Refer and Earn</h3>
+          </a>
+        </div>
+
+        <div class="referral-card">
+          <img src="pan-removebg-preview.png" width="34" alt="PAN Icon">
+          <h3>Referral Balance</h3>
+          <span>$7.00</span>
         </div>
 
       </div>
-        <div class="cart">
 
-  <div class="referral-card">
-    <img src="person_add_24dp_FFFF55_FILL0_wght400_GRAD0_opsz24.png" alt="Referral Icon">
-    <h3>Referral and Rewards</h3>
-    <div class="referral-code">
-      <span>REF12345</span>
-      <button class="btn-copy">
-        <i class="fa-solid fa-copy"></i>
-      </button>
-    </div>
-  </div>
-
-  <div class="referral-card">
-    <a href="#">
-      <img src="pot2-removebg-preview.png" width="34" alt="Buy Icon" >
-      <h3>refer and Earn </h3>
-    </a>
-  </div>
-
-  <div class="referral-card">
-    <img src="pan-removebg-preview.png" width="34" alt="PAN Icon">
-    <h3>Referral  balance</h3>
-      <span>$7.00</span>
-      </button>
-    </div>
-  </div>
-
-</div>
     </section>
+
+    <!-- Recent Transactions -->
     <div class="active">
-<div class="card">
-
+      <div class="card">
         <h3>Recent Transactions</h3>
-
         <ul class="transactions">
           <li>
             <span class="transaction-type">Recharge</span>
@@ -172,87 +145,73 @@
             <span class="transaction-amount">+ $200.00</span>
           </li>
         </ul>
-
       </div>
     </div>
+
   </main>
 
-  <!-- Popup -->
+  <!-- Wallet Overview Popup -->
   <div id="popup_balance">
-
     <div class="flex">
-
       <div class="panel">
 
-        <!-- Header -->
         <div class="panel-header">
           Wallet Overview
-
           <button class="panel-close" id="closePopup">
             <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
 
-        <!-- Balance Row -->
         <div class="balance-row">
-
           <div class="balance-left">
-
             <img src="https://cdn-icons-png.flaticon.com/512/2489/2489756.png" alt="wallet">
-
             <div>
               <div class="stat-label">Current Balance</div>
               <div class="balance-amount">$5,420</div>
             </div>
-
           </div>
-
           <button class="btn-add">
             <i class="fa-solid fa-plus"></i>
           </button>
-
         </div>
 
-        <!-- Stats -->
         <div class="stat-row">
-
           <div class="stat-icon info">
             <i class="fa-solid fa-cart-shopping"></i>
           </div>
-
           <div>
             <div class="stat-label">Numbers Purchased</div>
             <span class="stat-value">0</span>
           </div>
-
         </div>
 
         <div class="stat-row">
-
           <div class="stat-icon secondary">
             <i class="fa-solid fa-wallet"></i>
           </div>
-
           <div>
             <div class="stat-label">Total Recharge</div>
             <span class="stat-value">0</span>
           </div>
-
         </div>
 
       </div>
-
     </div>
-
   </div>
 
-  <!-- Scroll Top -->
+  <!-- Scroll To Top Button -->
   <button class="scroll-top" id="scrollTopBtn">
     <i class="fa-solid fa-arrow-up"></i>
   </button>
+  <!-- Screen Loader (fixed: moved outside main, first child of body) -->
+  <div class="loader-wrapper">
+    <img src="416616820_0ba6f5ba-e476-49f8-8f99-a8fcba54aa76.jpg" width="50px" height="50px" class="">
+    
+  </span>
+  </div>
 
-  <div class="pased" <!-- JavaScript -->
-    <script src="script.js"></script>
+  <!-- JavaScript -->
+  <script src="script.js"></script>
 
 </body>
 

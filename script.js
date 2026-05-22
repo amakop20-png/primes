@@ -110,3 +110,12 @@ window.addEventListener("load", () => {
     }, 3000);
 
 });
+window.addEventListener("load", function () {
+  const loader = document.querySelector(".loader-wrapper");
+  loader.style.transition = "opacity 0.6s ease";
+  loader.style.opacity = "0";
+
+  setTimeout(function () {
+    loader.style.display = "none";
+  }, 600);
+});

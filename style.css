@@ -43,6 +43,10 @@
         padding: 4px;
       }
 
+
+
+
+
       .menu-toggle span {
         width: 28px;
         height: 3px;
@@ -1063,11 +1067,6 @@
           gap: 8px;
         }
 
-        .nav {
-          justify-content: center;
-          gap: 8px;
-          font-size: 11px;
-        }
 
         .container,
         .container2 {

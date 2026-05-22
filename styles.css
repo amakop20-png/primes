@@ -9,7 +9,8 @@
   margin: 0;
   padding: 0;
 }
-.btn0{
+
+.btn0 {
   background: whitesmoke;
   display: flex;
   align-items: center;
@@ -23,23 +24,91 @@
   cursor: pointer;
 
   transition: background 0.2s ease,
-              transform 0.15s ease,
-              box-shadow 0.2s ease;
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
 
   /* CENTER THE BUTTON */
   margin: 0 auto;
   width: fit-content;
 }
-.btn0 a{
-text-decoration: none;
+
+.btn0 a {
+  text-decoration: none;
 }
-body {
-  font-family: 'Nunito', sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
-  background-color:;
-  color: #1a1a2e;
-  overflow-x: hidden;
+
+.loader-wrapper {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgb(59, 59, 211);
+  z-index: 1000;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.loader {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  position: relative;
+  border: 4px solid #Fff;
+  animation: loader 2s infinite ease;
+}
+
+.loader-inner {
+  vertical-align: top;
+  display: inline-block;
+  width: 100%;
+  background-color: #fff;
+  animation: loader-inner 2s infinite ease-in;
+}
+
+@keyframes loader {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(180deg);
+  }
+
+  50% {
+    transform: rotate(180deg);
+  }
+
+  75% {
+    transform: rotate(360deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loader-inner {
+  0% {
+    height: 0%;
+  }
+
+  25% {
+    height: 0%;
+  }
+
+  50% {
+    height: 100%;
+  }
+
+  75% {
+    height: 100%;
+  }
+
+  100% {
+    height: 0%;
+  }
 }
 
 /* ============================================================
@@ -55,9 +124,10 @@ header {
   justify-content: space-between;
 }
 
-header p{
-color: white;
-} 
+header p {
+  color: white;
+}
+
 .profile {
   align-items: center;
   gap: 12px;
@@ -176,7 +246,7 @@ aside .close:hover {
 }
 
 .container {
-    background-color:rgb(212, 212, 216);
+  background-color: rgb(212, 212, 216);
   padding: 32px 24px;
   margin-left: 280px;
 }
@@ -184,7 +254,7 @@ aside .close:hover {
 main h1 {
   font-size: 24px;
   font-weight: 700;
-  color:#000000;
+  color: #000000;
   margin-bottom: 6px;
 }
 
@@ -291,7 +361,7 @@ main p {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background:#9B8EF4;
+  background: #9B8EF4;
   border: none;
   cursor: pointer;
   display: flex;
@@ -356,14 +426,14 @@ main p {
    ============================================================ */
 
 .activities {
-  
+
   justify-content: center;
   align-items: center;
   padding: 24px 0;
 }
 
 .activities-card {
-background: linear-gradient(135deg, #8000ff, #000000);
+  background: linear-gradient(135deg, #8000ff, #000000);
   color: white;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
@@ -386,11 +456,11 @@ background: linear-gradient(135deg, #8000ff, #000000);
 }
 
 .card {
-  background: linear-gradient(135deg, #8000ff, #000000);
+  background: linear-gradient(135deg, #7908e9, #000000);
   border: 1px solid #e5e7eb;
   border-radius: 16px;
   padding: 28px 32px;
-  background:blu;
+  background: blu;
   width: 100%;
   max-width: 800px;
   overflow: hidden;
@@ -399,89 +469,102 @@ background: linear-gradient(135deg, #8000ff, #000000);
     border-color 0.22s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
-.card h3{
+
+.card h3 {
   color: white;
 }
 
-.transaction-type{
+.transaction-type {
   color: white;
-}
-.transaction-amount{
-  color: white;
-}
-.cart{
-  
- display: grid;
- grid-template-columns: repeat(3, 1fr);
- 
 }
 
-.referral-card{
- background: linear-gradient(135deg, #8000ff, #000000);
-    border-radius: 16px;
-    padding: 5px;
-    color: white;
-    border: 1px solid #e5e7eb;
-    transition: all 0.3s ease;
-    margin: 12px;
-    border: 1px solid #e5e7eb;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+.transaction-amount {
+  color: white;
+}
+
+.cart {
+
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+}
+
+.referral-card {
+  background: linear-gradient(135deg, #8000ff, #000000);
+  border-radius: 16px;
+  padding: 5px;
+  color: white;
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+  margin: 12px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
+
 .referral-card h3 {
   font-size: 12px;
   font-weight: 700;
   color: #d8d8df;
   margin-bottom: 12px;
 }
-.referral-card a{
+
+.referral-card a {
   text-decoration: none;
 }
-    /* Top gradient bar */
-    .referral-card::before {
-      content: "";
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
-      border-radius: 16px 16px 0 0;
-    }
- 
-    /* Glow behind the card */
-    .referral-card::after {
-      content: "";
-      position: absolute;
-      inset: -8px;
-      border-radius: 22px;
-      background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
-      opacity: 0.15;
-      filter: blur(16px);
-      z-index: -1;
-    }
-    .pride{
+
+/* Top gradient bar */
+.referral-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6366f1, #ffffff, #ffffff);
+  border-radius: 16px 16px 0 0;
+}
+
+/* Glow behind the card */
+.referral-card::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 22px;
+  background: linear-gradient(90deg, #6366f1, #ffffff, #fffefe);
+  opacity: 0.15;
+  filter: blur(16px);
+  z-index: -1;
+}
+
+.pride {
   display: flex;
   align-items: center;
-    }
+}
+
 .referral-icon {
   width: 40px;
   height: 40px;
   margin-bottom: 10px;
   filter: hue-rotate(210deg);
 }
+
 .referral-card:hover {
   transform: translateY(-3px);
   border-color: #e9d5ff;
   box-shadow: 0 4px 12px rgba(107, 33, 168, 0.08),
     0 12px 28px rgba(107, 33, 168, 0.06);
 }
+
 .referral-icon {
   width: 40px;
   background-color: #060818;
   height: 40px;
   margin-bottom: 10px;
 }
+
 .activities-card:hover {
   transform: translateY(-3px);
   border-color: #e9d5ff;
@@ -552,7 +635,7 @@ background: linear-gradient(135deg, #8000ff, #000000);
 }
 
 .btn12 {
-  background:#9B8EF4;
+  background: #9B8EF4;
   color: #ffffff;
   border: 1px solid transparent;
 }
@@ -595,6 +678,7 @@ aside.closed {
   transform: translateX(-120%);
   transition: transform 0.3s ease;
 }
+
 /* ============================================================
    MOBILE RESPONSIVENESS - styles.css
    ============================================================ */
@@ -608,14 +692,15 @@ aside.closed {
   aside {
     transform: translateX(-120%);
     transition: transform 0.3s ease;
-    width: 260px;           /* Better width for mobile menu */
+    width: 260px;
+    /* Better width for mobile menu */
   }
 
   aside.open {
     transform: translateX(0);
   }
-     
-  
+
+
   .container {
     margin: 0 auto;
     margin-left: 0 !important;
@@ -648,14 +733,17 @@ aside.closed {
   .activities-card p {
     font-size: 22px;
   }
-  .cart{
+
+  .cart {
     display: grid;
     grid-template-columns: 1fr;
   }
-  .referral-card{
+
+  .referral-card {
     height: 150px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   }
+
   .referral-card::after {
     content: "";
     position: absolute;
@@ -666,6 +754,7 @@ aside.closed {
     filter: blur(16px);
     z-index: -1;
   }
+
   .activities-card {
     justify-content: center;
     align-items: center;
@@ -678,7 +767,8 @@ aside.closed {
 /* ==================== TABLET (768px - 1024px) ==================== */
 @media (min-width: 768px) and (max-width: 1024px) {
   .toggle-btn {
-    display: none;           /* Hide toggle on tablet */
+    display: none;
+    /* Hide toggle on tablet */
   }
 
   aside {
@@ -713,9 +803,7 @@ aside.closed {
   }
 
 
-  #close-btn {
-    
-  }
+  #close-btn {}
 
   main.container {
     margin-left: 280px;
