@@ -159,7 +159,7 @@
 
 
       .global {
-        background: linear-gradient(135deg, #8000ff, #000000);
+      background-color: #ffffff;
         text-align: center;
         align-items: center;
         gap: 12px;

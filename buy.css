@@ -186,9 +186,7 @@ aside .top a span {
 }
 
 .card {
-  background: linear-gradient(135deg, rgba(255, 75, 255, 0.158) 0%, #a01eb1 55%, rgba(206, 64, 206, 0.555) 100%);
-
-/* Card shadow/glow */
+    background: linear-gradient(135deg, #5C2DC8 0%, #7B35E8 55%, #9B59F5 100%);
 box-shadow: 0 16px 48px rgba(121, 88, 199, 0.45);
   border-radius: 16px;
   padding: min(2rem, 8%);
@@ -200,4 +198,10 @@ box-shadow: 0 16px 48px rgba(121, 88, 199, 0.45);
   transform: translateY(-4px);
   box-shadow: 0 8px 28px rgba(99, 102, 241, 0.14);
 }
-
+@media (max-width: 480px) {
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr; /* ✅ fixed */
+    gap: 24px;
+  }
+}

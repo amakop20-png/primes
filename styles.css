@@ -384,7 +384,7 @@ main > p {
 }
 
 .referral-card {
-  background: linear-gradient(135deg, #5C2DC8, #2d0a6e);
+  background: linear-gradient(135deg, #5C2DC8 0%, #7B35E8 55%, #9B59F5 100%);
   border-radius: var(--radius);
   padding: 20px 16px;
   color: white;
