@@ -1,0 +1,203 @@
+
+
+body {
+  background-color: #ffffff;
+  font-family: 'Nunito', system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ══════════════════════════════════════
+   HEADER
+══════════════════════════════════════ */
+.header {
+  width: 100%;
+  padding: 14px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+.profile .username {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.notifications {
+  display: flex;
+  align-items: center;
+}
+
+.match {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ══════════════════════════════════════
+   HAMBURGER TOGGLE
+══════════════════════════════════════ */
+.toggle-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: #1f2937;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+  line-height: 1;
+}
+
+.toggle-btn:hover {
+  background: #f3f4f6;
+}
+
+/* ══════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════ */
+aside {
+  width: 260px;
+  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  padding: 28px 16px;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 2px 0 20px rgba(15, 23, 42, 0.06);
+  z-index: 200;
+  transition: transform 0.3s ease; /* ✅ on base style */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+aside .top {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+aside .top a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  color: #374151;
+  text-decoration: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+aside .top a:hover {
+  background: #eef2ff;
+  color: #6366f1;
+}
+
+aside .top a.active {
+  background: #eef2ff;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+aside .top a span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.close {
+  margin-top: 16px;
+  align-self: flex-end;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  color: #6b7280;
+}
+
+.close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+/* ══════════════════════════════════════
+   OVERLAY
+══════════════════════════════════════ */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 150;
+  backdrop-filter: blur(2px);
+}
+
+.overlay.show {
+  display: block;
+}
+
+/* ══════════════════════════════════════
+   CONTAINER
+══════════════════════════════════════ */
+.container {
+  max-width: 1200px;
+  width: 100%;
+  /* ✅ removed height: 300px — was cutting off content */
+  margin: 0 auto;
+  padding: 40px 24px;
+}
+
+/* ══════════════════════════════════════
+   CARDS GRID
+══════════════════════════════════════ */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.card {
+  background: linear-gradient(135deg, rgba(255, 75, 255, 0.158) 0%, #a01eb1 55%, rgba(206, 64, 206, 0.555) 100%);
+
+/* Card shadow/glow */
+box-shadow: 0 16px 48px rgba(121, 88, 199, 0.45);
+  border-radius: 16px;
+  padding: min(2rem, 8%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+ .card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px rgba(99, 102, 241, 0.14);
+}
+
