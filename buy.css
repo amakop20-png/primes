@@ -277,7 +277,10 @@ box-shadow: 0 16px 48px rgba(121, 88, 199, 0.45);
 .logo{
   width: 60px;
 }
-@media  screen and (max-width: 780px) {
+@media   (max-width: 480px) {
+   html,body{
+  width: 100%;
+  }
   .header{
      margin: 5px;
      width: 100%;
