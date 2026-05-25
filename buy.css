@@ -1,6 +1,8 @@
 
 
 body {
+  margin: 0;
+  padding: 0;
   background-color: #ffffff;
   font-family: 'Nunito', system-ui, sans-serif;
   overflow-x: hidden;
@@ -9,7 +11,7 @@ body {
 /* ══════════════════════════════════════
    HEADER
 ══════════════════════════════════════ */
-.header {
+header {
   width: 100%;
   padding: 14px ;
   background: #ffffff;
@@ -54,100 +56,145 @@ body {
   gap: 14px;
 }
 
+
 /* ══════════════════════════════════════
-   HAMBURGER TOGGLE
+   HAMBURGER
 ══════════════════════════════════════ */
 .toggle-btn {
   display: none;
   background: none;
   border: none;
-  color: #1f2937;
+  color: var(--text);
   font-size: 20px;
   cursor: pointer;
   padding: 8px;
   border-radius: 8px;
-  transition: background 0.2s ease;
+  transition: background var(--transition);
   line-height: 1;
 }
 
 .toggle-btn:hover {
-  background: #f3f4f6;
+  background: var(--primary-light);
+  color: var(--primary);
 }
-
+.pride {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 /* ══════════════════════════════════════
    SIDEBAR
 ══════════════════════════════════════ */
+
 aside {
   width: 260px;
-  min-height: 100vh;
+  height: 100vh;
   position: fixed;
   top: 0;
   left: 0;
+
   padding: 28px 16px;
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
+
+  background: var(--surface);
+  border-right: 1px solid var(--border);
   box-shadow: 2px 0 20px rgba(15, 23, 42, 0.06);
+
   z-index: 200;
-  transition: transform 0.3s ease; /* ✅ on base style */
+
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+
+  overflow-y: auto;
+  transition: transform 0.3s ease;
 }
 
+/* =========================
+   TOP SECTION
+========================= */
 aside .top {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+/* =========================
+   SIDEBAR LINKS
+========================= */
 aside .top a {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 14px;
+
+  padding: 12px 14px;
+
   color: #374151;
   text-decoration: none;
+
   border-radius: 12px;
+
   font-size: 14px;
   font-weight: 500;
-  transition: background 0.2s ease, color 0.2s ease;
+
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    transform 0.2s ease;
 }
 
-aside .top a:hover {
-  background: #eef2ff;
-  color: #6366f1;
-}
-
+/* HOVER + ACTIVE */
+aside .top a:hover,
 aside .top a.active {
-  background: #eef2ff;
-  color: #6366f1;
+  background: var(--primary-light);
+  color: var(--primary);
   font-weight: 600;
+
+  transform: translateX(4px);
 }
 
+/* ICON + TEXT */
 aside .top a span {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+/* =========================
+   CLOSE BUTTON
+========================= */
 .close {
-  margin-top: 16px;
+  margin-top: 18px;
   align-self: flex-end;
+
   width: 36px;
   height: 36px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   border-radius: 10px;
+
   cursor: pointer;
-  transition: background 0.2s ease;
-  color: #6b7280;
+
+  color: var(--muted);
+
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    transform 0.2s ease;
 }
 
 .close:hover {
   background: #f3f4f6;
-  color: #1f2937;
+  color: var(--text);
+
+  transform: rotate(90deg);
 }
+
+/* =========================
+   MOBILE SIDEBAR
+========================= */
 
 /* ══════════════════════════════════════
    OVERLAY
@@ -186,7 +233,7 @@ aside .top a span {
 }
 
 .card {
-    background: linear-gradient(135deg, #5C2DC8 0%, #7B35E8 55%, #9B59F5 100%);
+    background: white;
 box-shadow: 0 16px 48px rgba(121, 88, 199, 0.45);
   border-radius: 16px;
   padding: min(2rem, 8%);
@@ -194,11 +241,43 @@ box-shadow: 0 16px 48px rgba(121, 88, 199, 0.45);
   border: 1px solid #f0f0f0;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+.card h3{
+  color: black;
+  font-size: 13px;
+}
+.fa-solid fa-bars{
+  background-color: black;
+}
+.card p{
+  color: black;
+  font-size: 10px;
+}
+.details {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px;
+  background: #dcfce7;        /* light green background */
+  color: #15803d;             /* dark green text */
+  border: 1px solid #bbf7d0; /* green border */
+  border-radius: 20px;        /* pill shape */
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.details::before {
+  content: "✅";              /* assurance icon */
+  font-size: 13px;
+}
  .card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 28px rgba(99, 102, 241, 0.14);
 }
-@media (max-width: 480px) {
+.logo{
+  width: 60px;
+}
+@media  screen and (max-width: 780px) {
   .header{
      margin: 5px;
      width: 100%;
@@ -217,13 +296,29 @@ box-shadow: 0 16px 48px rgba(121, 88, 199, 0.45);
     /* ✅ removed margin: 0 auto — grid handles this */
   }
 
-  .card {
-    width: 80%;
-    height:150px;
-    padding: 20px 16px;
-    margin: 10px auto;
-    border-radius: 12px;
-    /* ✅ removed duplicate box-shadow — keep only one */
-    box-shadow: 0 8px 24px rgba(121, 88, 199, 0.3);
+.card {
+  width: 80%;              /* ✅ was 80% — leaves awkward gaps */
+  padding: 20px 16px;
+  margin: 0 auto;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 8px 24px rgba(121, 88, 199, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  /* ✅ removed height: 100px — was cutting off content */
+  /* ✅ removed margin: 10px auto — gap handles spacing */
+}
+   .toggle-btn {
+    display: block;
+  }
+
+  aside {
+    transform: translateX(-100%);
+    z-index: 300;
+  }
+
+  aside.open {
+    transform: translateX(0);
   }
 }
