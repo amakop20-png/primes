@@ -11,7 +11,7 @@ body {
 ══════════════════════════════════════ */
 .header {
   width: 100%;
-  padding: 14px 24px;
+  padding: 14px ;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
@@ -19,7 +19,7 @@ body {
   justify-content: space-between;
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 60;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
 }
 
@@ -199,9 +199,31 @@ box-shadow: 0 16px 48px rgba(121, 88, 199, 0.45);
   box-shadow: 0 8px 28px rgba(99, 102, 241, 0.14);
 }
 @media (max-width: 480px) {
+  .header{
+     margin: 5px;
+     width: 100%;
+  }
+
+  /* ✅ removed html,body width:100% — not needed */
+
+  .container {
+    /* ✅ only override what needs to change on mobile */
+    padding: 16px 12px;
+  }
+
   .cards {
-    display: grid;
-    grid-template-columns: 1fr; /* ✅ fixed */
-    gap: 24px;
+    grid-template-columns: 1fr; /* single column */
+    gap: 14px;
+    /* ✅ removed margin: 0 auto — grid handles this */
+  }
+
+  .card {
+    width: 80%;
+    height:150px;
+    padding: 20px 16px;
+    margin: 10px auto;
+    border-radius: 12px;
+    /* ✅ removed duplicate box-shadow — keep only one */
+    box-shadow: 0 8px 24px rgba(121, 88, 199, 0.3);
   }
 }
