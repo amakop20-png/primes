@@ -320,7 +320,7 @@ box-shadow: 0 16px 48px rgba(121, 88, 199, 0.45);
      SINGLE CARD
   ========================= */
   .card {
-    width: 90%;
+    width: 80%;
     min-height: auto;
 
     padding: 18px 16px;
