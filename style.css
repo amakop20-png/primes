@@ -114,7 +114,7 @@
         border-radius: 9px;
         border: none;
         padding: 12px;
-      background: linear-gradient(90deg, #a855f7, #fff, #a855f7);
+      background: blue;
         color: blue;
       }
 
@@ -1132,6 +1132,7 @@
         }
          
         .btn3{
+         background-color: blue;
           width: 170px;
           padding: 12px;
           font-size: 12px;
