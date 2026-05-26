@@ -83,6 +83,10 @@
         color: white;
       }
 
+      .btn a{
+        color: #b68cdf;
+        text-decoration: none;
+      }
       .btn2 {
         border-radius: 9px;
         padding: 12px;
@@ -100,10 +104,13 @@
       }
 
 
-
+        .btn2 a{
+        color: black;
+        text-decoration: none;
+      }
 
       .btn3 {
-        width: 90px;
+        width: 100px;
         border-radius: 9px;
         border: none;
         padding: 12px;
@@ -118,7 +125,7 @@
 
       .btn3 a {
         background-color: blue;
-        color: white;
+        color: #a855f7;
         text-decoration: none;
       }
 
@@ -141,6 +148,7 @@
 
       .btn4 a {
         text-decoration: none;
+        color: #a855f7;
       }
 
 
@@ -154,7 +162,7 @@
 
       .btn5:hover {
         background-color: blue;
-        color: white;
+       color: #a855f7;
       }
 
 
@@ -221,7 +229,7 @@
         padding: 10px;
         width: 300px;
         height: 200px;
-         background: rgb(255, 135, 255);
+         background: white;
         border: 0.5px solid #e5e5e5;
         border-radius: 12px;
         overflow: hidden;
@@ -993,8 +1001,7 @@
         .cards,
         .cards2 {
           width: 100%;
-        background: rgb(255, 209, 255);
-          
+             background: white;
           height: auto;
           padding: 16px;
           border-radius: 12px;
@@ -1114,15 +1121,21 @@
 
         .btn,
         .btn2,
-        .btn3,
         .btn4,
         .btn5 {
-          width: 50px;
+          width: 80px;
+          border-color: none;
           padding: 12px;
           font-size: 12px;
           min-height: 44px;
         }
-
+         
+        .btn3{
+          width: 170px;
+          padding: 12px;
+          font-size: 12px;
+          min-height: 44px;
+        }
         .login-card,
         .register-card {
           padding: 1rem;
