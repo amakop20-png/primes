@@ -8,7 +8,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: white;
+        background: rgb(158, 158, 158);
         color: black;
         padding: 16px 24px;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -74,7 +74,7 @@
         border-color: blue;
         border-radius: 9px;
         padding: 10px;
-        background-color: white;
+        background: linear-gradient(90deg, #efdfff, #fff, #f2e3ff);
         color: blue;
       }
 
@@ -90,7 +90,7 @@
         cursor: pointer;
         width: 90px;
         transition: all 0.3s ease-in-out;
-        background-color: blue;
+        background: linear-gradient(90deg, #a855f7, #a855f7, #a855f7);
         color: white;
       }
 
@@ -107,7 +107,7 @@
         border-radius: 9px;
         border: none;
         padding: 12px;
-        background-color: ghostwhite;
+      background: linear-gradient(90deg, #a855f7, #fff, #a855f7);
         color: blue;
       }
 
@@ -130,7 +130,7 @@
         cursor: pointer;
         margin: 10px;
         transition: all 0.3s ease-in-out;
-        background-color: blue;
+       background: linear-gradient(90deg, #a855f7, #fff, #a855f7);
         color: white;
       }
 
@@ -148,7 +148,7 @@
         border: none;
         border-radius: 9px;
         padding: 10px;
-        background-color: white;
+        background: linear-gradient(90deg, #a855f7, #fff, #a855f7);
         color: blue;
       }
 
@@ -221,7 +221,7 @@
         padding: 10px;
         width: 300px;
         height: 200px;
-    background: rgb(219, 216, 216);
+         background: rgb(255, 135, 255);
         border: 0.5px solid #e5e5e5;
         border-radius: 12px;
         overflow: hidden;
@@ -993,7 +993,8 @@
         .cards,
         .cards2 {
           width: 100%;
-          background-color: rgb(207, 198, 198);
+        background: rgb(255, 209, 255);
+          
           height: auto;
           padding: 16px;
           border-radius: 12px;
