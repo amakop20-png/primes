@@ -221,7 +221,7 @@
         padding: 10px;
         width: 300px;
         height: 200px;
-    background: linear-gradient(135deg, #5C2DC8 0%, #7B35E8 55%, #9B59F5 100%);
+    background: rgb(219, 216, 216);
         border: 0.5px solid #e5e5e5;
         border-radius: 12px;
         overflow: hidden;
@@ -852,7 +852,7 @@
       .info {
         text-align: center;
         font-size: 0.9rem;
-        background-color: rgb(203, 203, 209);
+        background-color: white;
 
       }
 
@@ -993,6 +993,7 @@
         .cards,
         .cards2 {
           width: 100%;
+          background-color: rgb(207, 198, 198);
           height: auto;
           padding: 16px;
           border-radius: 12px;
@@ -1060,9 +1061,9 @@
 
 
         header {
-          background-color: blue;
+          background-color: white;
           color: white;
-          padding: 10px;
+          padding: 10px 12px;
           gap: 8px;
         }
 
@@ -1102,6 +1103,7 @@
         .global h1,
         .features h1 {
           font-size: 1.4rem;
+          margin-top: 30px;
         }
 
         .global p,
@@ -1168,6 +1170,7 @@
         .contact-info p,
         .info p {
           font-size: 0.85rem;
+          margin-top: 10px;
         }
       }
 
