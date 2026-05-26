@@ -1016,6 +1016,7 @@
         .global h1,
         .features h1 {
           font-size: 1.7rem;
+          margin: 10px;
         }
 
         .global p,
