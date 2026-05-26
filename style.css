@@ -857,6 +857,9 @@
         color: #ef4444;
       }
 
+      .image{
+        width: 500px;
+      }
       .info {
         text-align: center;
         font-size: 0.9rem;
@@ -946,7 +949,7 @@
           font-size: 13px;
           flex-wrap: wrap;
         }
-
+          
         .btn,
         .btn2,
         .btn3,
@@ -1111,13 +1114,12 @@
 
         .global h1,
         .features h1 {
-          font-size: 1.4rem;
           margin-top: 30px;
         }
 
         .global p,
         .features p {
-          font-size: 0.85rem;
+          margin-bottom: 20px;
         }
 
         .btn,
@@ -1195,6 +1197,9 @@
           font-size: 0.85rem;
           margin-top: 10px;
         }
+        .image{
+        width: 100%;
+      }
       }
 
       /* =========================
