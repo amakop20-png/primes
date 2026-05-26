@@ -156,7 +156,7 @@
         border: none;
         border-radius: 9px;
         padding: 10px;
-        background: linear-gradient(90deg, #a855f7, #fff, #a855f7);
+        background:white;
         color: blue;
       }
 
@@ -1122,8 +1122,7 @@
 
         .btn,
         .btn2,
-        .btn4,
-        .btn5 {
+        .btn4 {
           width: 80px;
           border-color: none;
           padding: 12px;
@@ -1132,8 +1131,16 @@
         }
          
         .btn3{
-         background-color: blue;
+         background-color: rgb(100, 36, 100);
           width: 170px;
+          padding: 12px;
+          font-size: 12px;
+          min-height: 44px;
+        }
+        .btn5{
+            background-color: white;
+          width: 170px;
+          margin-bottom:8px ;
           padding: 12px;
           font-size: 12px;
           min-height: 44px;
