@@ -110,7 +110,7 @@
       }
 
       .btn3 {
-        width: 100px;
+    
         border-radius: 9px;
         border: none;
         padding: 12px;
@@ -1198,7 +1198,7 @@
           margin-top: 10px;
         }
         .image{
-        width: 100%;
+        max-width: 100%;
       }
       }
 
