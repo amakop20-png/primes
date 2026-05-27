@@ -5,7 +5,7 @@
       }
 
       header {
-        display: flex;
+      
         justify-content: space-between;
         align-items: center;
         background: rgb(158, 158, 158);
@@ -601,7 +601,15 @@
       .login-footer a:hover {
         text-decoration: underline;
       }
-
+        
+      .pin{
+        display: flex;
+   
+     }
+     .price{
+      display: flex;
+      justify-content: space-between;
+     }
       .alert {
         padding: 0.85rem 1rem;
         margin-bottom: 1.25rem;
