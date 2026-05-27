@@ -312,11 +312,11 @@ aside .top a.active {
 
 /* DETAILS BADGE */
 .details {
-  display: inline-flex;
+  width: 100%;
   align-items: center;
   gap: 6px;
 
-  margin-top: 12px;
+  margin:  12px  9px 10px  ;
 
   background: #dcfce7;
   color: #15803d;
