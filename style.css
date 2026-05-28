@@ -19,7 +19,9 @@
 
        /* ── Logo container ── */
 .logo {
-  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px;
   width: fit-content;
 }
@@ -631,6 +633,7 @@
      .price{
       display: flex;
       justify-content: space-between;
+      align-items: center;
      }
       .alert {
         padding: 0.85rem 1rem;
