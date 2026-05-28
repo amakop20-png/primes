@@ -244,6 +244,50 @@ function initForm() {
     });
 }
 
+  // Mobile menu toggle
+    const menuToggle = document.getElementById('menu-toggle');
+    const nav = document.getElementById('nav');
+
+    if (menuToggle) {
+      menuToggle.addEventListener('click', function() {
+        menuToggle.classList.toggle('open');
+        nav.classList.toggle('open');
+      });
+
+      // Close menu when a link is clicked
+      nav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', function() {
+          menuToggle.classList.remove('open');
+          nav.classList.remove('open');
+        });
+      });
+    }
+
+    // Hide loader when page fully loads
+    window.addEventListener('load', function () {
+      const loader = document.getElementById('loaderWrapper');
+      if (loader) {
+        loader.classList.add('hidden');
+
+        // Remove from DOM completely after fade out
+        setTimeout(function () {
+          loader.remove();
+        }, 500);
+      }
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        const href = this.getAttribute('href');
+        if (href !== '#' && document.querySelector(href)) {
+          e.preventDefault();
+          document.querySelector(href).scrollIntoView({
+            behavior: 'smooth'
+          });
+        }
+      });
+    });
 // ==============================
 // Init App
 // ==============================

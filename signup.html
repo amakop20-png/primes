@@ -1,36 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
-      <header>
-    <div class="logo">
-      <img src="" alt="daveslogo">
+   <header >
+    <div class="header__logo">
+      <img src="77825-removebg-preview.png" alt="Dave's Social - Virtual Phone Numbers">
     </div>
-   <div class="nav">
-     <a href="index.html">Home</a>
-    <a href="terms.html">Terms of service</a>
-      <a href="">Privacy Policy</a>
-     <a href="">Help Center</a>
-     <a href="refund.html">Refund Policy</a>
-     <button class="btn">
-            <a href="login.html">Login</a>
-   </button>
-     <button class="btn2">Sign Up</button>
-     </div>
-     </header>
-      <div class="register-container">
+    
+    <nav class="header__nav" id="nav">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="terms.html" class="nav-link">Terms</a>
+      <a href="#" class="nav-link">Privacy</a>
+      <a href="#" class="nav-link">Help</a>
+      <a href="refund.html" class="nav-link">Refunds</a>
+    </nav>
+
+    <div class="header__actions">
+      <button class="btn-secondary"><a href="login.html">Log In</a></button>
+      <button class="btn-primary"><a href="signup.html">Sign Up</a></button>
+    </div>
+
+    <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </header>
+    <div class="register-container">
         <div class="register-card">
             <div class="register-header">
                 <h1>Create Account</h1>
                 <p>Join Dave’s Logo to get virtual phone numbers</p>
             </div>
-            
+
             <form id="registerForm" class="register-form">
                 <div class="form-group">
                     <label for="name">Full Name</label>
@@ -39,68 +49,76 @@
                         <input type="text" id="name" name="name" class="form-control" placeholder="Neura Tech" required>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="username">Username</label>
                     <div class="input-group">
                         <span class="input-icon">@</span>
-                        <input type="text" id="username" name="username" class="form-control" placeholder="Neuratech" required>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="Neuratech"
+                            required>
                         <div id="username-error" class="error-message"></div>
-                        <small style="color: var(--gray); font-size: 0.85rem; display: block; margin-top: 0.25rem;">Only letters and numbers allowed</small>
+                        <small style="color: var(--gray); font-size: 0.85rem; display: block; margin-top: 0.25rem;">Only
+                            letters and numbers allowed</small>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <div class="input-group">
                         <span class="input-icon">✉️</span>
-                        <input type="email" id="email" name="email" class="form-control" placeholder="your@email.com" required>
+                        <input type="email" id="email" name="email" class="form-control" placeholder="your@email.com"
+                            required>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="password">Password</label>
                     <div class="input-group">
                         <span class="input-icon">🔒</span>
-                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" minlength="6" required>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••"
+                            minlength="6" required>
                         <button type="button" class="password-toggle">👁️</button>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="confirm_password">Confirm Password</label>
                     <div class="input-group">
                         <span class="input-icon">🔒</span>
-                        <input type="password" id="confirm_password" class="form-control" placeholder="••••••••" minlength="6" required>
+                        <input type="password" id="confirm_password" class="form-control" placeholder="••••••••"
+                            minlength="6" required>
                         <button type="button" class="password-toggle">👁️</button>
                         <div id="password-error" class="error-message"></div>
                     </div>
                 </div>
-                
+
                 <input type="hidden" id="refer_id" name="refer_id" value="">
                 <input type="hidden" name="register" value="1">
-                
+
                 <div class="remember-me">
                     <input type="checkbox" id="remember_me" name="remember_me" checked>
                     <label for="remember_me">Keep me logged in (30 days)</label>
                 </div>
-                
+
                 <button type="submit" class="btn9 btn9-primary" id="registerBtn">
                     <span class="btn9-text">Create Account</span>
                     <div class="spinner" id="btnSpinner" style="display: none;"></div>
                 </button>
-                
+
                 <div class="divider">OR</div>
-                
+
                 <div class="social-login">
                     <a href="google-register" class="social-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21.8 10H12v4h5.7c-.8 2.3-3 4-5.7 4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.7 0 3.2.7 4.2 1.8L19 4.2C17.1 2.4 14.7 1 12 1 5.9 1 1 5.9 1 12s4.9 11 11 11 11-4.9 11-11c0-1.3-.2-2.7-.8-4z"></path>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M21.8 10H12v4h5.7c-.8 2.3-3 4-5.7 4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.7 0 3.2.7 4.2 1.8L19 4.2C17.1 2.4 14.7 1 12 1 5.9 1 1 5.9 1 12s4.9 11 11 11 11-4.9 11-11c0-1.3-.2-2.7-.8-4z">
+                            </path>
                         </svg>
                         Sign Up With Google
                     </a>
                 </div>
-                
+
                 <div class="register-footer">
                     Already have an account? <a href="login">Sign In</a>
                 </div>
@@ -110,4 +128,5 @@
     <script src="signup.js"></script>
 
 </body>
+
 </html>
