@@ -143,12 +143,12 @@
       }
 
       .btn3:hover {
-        background-color: blue;
+        background-color:purple;
         color: white;
       }
 
       .btn3 a {
-        background-color: blue;
+      
         color: #a855f7;
         text-decoration: none;
       }
@@ -185,11 +185,13 @@
       }
 
       .btn5:hover {
-        background-color: blue;
+        background-color: purple;
        color: #a855f7;
       }
 
-
+       .btn5 a{
+      letter-spacing: 0.1em;      /* moderate — nice for buttons */
+       }
       .global {
       background-color: #ffffff;
         text-align: center;
@@ -215,7 +217,7 @@
         margin: 0;
 
       }
-
+      
       .features {
         text-align: center;
         align-items: center;
@@ -1166,7 +1168,7 @@
         }
          
         .btn3{
-         background-color: blue;
+         background-color: purple;
           width: 170px;
           padding: 12px;
           font-size: 12px;
