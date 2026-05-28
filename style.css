@@ -1,14 +1,63 @@
-      body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        margin: 0;
-        padding: 0;
-      }
+:root {
+  --body-bg: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  --body-bg-login: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --text-color: #333333;
+  --text-muted: #666666;
+  --header-bg: rgba(255, 255, 255, 0.95);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --card-bg: #ffffff;
+  --card-header-bg: #fafafa;
+  --input-bg: #ffffff;
+  --input-border: #e0e0e0;
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-text: #667eea;
+  --shadow: 0 10px 30px rgba(0,0,0,0.06);
+  --primary: #667eea;
+  --primary-dark: #764ba2;
+  --dark: #333333;
+  --gray: #666666;
+  --light-gray: #e0e0e0;
+  --white: #ffffff;
+}
+
+body.dark-theme {
+  --body-bg: #0B0914;
+  --body-bg-login: #0B0914;
+  --text-color: #F3F4F6;
+  --text-muted: #9CA3AF;
+  --header-bg: #131125;
+  --border-color: #231F3A;
+  --card-bg: #131125;
+  --card-header-bg: #16132b;
+  --input-bg: #1a1733;
+  --input-border: #231F3A;
+  --btn-secondary-bg: #1a1733;
+  --btn-secondary-text: #F3F4F6;
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --primary: #a855f7;
+  --primary-dark: #7C3AED;
+  --dark: #F3F4F6;
+  --gray: #9CA3AF;
+  --light-gray: #231F3A;
+  --white: #131125;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: var(--body-bg);
+  color: var(--text-color);
+}
+body.auth-page {
+  background: var(--body-bg-login);
+}
 
 header {
   width: 100%;
   padding: 14px 24px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -54,8 +103,7 @@ header {
 
       .nav a {
         text-decoration: none;
-        color: black;
-        /* was white — invisible on white header */
+        color: var(--text-color);
       }
 
       /* ── Menu Toggle ── */
@@ -99,21 +147,24 @@ header {
 
       .btn {
         width: 70px;
-        border-color: blue;
+        border: 1px solid var(--border-color);
         border-radius: 9px;
         padding: 10px;
-        background: linear-gradient(90deg, #efdfff, #fff, #f2e3ff);
-        color: blue;
+        background: var(--btn-secondary-bg);
+        color: var(--btn-secondary-text);
       }
 
       .btn:hover {
-        background-color: blue;
-        color: white;
+        background-color: var(--primary-dark);
+        color: var(--white);
       }
 
       .btn a{
-        color: #b68cdf;
+        color: var(--btn-secondary-text);
         text-decoration: none;
+      }
+      .btn:hover a {
+        color: var(--white);
       }
       .btn2 {
         border-radius: 9px;
@@ -122,18 +173,18 @@ header {
         cursor: pointer;
         width: 90px;
         transition: all 0.3s ease-in-out;
-        background: linear-gradient(90deg, #a855f7, #a855f7, #a855f7);
-        color: white;
+        background: var(--primary);
+        color: var(--white);
       }
 
       .btn2:hover {
-        background-color: #555;
+        background-color: var(--primary-dark);
         transform: scale(1.05);
       }
 
 
         .btn2 a{
-        color: black;
+        color: var(--white);
         text-decoration: none;
       }
 
@@ -316,9 +367,10 @@ header {
       }
 
       .refund-content {
-        background: rgb(243, 226, 226);
+        background: var(--card-bg);
         padding: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
       }
 
       .refund-section {
@@ -421,10 +473,10 @@ header {
       }
 
       .terms-content {
-        background: white;
+        background: var(--card-bg);
         border-radius: 12px;
-        border: 1px solid rgba(0, 0, 0, 0.06);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow);
         padding: 2rem;
       }
 
@@ -491,16 +543,16 @@ header {
         justify-content: center;
         min-height: 100vh;
         padding: 2rem;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: var(--body-bg-login);
       }
 
       .login-card {
-        background: white;
+        background: var(--card-bg);
         border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+        box-shadow: var(--shadow);
         padding: 1.5rem;
         max-width: 20rem;
-        border: 0.5px solid rgba(0, 0, 0, 0.08)
+        border: 0.5px solid var(--border-color);
       }
 
       .login-header {
@@ -549,20 +601,21 @@ header {
 
       .form-control {
         width: 100%;
-        padding: 0.7rem 1rem 0.7rem 2.4rem;
-        border: 1px solid #d1d5db;
-        border-radius: var(--radius-sm);
-        font-size: 0.9rem;
-        color: var(--dark);
-        background: var(--white);
-        transition: border-color 0.2s, box-shadow 0.2s;
+        padding: 0.85rem 0.85rem 0.85rem 2.8rem;
+        border: 2px solid var(--input-border);
+        border-radius: 10px;
+        font-size: 0.95rem;
+        color: var(--text-color);
+        background: var(--input-bg);
+        transition: all 0.3s;
         box-sizing: border-box;
+        font-family: inherit;
       }
 
       .form-control:focus {
         outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
       }
 
       .password-toggle {
@@ -690,16 +743,16 @@ header {
         justify-content: center;
         min-height: 100vh;
         padding: 2rem;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: var(--body-bg-login);
       }
 
       .register-card {
-        background: white;
+        background: var(--card-bg);
         border-radius: 16px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+        box-shadow: var(--shadow);
         padding: 1.5rem;
         max-width: 20rem;
-        border: 0.5px solid rgba(0, 0, 0, 0.08);
+        border: 0.5px solid var(--border-color);
       }
 
       .register-header {

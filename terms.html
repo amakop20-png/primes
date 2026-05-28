@@ -7,22 +7,27 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-   <header>
+  <script>
+    if (localStorage.getItem('dashboardTheme') === 'dark') {
+      document.body.classList.add('dark-theme');
+    }
+  </script>
+  <header>
     <div class="logo">
-      <img src="" alt="daveslogo">
+      <img src="77825-removebg-preview.png" alt="daveslogo" style="width: 80px; height: auto;">
     </div>
-      <div class="nav">
-        <a href="index.html">Home</a>
-        <a href="terms.html">Terms of service</a>
-         <a href="">Privacy Policy</a>
-        <a href="">Help Center</a>
-        <a href="refund.html">Refund Policy</a>
-        <button class="btn">
-          <a href="login.html">Login</a>
-        </button>
-        <button class="btn2">Sign Up</button>
-       </div>
-     </header>
+    <div class="nav">
+      <a href="index.html">Home</a>
+      <a href="terms.html">Terms of service</a>
+      <a href="#">Privacy Policy</a>
+      <a href="#">Help Center</a>
+      <a href="refund.html">Refund Policy</a>
+      <button class="btn">
+        <a href="login.html">Login</a>
+      </button>
+      <button class="btn2"><a href="signup.html" style="color: white; text-decoration: none;">Sign Up</a></button>
+    </div>
+  </header>
      <div class="prike">
    <div class="terms-container">
         <div class="terms-header">

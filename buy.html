@@ -17,8 +17,12 @@
 </head>
 
 <body>
+  <script>
+    if (localStorage.getItem('dashboardTheme') === 'dark') {
+      document.body.classList.add('dark-theme');
+    }
+  </script>
 
-  
   <header class="header">
        <div class="pride">
       <div class="logo">
