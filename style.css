@@ -16,6 +16,28 @@
         z-index: 100;
       }
 
+
+       /* ── Logo container ── */
+.logo {
+  color: #000;
+  padding: 8px;
+  width: fit-content;
+}
+
+.logo img {
+  width: 80px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+
+  /* Smooth pop on hover */
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.logo img:hover {
+  transform: scale(1.08);
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+}
       .nav {
         font-size: 13px;
         display: flex;
