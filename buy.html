@@ -30,13 +30,16 @@
     </div>
 
     <div class="match">
+      <div class="currency-switch" id="currencySwitch" style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: var(--border-light); padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; color: var(--text); border: 1px solid var(--border); transition: all 0.2s; user-select: none;">
+        <span id="currencySymbol">$</span> <span id="currencyName">USD</span>
+      </div>
       <div class="notification">
         <i class="fa-solid lfa-bel"></i>
         <span class="badge">3</span>
       </div>
       <div class="profile">
         <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
-        <span class="username">John Doe</span>
+        <span class="username" id="buyUsername">John Doe</span>
       </div>
     </div>
   </header>
@@ -81,41 +84,69 @@
   <div class="details"> Instant Refund if no OTP recived</div>
   <div class="cards">
 
-    <div class="card">
-      <img src="buy_number_one-removebg-preview.png" class="logo">
-      <span class="card-icon">🇺🇸</span>
-      <h3>USA Numbers 1</h3>
-      <p>Get instant access to US virtual numbers for SMS verification, marketing, </p>
-<img src="USA.png" class="logo">
-    </div>
-
-    <div class="card">
-      <span class="card-icon">🇬🇧</span>
-      <h3>USa Number 2</h3>
-     <p>Get instant access to US virtual numbers for SMS verification, marketing, </p>
-     <img src="USA.png" class="logo">
-    </div>
-
-    <div class="card">
-       <img src="buy_number_one-removebg-preview.png" class="logo">
-      
-      <h3>UK Numbers</h3>
-          <p>Access United Kingdom virtual numbers for reliable SMS delivery and </p>
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <img src="buy_number_one-removebg-preview.png" class="logo">
+        <span class="card-icon">🇺🇸</span>
+        <h3>USA Numbers 1</h3>
+        <p>Get instant access to US virtual numbers for SMS verification, marketing.</p>
+        <img src="USA.png" class="logo">
       </div>
+      <button class="btn-buy-number" data-price="2.00" data-name="USA Number 1" style="margin-top: 12px; width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.2s;">Buy Number ($2.00)</button>
+    </div>
 
-      <div class="card">
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <span class="card-icon">🇺🇸</span>
+        <h3>USA Number 2</h3>
+        <p>Get instant access to US virtual numbers for SMS verification, marketing.</p>
+        <img src="USA.png" class="logo">
+      </div>
+      <button class="btn-buy-number" data-price="2.50" data-name="USA Number 2" style="margin-top: 12px; width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.2s;">Buy Number ($2.50)</button>
+    </div>
+
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
+        <img src="buy_number_one-removebg-preview.png" class="logo">
+        <h3>UK Numbers</h3>
+        <p>Access United Kingdom virtual numbers for reliable SMS delivery and verify accounts.</p>
+      </div>
+      <button class="btn-buy-number" data-price="3.00" data-name="UK Number" style="margin-top: 12px; width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.2s;">Buy Number ($3.00)</button>
+    </div>
+
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
         <span class="card-icon">🌍</span>
         <h3>Multi-Country Support</h3>
         <p>Operate globally with numbers available from multiple countries for wider business reach.</p>
       </div>
+      <button class="btn-buy-number" data-price="4.00" data-name="Multi-Country Number" style="margin-top: 12px; width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.2s;">Buy Number ($4.00)</button>
+    </div>
 
-      <div class="card">
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <div>
         <span class="card-icon">📊</span>
         <h3>Canada Number</h3>
-        <p>Track performance, message delivery r</p>
+        <p>Reliable virtual numbers from Canada for seamless verification and text message routing.</p>
       </div>
+      <button class="btn-buy-number" data-price="2.20" data-name="Canada Number" style="margin-top: 12px; width: 100%; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background 0.2s;">Buy Number ($2.20)</button>
     </div>
   </div>
+  </div>
+  <script>
+    // Load user info from localStorage on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const sessionData = JSON.parse(localStorage.getItem('primes_session') || '{}');
+      if (sessionData && sessionData.name) {
+        const usernameEl = document.getElementById('buyUsername');
+        if (usernameEl) usernameEl.textContent = sessionData.name;
+      } else {
+        // Redirect to login if not authenticated
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+  <script src="script.js"></script>
   <script src="buy.js"></script>
 </body>
 
