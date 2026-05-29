@@ -3,67 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Dave social</title>
+  <title>Login - Dave Social</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--body-bg-login); min-height: 100vh; display: flex; flex-direction: column; color: var(--text-color); }
+    header { background: var(--header-bg); border-bottom: 1px solid var(--border-color); padding: 1rem 2rem; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
+    header .logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.5rem; font-weight: 700; color: var(--btn-secondary-text); }
+    header a { text-decoration: none; color: var(--btn-secondary-text); font-weight: 600; font-size: 0.95rem; transition: color 0.3s; padding: 0.5rem 1rem; }
+    header a:hover { color: #764ba2; }
+  </style>
 </head>
-<body>
+<body class="auth-page">
+  <script>
+    if (localStorage.getItem('dashboardTheme') === 'dark') {
+      document.body.classList.add('dark-theme');
+    }
+  </script>
     <header>
-    <div class="logo">
-      <img src="" alt="daveslogo">
-    </div>
-      <div class="nav">
-        <a href="index.html">Home</a>
-        <a href="terms.html">Terms of service</a>
-         <a href="">Privacy Policy</a>
-        <a href="">Help Center</a>
-        <a href="refund.html">Refund Policy</a>
-        <button class="btn">
-            <a href="login.html">Login</a>
-        </button>
-        <button class="btn2">
-            <a href="signup.html">Sign Up</a>
-        </button>
-       </div>
+    <div class="logo">💬 Dave Social</div>
+      <a href="index.html">← Back to Home</a>
      </header>
-      </br></br></br>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="login-header">
-                <h1>Welcome Back</h1>
-                <p>Log in to your account</p>
+    <div class="login-container" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; margin-top: -2rem;">
+        <div class="login-card" style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: var(--shadow); padding: 3rem; width: 100%; max-width: 420px; animation: slideUp 0.6s ease-out;">
+            <div class="login-header" style="text-align: center; margin-bottom: 2.5rem;">
+                <h1 style="font-size: 1.8rem; font-weight: 700; color: var(--text-color); margin-bottom: 0.5rem;">Welcome Back</h1>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Log in to your account to continue</p>
             </div>
             
                         
                         
-            <form class="login-form" method="post" id="loginForm">
+            <form class="login-form" method="post" id="loginForm" style="display: flex; flex-direction: column; gap: 1.5rem;">
                 <input type="hidden" name="ajax" value="1">
-                <div class="form-group">
-                    <label for="login_input">Email or Username</label>
-                    <div class="input-group">
-                        <span class="input-icon">👤</span>
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label for="login_input" style="font-weight: 600; color: var(--text-color); font-size: 0.9rem;">Email or Username</label>
+                    <div class="input-group" style="position: relative; display: flex; align-items: center;">
+                        <span class="input-icon" style="position: absolute; left: 1rem; font-size: 1.2rem;">👤</span>
                         <input type="text" id="login_input" name="login_input" class="form-control" 
                                placeholder="your@email.com or username" required>
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <div class="input-group">
-                        <span class="input-icon">🔒</span>
-                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
-                        <button type="button" class="password-toggle" id="togglePassword">👁</button>
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label for="password" style="font-weight: 600; color: var(--text-color); font-size: 0.9rem;">Password</label>
+                    <div class="input-group" style="position: relative; display: flex; align-items: center;">
+                        <span class="input-icon" style="position: absolute; left: 1rem; font-size: 1.2rem;">🔒</span>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required
+                               style="padding-right: 2.8rem;">
+                        <button type="button" class="password-toggle" id="togglePassword" style="position: absolute; right: 1rem; background: none; border: none; font-size: 1.2rem; cursor: pointer;">👁</button>
                     </div>
-                    <a href="/forget-password" class="forgot-password">Forgot password?</a>
+                    <a href="/forget-password" style="text-align: right; font-size: 0.9rem; color: #667eea; text-decoration: none; font-weight: 500; margin-top: 0.3rem;">Forgot password?</a>
                 </div>
                 
-                <button type="submit" class="btn8 btn-primary" id="loginBtn8">Log In</button>
+                <button type="submit" class="btn8 btn-primary" id="loginBtn8" style="padding: 0.95rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s; margin-top: 1rem;">Log In</button>
                 
-                <div class="login-footer">
-                    Don't have an account? <a href="/register">Sign Up</a>
+                <div class="login-footer" style="text-align: center; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                    <p style="color: var(--text-muted); font-size: 0.95rem;">Don't have an account? <a href="signup.html" style="color: var(--primary); font-weight: 700; text-decoration: none;">Sign Up</a></p>
                 </div>
             </form>
         </div>
     </div>
+    <style>
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        #login_input:focus, #password:focus, #referral_code:focus {
+            outline: none;
+            border-color: #667eea !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+        }
+        #loginBtn8:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+        #loginBtn8:active { transform: translateY(0); }
+    </style>
 <script>
 // ── Toast Notification System ──
 class SimpleToast {
@@ -196,37 +208,56 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled  = true;
 
             try {
-                const response = await fetch('api/auth/login.php', {
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: { 'Accept': 'application/json' }
-                });
+                const loginInputValue = document.getElementById('login_input')?.value.trim();
+                const passwordValue = document.getElementById('password')?.value || '';
+                const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
 
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('Server returned non-JSON response');
+                const matchedUser = users.find(user =>
+                    ((user.email || '').toLowerCase() === loginInputValue.toLowerCase() ||
+                     (user.username || '').toLowerCase() === loginInputValue.toLowerCase()) &&
+                     user.password === passwordValue
+                );
+
+                const isAdminCredentials =
+                    ['admin', 'admin@primes.com'].includes(loginInputValue.toLowerCase()) &&
+                    passwordValue === 'admin123';
+
+                if (!loginInputValue || !passwordValue) {
+                    throw new Error('Email/username and password are required.');
                 }
 
-                const data = await response.json();
-                 if (loginInput === 'amakop20@gmail.com' && password === '12345') {
-                     toast.show('Login successful!', 'success');
-                       submitBtn.innerHTML = 'Redirecting...';
-                            submitBtn.disabled  = true;
-                            setTimeout(() => {
-                     window.location.href = '/dashboard';
-                         }, 1500);
-                       return; // ← stops the real fetch from running
-} else {
-    toast.show('Invalid email or password.', 'error');
-    return;
-}
+                if (!matchedUser && !isAdminCredentials) {
+                    toast.show('Invalid email/username or password.', 'error');
+                    return;
+                }
+
+                const sessionData = isAdminCredentials
+                    ? { username: 'admin', email: 'admin@primes.com', name: 'Admin', role: 'admin', loggedAt: new Date().toISOString() }
+                    : { username: matchedUser.username, email: matchedUser.email, name: matchedUser.name, role: 'user', loggedAt: new Date().toISOString() };
+
+                localStorage.setItem('primes_session', JSON.stringify(sessionData));
+
+                if (!isAdminCredentials) {
+                    const activityLog = JSON.parse(localStorage.getItem('primes_activity') || '[]');
+                    activityLog.unshift({
+                        type: 'login',
+                        username: sessionData.username,
+                        message: `${sessionData.name} signed in`,
+                        timestamp: new Date().toISOString()
+                    });
+                    localStorage.setItem('primes_activity', JSON.stringify(activityLog.slice(0, 100)));
+                }
+
+                toast.show('Login successful! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = isAdminCredentials ? 'admin.html' : 'dashboard.html';
+                }, 900);
             } catch (error) {
                 console.error('Login error:', error);
-                toast.show('Network error. Please try again.', 'error');
+                toast.show(error.message || 'Network error. Please try again.', 'error');
             } finally {
-                // ✅ always re-enables button whether success or error
                 submitBtn.innerHTML = originalText;
-                submitBtn.disabled  = false;
+                submitBtn.disabled = false;
             }
         });
     }

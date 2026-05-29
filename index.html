@@ -17,6 +17,11 @@
 </head>
 
 <body>
+  <script>
+    if (localStorage.getItem('dashboardTheme') === 'dark') {
+      document.body.classList.add('dark-theme');
+    }
+  </script>
 
   <!-- Loader (first thing inside body) -->
   <div class="loader-wrapper" id="loaderWrapper">
@@ -38,6 +43,10 @@
     </nav>
 
     <div class="header__actions">
+      <!-- Theme Switcher -->
+      <button id="themeToggle" aria-label="Toggle theme" style="background: none; border: none; font-size: 1.25rem; color: var(--text); cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.25s; outline: none; margin-right: 8px;">
+        <i class="fa-solid fa-moon"></i>
+      </button>
       <button class="btn-secondary"><a href="login.html">Log In</a></button>
       <button class="btn-primary"><a href="signup.html">Sign Up</a></button>
     </div>
@@ -272,6 +281,33 @@
         }
       });
     });
+
+    // Theme toggle logic for landing page
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle?.querySelector('i');
+
+    function updateLandingThemeUI(isDark) {
+      if (themeIcon) {
+        if (isDark) {
+          themeIcon.className = 'fa-solid fa-sun';
+        } else {
+          themeIcon.className = 'fa-solid fa-moon';
+        }
+      }
+    }
+
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-theme');
+        const isDark = document.body.classList.contains('dark-theme');
+        localStorage.setItem('dashboardTheme', isDark ? 'dark' : 'light');
+        updateLandingThemeUI(isDark);
+      });
+      
+      // Initial UI update based on current state
+      const isDark = document.body.classList.contains('dark-theme');
+      updateLandingThemeUI(isDark);
+    }
   </script>
 
 </body>
