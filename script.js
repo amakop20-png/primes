@@ -280,16 +280,32 @@ function renderDashboard() {
         }
     }
 }
-
 function handleAddFunds() {
     const currency = getCurrency();
+
+    // ── Open Paystack payment page in a new tab ──
+    const paystackURL = "https://paystack.shop/pay/x0rmg9yt1d";
+    const paystackWindow = window.open(paystackURL, "_blank");
+
+    // ── Poll for payment completion ──
+    // Since Paystack payment page is external, we listen for when
+    // the user returns to this tab (window regains focus)
+    const onFocus = () => {
+        window.removeEventListener("focus", onFocus);
+        promptForAmount();
+    };
+    window.addEventListener("focus", onFocus);
+}
+
+function promptForAmount() {
+    const currency = getCurrency();
     const promptMessage = currency === 'USD'
-        ? "Enter amount to deposit in USD ($):"
-        : "Enter amount to deposit in Naira (₦):";
-        
+        ? "Payment complete! Enter the amount you deposited in USD ($):"
+        : "Payment complete! Enter the amount you deposited in Naira (₦):";
+
     const response = prompt(promptMessage);
     if (response === null) return; // User cancelled
-    
+
     const rawVal = parseFloat(response.replace(/[^0-9.]/g, ''));
     if (isNaN(rawVal) || rawVal <= 0) {
         showToast("Invalid amount entered.", "error");
@@ -310,9 +326,16 @@ function handleAddFunds() {
         id: 'TX-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
         type: 'Recharge',
         amount: addedUSD,
-        description: 'Deposited funds via dashboard',
+        description: 'Deposited funds via Paystack',
         timestamp: new Date().toISOString()
     });
+
+    showToast(`Funds added successfully! 🎉`, "success");
+
+    // ── Save & refresh UI if you have these helpers ──
+    if (typeof saveUser === 'function') saveUser(user);
+    if (typeof renderDashboard === 'function') renderDashboard();
+}
 
     saveLiveUser(user);
     renderDashboard();
