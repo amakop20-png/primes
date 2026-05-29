@@ -118,7 +118,6 @@
             </form>
         </div>
     </div>
-    <script src="signup.js"></script>
     <style>
         @keyframes slideUp {
             from { transform: translateY(20px); opacity: 0; }
@@ -137,318 +136,547 @@
         .social-btn:hover { border-color: #667eea; background: rgba(102, 126, 234, 0.05); }
     </style>
     <script>
-      // ==============================
-      // Toast Notification System
-      // ==============================
-      class SimpleToast {
-          constructor() {
-              this.toastContainer = null;
-              this.createContainer();
-              this.injectStyles();
-          }
+// ==============================
+// Toast Notification System
+// ==============================
+class SimpleToast {
+    constructor() {
+        this.createContainer();
+        this.injectStyles();
+    }
 
-          createContainer() {
-              this.toastContainer = document.createElement('div');
-              this.toastContainer.style.cssText = `
-                  position: fixed;
-                  top: 20px;
-                  right: 20px;
-                  z-index: 9999;
-                  width: 380px;
-                  max-height: 80vh;
-                  overflow-y: auto;
-                  font-family: "Poppins", sans-serif;
-                  display: flex;
-                  flex-direction: column;
-                  gap: 10px;
-              `;
-              document.body.appendChild(this.toastContainer);
-          }
+    createContainer() {
+        this.toastContainer = document.createElement('div');
+        this.toastContainer.className = 'toast-container';
+        document.body.appendChild(this.toastContainer);
+    }
 
-          injectStyles() {
-              const style = document.createElement('style');
-              style.textContent = `
-                  @keyframes toastSlideIn {
-                      from { transform: translateX(110%); opacity: 0; }
-                      to   { transform: translateX(0); opacity: 1; }
-                  }
-                  @keyframes toastSlideOut {
-                      from { transform: translateX(0); opacity: 1; }
-                      to   { transform: translateX(110%); opacity: 0; }
-                  }
-                  .toast-close-btn:hover { color: #333 !important; }
-              `;
-              document.head.appendChild(style);
-          }
+    injectStyles() {
+        if (document.getElementById('toast-styles')) return;
 
-          show(message, type = 'info', duration = 5000) {
-              const configs = {
-                  success: { icon: '✓', title: 'Success!', color: '#47D764' },
-                  error:   { icon: '✗', title: 'Error!', color: '#ff355b' },
-                  info:    { icon: 'ℹ', title: 'Info!', color: '#2F86EB' },
-                  warning: { icon: '⚠', title: 'Warning!', color: '#FFC021' },
-              };
+        const style = document.createElement('style');
+        style.id = 'toast-styles';
 
-              const config = configs[type] || configs.info;
-              const toast = document.createElement('div');
+        style.textContent = `
+            .toast-container {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                width: 380px;
+                max-width: calc(100vw - 30px);
+                max-height: 80vh;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                z-index: 9999;
+                font-family: "Poppins", sans-serif;
+            }
 
-              toast.style.cssText = `
-                  width: 100%;
-                  padding: 16px 20px;
-                  background-color: white;
-                  border-radius: 8px;
-                  display: grid;
-                  grid-template-columns: 48px 1fr 28px;
-                  align-items: center;
-                  gap: 8px;
-                  color: #101020;
-                  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
-                  border-left: 6px solid ${config.color};
-                  animation: toastSlideIn 0.3s ease-out;
-              `;
+            .toast {
+                display: grid;
+                grid-template-columns: 50px 1fr 30px;
+                align-items: center;
+                gap: 12px;
+                padding: 16px;
+                background: #ffffff;
+                border-radius: 12px;
+                border-left: 5px solid;
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+                animation: toastSlideIn 0.35s ease;
+            }
 
-              toast.innerHTML = `
-                  <div style="text-align:center;">
-                      <span style="font-size:30px; color:${config.color};">${config.icon}</span>
-                  </div>
-                  <div>
-                      <p style="margin:0 0 4px; font-weight:600;">${config.title}</p>
-                      <p style="margin:0; font-size:12px; color:white;">${message}</p>
-                  </div>
-                  <button class="toast-close-btn" style="background:none;border:none;cursor:pointer;font-size:22px;">×</button>
-              `;
+            .toast-icon {
+                font-size: 28px;
+                text-align: center;
+            }
 
-              this.toastContainer.appendChild(toast);
+            .toast-title {
+                margin: 0 0 4px;
+                font-size: 15px;
+                font-weight: 600;
+                color: #111827;
+            }
 
-              const close = () => {
-                  toast.style.animation = 'toastSlideOut 0.3s forwards';
-                  setTimeout(() => toast.remove(), 300);
-              };
+            .toast-message {
+                margin: 0;
+                font-size: 13px;
+                line-height: 1.5;
+                color: #6b7280;
+            }
 
-              toast.querySelector('.toast-close-btn').addEventListener('click', close);
+            .toast-close-btn {
+                border: none;
+                background: transparent;
+                font-size: 22px;
+                cursor: pointer;
+                color: #9ca3af;
+                transition: 0.2s ease;
+            }
 
-              if (duration > 0) {
-                  setTimeout(close, duration);
-              }
-          }
-      }
+            .toast-close-btn:hover {
+                color: #111827;
+                transform: scale(1.1);
+            }
 
-      const toast = new SimpleToast();
+            @keyframes toastSlideIn {
+                from {
+                    transform: translateX(120%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
 
-      const Validator = {
-          username(value) {
-              return /^[a-zA-Z0-9]+$/.test(value);
-          },
+            @keyframes toastSlideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(120%);
+                    opacity: 0;
+                }
+            }
 
-          email(value) {
-              return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-          },
+            @media (max-width: 480px) {
+                .toast-container {
+                    left: 15px;
+                    right: 15px;
+                    width: auto;
+                }
+            }
+        `;
 
-          password(password, confirmPassword) {
-              if (password.length < 6) {
-                  return 'Password must be at least 6 characters';
-              }
-              if (password !== confirmPassword) {
-                  return 'Passwords do not match';
-              }
-              return '';
-          }
-      };
+        document.head.appendChild(style);
+    }
 
-      function toggleButton(btn, spinner, loading) {
-          if (!btn || !spinner) return;
+    show(message, type = 'info', duration = 5000) {
+        const configs = {
+            success: {
+                icon: '✓',
+                title: 'Success',
+                color: '#22c55e'
+            },
+            error: {
+                icon: '✕',
+                title: 'Error',
+                color: '#ef4444'
+            },
+            warning: {
+                icon: '⚠',
+                title: 'Warning',
+                color: '#f59e0b'
+            },
+            info: {
+                icon: 'ℹ',
+                title: 'Info',
+                color: '#3b82f6'
+            }
+        };
 
-          btn.disabled = loading;
-          spinner.style.display = loading ? 'inline-block' : 'none';
-      }
+        const config = configs[type] || configs.info;
 
-      function initPasswordToggle() {
-          document.querySelectorAll('.password-toggle').forEach(btn => {
-              btn.addEventListener('click', () => {
-                  const input = btn.parentElement.querySelector('input');
-                  if (!input) return;
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.style.borderColor = config.color;
 
-                  const hidden = input.type === 'password';
-                  input.type = hidden ? 'text' : 'password';
-                  btn.textContent = hidden ? '🙈' : '👁️';
-              });
-          });
-      }
+        toast.innerHTML = `
+            <div class="toast-icon" style="color:${config.color}">
+                ${config.icon}
+            </div>
 
-      function initLiveValidation() {
-          const usernameInput = document.getElementById('username');
-          const usernameError = document.getElementById('username-error');
+            <div>
+                <p class="toast-title">${config.title}</p>
+                <p class="toast-message">${message}</p>
+            </div>
 
-          usernameInput?.addEventListener('input', (e) => {
-              const value = e.target.value;
+            <button class="toast-close-btn">&times;</button>
+        `;
 
-              if (!/^[a-zA-Z0-9]*$/.test(value)) {
-                  e.target.value = value.replace(/[^a-zA-Z0-9]/g, '');
-                  if (usernameError) {
-                      usernameError.textContent = 'Only letters and numbers allowed';
-                      usernameError.classList.add('show');
-                  }
-              } else {
-                  usernameError?.classList.remove('show');
-              }
-          });
+        this.toastContainer.appendChild(toast);
 
-          const confirmInput = document.getElementById('confirm_password');
-          const passwordError = document.getElementById('password-error');
+        const closeToast = () => {
+            toast.style.animation = 'toastSlideOut 0.3s forwards';
 
-          confirmInput?.addEventListener('input', () => {
-              const password = document.getElementById('password')?.value || '';
-              const error = Validator.password(password, confirmInput.value);
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        };
 
-              if (error) {
-                  passwordError.textContent = error;
-                  passwordError.classList.add('show');
-              } else {
-                  passwordError?.classList.remove('show');
-              }
-          });
-      }
+        toast.querySelector('.toast-close-btn')
+            .addEventListener('click', closeToast);
 
-      function getUsers() {
-          return JSON.parse(localStorage.getItem('primes_users') || '[]');
-      }
+        if (duration > 0) {
+            setTimeout(closeToast, duration);
+        }
+    }
+}
 
-      function saveUsers(users) {
-          localStorage.setItem('primes_users', JSON.stringify(users));
-      }
+const toast = new SimpleToast();
 
-      function saveActivity(entry) {
-          const activity = JSON.parse(localStorage.getItem('primes_activity') || '[]');
-          activity.unshift(entry);
-          localStorage.setItem('primes_activity', JSON.stringify(activity.slice(0, 100)));
-      }
+// ==============================
+// Validators
+// ==============================
+const Validator = {
+    username(value) {
+        return /^[a-zA-Z0-9]+$/.test(value);
+    },
 
-      function initForm() {
-          const form = document.getElementById('registerForm');
-          if (!form) return;
+    email(value) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    },
 
-          form.addEventListener('submit', (e) => {
-              e.preventDefault();
+    password(password, confirmPassword) {
+        if (password.length < 6) {
+            return 'Password must be at least 6 characters';
+        }
 
-              const name = document.getElementById('name')?.value.trim();
-              const username = document.getElementById('username')?.value.trim();
-              const email = document.getElementById('email')?.value.trim().toLowerCase();
-              const password = document.getElementById('password')?.value || '';
-              const confirmPassword = document.getElementById('confirm_password')?.value || '';
-              const referralCode = document.getElementById('referral_code')?.value.trim().toUpperCase();
-              const rememberMe = document.getElementById('remember_me')?.checked || false;
-              const btn = document.getElementById('registerBtn');
-              const spinner = document.getElementById('btnSpinner');
+        if (password !== confirmPassword) {
+            return 'Passwords do not match';
+        }
 
-              if (!name) return toast.show('Full name is required', 'error');
-              if (!Validator.username(username)) return toast.show('Username must be letters and numbers only', 'error');
-              if (!Validator.email(email)) return toast.show('Enter a valid email address', 'error');
+        return '';
+    }
+};
 
-              const passwordError = Validator.password(password, confirmPassword);
-              if (passwordError) return toast.show(passwordError, 'error');
+// ==============================
+// Utilities
+// ==============================
+function toggleButton(button, spinner, loading) {
+    if (!button || !spinner) return;
 
-              const users = getUsers();
-              if (users.some(user => user.username.toLowerCase() === username.toLowerCase())) {
-                  toggleButton(btn, spinner, false);
-                  return toast.show('This username is already taken. Choose another one.', 'error');
-              }
-              if (users.some(user => user.email === email)) {
-                  toggleButton(btn, spinner, false);
-                  return toast.show('An account with this email already exists.', 'error');
-              }
+    button.disabled = loading;
+    button.style.opacity = loading ? '0.7' : '1';
+    spinner.style.display = loading ? 'inline-block' : 'none';
+}
 
-              // Validate Referral Code if provided
-              let referrerUsername = '';
-              let hasReferrer = false;
-              if (referralCode) {
-                  if (referralCode.startsWith('REF-')) {
-                      referrerUsername = referralCode.replace('REF-', '').trim().toLowerCase();
-                  } else {
-                      referrerUsername = referralCode.trim().toLowerCase();
-                  }
+function generateTransactionId() {
+    return `TX-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
+}
 
-                  if (referrerUsername === username.toLowerCase()) {
-                      toggleButton(btn, spinner, false);
-                      return toast.show('You cannot refer yourself.', 'error');
-                  }
+// ==============================
+// Password Toggle
+// ==============================
+function initPasswordToggle() {
+    const toggles = document.querySelectorAll('.password-toggle');
 
-                  const referrerExists = users.some(u => u.username.toLowerCase() === referrerUsername);
-                  if (!referrerExists) {
-                      toggleButton(btn, spinner, false);
-                      return toast.show('Invalid referral code.', 'error');
-                  }
-                  hasReferrer = true;
-              }
+    toggles.forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const input = toggle.parentElement.querySelector('input');
 
-              toggleButton(btn, spinner, true);
+            if (!input) return;
 
-              setTimeout(() => {
-                  const newUser = {
-                      name,
-                      username,
-                      email,
-                      password,
-                      rememberMe,
-                      createdAt: new Date().toISOString(),
-                      balance: 0.00,
-                      referralBalance: 0.00,
-                      referralCount: 0,
-                      referrals: [],
-                      transactions: [],
-                      numbersPurchased: 0,
-                      totalRecharge: 0.00
-                  };
+            const isPassword = input.type === 'password';
 
-                  if (hasReferrer) {
-                      const referrerIndex = users.findIndex(u => u.username.toLowerCase() === referrerUsername);
-                      if (referrerIndex !== -1) {
-                          const referrer = users[referrerIndex];
-                          if (referrer.balance === undefined) referrer.balance = 0.00;
-                          if (referrer.referralBalance === undefined) referrer.referralBalance = 0.00;
-                          if (referrer.referralCount === undefined) referrer.referralCount = 0;
-                          if (referrer.referrals === undefined) referrer.referrals = [];
-                          if (referrer.transactions === undefined) referrer.transactions = [];
+            input.type = isPassword ? 'text' : 'password';
+            toggle.textContent = isPassword ? '🙈' : '👁️';
+        });
+    });
+}
 
-                          referrer.balance += 0.50;
-                          referrer.referralBalance += 0.50;
-                          referrer.referralCount += 1;
-                          referrer.referrals.push(username);
-                          referrer.transactions.unshift({
-                              id: 'TX-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-                              type: 'Referral Reward',
-                              amount: 0.50,
-                              description: 'Referred ' + name + ' (@' + username + ')',
-                              timestamp: new Date().toISOString()
-                          });
+// ==============================
+// Live Validation
+// ==============================
+function initLiveValidation() {
+    const usernameInput = document.getElementById('username');
+    const usernameError = document.getElementById('username-error');
 
-                          newUser.referredBy = referrer.username;
-                          users[referrerIndex] = referrer;
-                      }
-                  }
+    usernameInput?.addEventListener('input', (e) => {
+        const cleaned = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
 
-                  users.push(newUser);
-                  saveUsers(users);
-                  saveActivity({
-                      type: 'signup',
-                      username,
-                      message: `${name} (${username}) created a new account`,
-                      timestamp: new Date().toISOString()
-                  });
+        if (e.target.value !== cleaned) {
+            e.target.value = cleaned;
 
-                  toast.show('Account created successfully! Redirecting to login...', 'success');
-                  setTimeout(() => {
-                      window.location.href = 'login.html?success=' + encodeURIComponent('Account created successfully. Please log in.');
-                  }, 1200);
-                  toggleButton(btn, spinner, false);
-              }, 900);
-          });
-      }
+            if (usernameError) {
+                usernameError.textContent = 'Only letters and numbers allowed';
+                usernameError.classList.add('show');
+            }
+        } else {
+            usernameError?.classList.remove('show');
+        }
+    });
 
-      document.addEventListener('DOMContentLoaded', () => {
-          initPasswordToggle();
-          initLiveValidation();
-          initForm();
-      });
-    </script>
+    const confirmInput = document.getElementById('confirm_password');
+    const passwordError = document.getElementById('password-error');
+
+    confirmInput?.addEventListener('input', () => {
+        const password =
+            document.getElementById('password')?.value || '';
+
+        const error = Validator.password(
+            password,
+            confirmInput.value
+        );
+
+        if (error) {
+            passwordError.textContent = error;
+            passwordError.classList.add('show');
+        } else {
+            passwordError?.classList.remove('show');
+        }
+    });
+}
+
+// ==============================
+// Local Storage
+// ==============================
+function getUsers() {
+    return JSON.parse(
+        localStorage.getItem('primes_users') || '[]'
+    );
+}
+
+function saveUsers(users) {
+    localStorage.setItem(
+        'primes_users',
+        JSON.stringify(users)
+    );
+}
+
+function saveActivity(entry) {
+    const activities = JSON.parse(
+        localStorage.getItem('primes_activity') || '[]'
+    );
+
+    activities.unshift(entry);
+
+    localStorage.setItem(
+        'primes_activity',
+        JSON.stringify(activities.slice(0, 100))
+    );
+}
+
+// ==============================
+// Registration Form
+// ==============================
+function initForm() {
+    const form = document.getElementById('registerForm');
+
+    if (!form) return;
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const name =
+            document.getElementById('name')?.value.trim();
+
+        const username =
+            document.getElementById('username')?.value.trim();
+
+        const email =
+            document.getElementById('email')
+                ?.value.trim()
+                .toLowerCase();
+
+        const password =
+            document.getElementById('password')?.value || '';
+
+        const confirmPassword =
+            document.getElementById('confirm_password')?.value || '';
+
+        const referralCode =
+            document.getElementById('referral_code')
+                ?.value.trim()
+                .toUpperCase();
+
+        const rememberMe =
+            document.getElementById('remember_me')
+                ?.checked || false;
+
+        const button =
+            document.getElementById('registerBtn');
+
+        const spinner =
+            document.getElementById('btnSpinner');
+
+        // Validation
+        if (!name) {
+            return toast.show(
+                'Full name is required',
+                'error'
+            );
+        }
+
+        if (!Validator.username(username)) {
+            return toast.show(
+                'Username must contain only letters and numbers',
+                'error'
+            );
+        }
+
+        if (!Validator.email(email)) {
+            return toast.show(
+                'Please enter a valid email address',
+                'error'
+            );
+        }
+
+        const passwordError = Validator.password(
+            password,
+            confirmPassword
+        );
+
+        if (passwordError) {
+            return toast.show(passwordError, 'error');
+        }
+
+        const users = getUsers();
+
+        const usernameExists = users.some(
+            user =>
+                user.username.toLowerCase() ===
+                username.toLowerCase()
+        );
+
+        if (usernameExists) {
+            return toast.show(
+                'Username already exists',
+                'error'
+            );
+        }
+
+        const emailExists = users.some(
+            user => user.email === email
+        );
+
+        if (emailExists) {
+            return toast.show(
+                'Email already exists',
+                'error'
+            );
+        }
+
+        // Referral
+        let referredBy = null;
+
+        if (referralCode) {
+            referredBy = referralCode.replace(
+                'REF-',
+                ''
+            ).toLowerCase();
+
+            if (
+                referredBy === username.toLowerCase()
+            ) {
+                return toast.show(
+                    'You cannot refer yourself',
+                    'error'
+                );
+            }
+
+            const referrer = users.find(
+                user =>
+                    user.username.toLowerCase() ===
+                    referredBy
+            );
+
+            if (!referrer) {
+                return toast.show(
+                    'Invalid referral code',
+                    'error'
+                );
+            }
+        }
+
+        toggleButton(button, spinner, true);
+
+        setTimeout(() => {
+            const newUser = {
+                name,
+                username,
+                email,
+                password,
+                rememberMe,
+                balance: 0,
+                referralBalance: 0,
+                referralCount: 0,
+                referrals: [],
+                transactions: [],
+                numbersPurchased: 0,
+                totalRecharge: 0,
+                createdAt: new Date().toISOString()
+            };
+
+            // Reward referrer
+            if (referredBy) {
+                const referrer = users.find(
+                    user =>
+                        user.username.toLowerCase() ===
+                        referredBy
+                );
+
+                if (referrer) {
+                    referrer.balance =
+                        (referrer.balance || 0) + 0.5;
+
+                    referrer.referralBalance =
+                        (referrer.referralBalance || 0) + 0.5;
+
+                    referrer.referralCount =
+                        (referrer.referralCount || 0) + 1;
+
+                    referrer.referrals =
+                        referrer.referrals || [];
+
+                    referrer.transactions =
+                        referrer.transactions || [];
+
+                    referrer.referrals.push(username);
+
+                    referrer.transactions.unshift({
+                        id: generateTransactionId(),
+                        type: 'Referral Reward',
+                        amount: 0.5,
+                        description: `Referred ${name} (@${username})`,
+                        timestamp: new Date().toISOString()
+                    });
+
+                    newUser.referredBy =
+                        referrer.username;
+                }
+            }
+
+            users.push(newUser);
+
+            saveUsers(users);
+
+            saveActivity({
+                type: 'signup',
+                username,
+                message: `${name} (${username}) created a new account`,
+                timestamp: new Date().toISOString()
+            });
+
+            toast.show(
+                'Account created successfully!',
+                'success'
+            );
+
+            toggleButton(button, spinner, false);
+
+            setTimeout(() => {
+                window.location.href =
+                    'login.html?success=' +
+                    encodeURIComponent(
+                        'Account created successfully. Please log in.'
+                    );
+            }, 1200);
+
+        }, 1000);
+    });
+}
+
+// ==============================
+// Init App
+// ==============================
+document.addEventListener('DOMContentLoaded', () => {
+    initPasswordToggle();
+    initLiveValidation();
+    initForm();
+});
+</script>
 </body>
 </html>
