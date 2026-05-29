@@ -76,7 +76,7 @@
         #loginBtn8:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
         #loginBtn8:active { transform: translateY(0); }
     </style>
-<script>
+ <script>
 // ── Toast Notification System ──
 class SimpleToast {
     constructor() {
@@ -128,12 +128,12 @@ class SimpleToast {
         };
 
         const config = configs[type] || configs.info;
-        const toast = document.createElement('div');
+        const toastEl = document.createElement('div');
 
-        toast.style.cssText = `
+        toastEl.style.cssText = `
             width: 100%;
             padding: 16px 20px;
-            background-color: blue;
+            background-color: #fff;
             border-radius: 8px;
             display: grid;
             grid-template-columns: 48px 1fr 28px;
@@ -145,40 +145,35 @@ class SimpleToast {
             animation: toastSlideIn 0.3s ease-out;
         `;
 
-        toast.innerHTML = `
+        toastEl.innerHTML = `
             <div style="text-align:center;">
-                <span style="font-size:30px; color:${config.color}; line-height:1;">${config.icon}</span>
+                <span style="font-size:26px; color:${config.color};">${config.icon}</span>
             </div>
             <div>
-                <p style="margin:0 0 4px; font-weight:600; font-size:15px; color:#101020;">${config.title}</p>
-                <p style="margin:0; font-size:12px; color:white; line-height:1.4;">${message}</p>
+                <p style="margin:0 0 4px; font-weight:600; font-size:14px;">${config.title}</p>
+                <p style="margin:0; font-size:12px; color:#555;">${message}</p>
             </div>
-            <button class="toast-close-btn" aria-label="Close" style="
-                background: none;
-                border: none;
-                font-size: 22px;
-                color: #aaa;
-                cursor: pointer;
-                line-height: 1;
-                padding: 0;
-                align-self: flex-start;
-            ">×</button>
+            <button class="toast-close-btn" style="background:none;border:none;cursor:pointer;font-size:20px;color:#aaa;">×</button>
         `;
 
-        this.toastContainer.appendChild(toast);
+        this.toastContainer.appendChild(toastEl);
 
         const close = () => {
-            toast.style.animation = 'toastSlideOut 0.3s ease-out forwards';
-            toast.addEventListener('animationend', () => toast.remove(), { once: true });
+            toastEl.style.animation = 'toastSlideOut 0.3s ease-out forwards';
+            toastEl.addEventListener('animationend', () => toastEl.remove(), { once: true });
         };
 
-        toast.querySelector('.toast-close-btn').addEventListener('click', close);
+        toastEl.querySelector('.toast-close-btn').addEventListener('click', close);
         if (duration > 0) setTimeout(close, duration);
     }
 }
 
 // ── Initialize Toast ──
 const toast = new SimpleToast();
+
+// ── Admin Credentials ──
+const ADMIN_EMAIL    = 'admin@primes.com';
+const ADMIN_PASSWORD = 'admin123'; // change to your real admin password
 
 // ── DOM Ready ──
 document.addEventListener('DOMContentLoaded', () => {
@@ -189,75 +184,97 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (togglePassword && passwordInput) {
         togglePassword.addEventListener('click', function () {
-            const isHidden = passwordInput.type === 'password';
+            const isHidden     = passwordInput.type === 'password';
             passwordInput.type = isHidden ? 'text' : 'password';
-            this.textContent = isHidden ? '🙈' : '👁';
+            this.textContent   = isHidden ? '🙈' : '👁';
         });
     }
 
     // ── Login Form Submit ──
     const form      = document.getElementById('loginForm');
-    const submitBtn = document.getElementById('loginBtn8'); // ✅ fixed ID
+    const submitBtn = document.getElementById('loginBtn8');
 
     if (form && submitBtn) {
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const originalText = submitBtn.innerHTML;
+            const loginInputValue = document.getElementById('login_input')?.value.trim();
+            const passwordValue   = document.getElementById('password')?.value || '';
+
+            // ── Validate empty fields FIRST ──
+            if (!loginInputValue || !passwordValue) {
+                toast.show('Email/username and password are required.', 'error');
+                return;
+            }
+
+            const originalText  = submitBtn.innerHTML;
             submitBtn.innerHTML = 'Logging in...';
             submitBtn.disabled  = true;
 
             try {
-                const loginInputValue = document.getElementById('login_input')?.value.trim();
-                const passwordValue = document.getElementById('password')?.value || '';
+                // ── Check admin credentials ──
+                const isAdminCredentials =
+                    (loginInputValue.toLowerCase() === ADMIN_EMAIL ||
+                     loginInputValue.toLowerCase() === 'admin') &&
+                     passwordValue === ADMIN_PASSWORD;
+
+                // ── Check saved users from localStorage ──
                 const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
 
                 const matchedUser = users.find(user =>
-                    ((user.email || '').toLowerCase() === loginInputValue.toLowerCase() ||
+                    ((user.email    || '').toLowerCase() === loginInputValue.toLowerCase() ||
                      (user.username || '').toLowerCase() === loginInputValue.toLowerCase()) &&
-                     user.password === passwordValue
+                      user.password === passwordValue
                 );
 
-                const isAdminCredentials =
-                    ['admin', 'admin@primes.com'].includes(loginInputValue.toLowerCase()) &&
-                    passwordValue === 'admin123';
-
-                if (!loginInputValue || !passwordValue) {
-                    throw new Error('Email/username and password are required.');
-                }
-
-                if (!matchedUser && !isAdminCredentials) {
+                // ── Reject if neither admin nor matched user ──
+                if (!isAdminCredentials && !matchedUser) {
                     toast.show('Invalid email/username or password.', 'error');
                     return;
                 }
 
+                // ── Build session ──
                 const sessionData = isAdminCredentials
-                    ? { username: 'admin', email: 'admin@primes.com', name: 'Admin', role: 'admin', loggedAt: new Date().toISOString() }
-                    : { username: matchedUser.username, email: matchedUser.email, name: matchedUser.name, role: 'user', loggedAt: new Date().toISOString() };
+                    ? {
+                        username: 'admin',
+                        email:    ADMIN_EMAIL,
+                        name:     'Admin',
+                        role:     'admin',
+                        loggedAt: new Date().toISOString()
+                      }
+                    : {
+                        username: matchedUser.username,
+                        email:    matchedUser.email,
+                        name:     matchedUser.name,
+                        role:     'user',
+                        loggedAt: new Date().toISOString()
+                      };
 
                 localStorage.setItem('primes_session', JSON.stringify(sessionData));
 
+                // ── Activity log (non-admin only) ──
                 if (!isAdminCredentials) {
                     const activityLog = JSON.parse(localStorage.getItem('primes_activity') || '[]');
                     activityLog.unshift({
-                        type: 'login',
-                        username: sessionData.username,
-                        message: `${sessionData.name} signed in`,
+                        type:      'login',
+                        username:  sessionData.username,
+                        message:   `${sessionData.name} signed in`,
                         timestamp: new Date().toISOString()
                     });
                     localStorage.setItem('primes_activity', JSON.stringify(activityLog.slice(0, 100)));
                 }
 
-                toast.show('Login successful! Redirecting...', 'success');
+                toast.show('Login successful! Redirecting... 🎉', 'success');
                 setTimeout(() => {
                     window.location.href = isAdminCredentials ? 'admin.html' : 'dashboard.html';
                 }, 900);
+
             } catch (error) {
                 console.error('Login error:', error);
-                toast.show(error.message || 'Network error. Please try again.', 'error');
+                toast.show(error.message || 'Something went wrong. Please try again.', 'error');
             } finally {
                 submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
+                submitBtn.disabled  = false;
             }
         });
     }
