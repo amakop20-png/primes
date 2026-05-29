@@ -280,12 +280,17 @@ function renderDashboard() {
         }
     }
 }
-function handleAddFunds() {
+  function handleAddFunds() {
+    const paystackURL = new URL("https://paystack.shop/pay/x0rmg9yt1d");
+    paystackURL.searchParams.set("key", "pk_live_3ca1325fab85ff43b8f4232cbf01cd76077a021c");
+
     showToast("Redirecting to payment page... 💳", "info");
     setTimeout(() => {
         window.location.href = "https://paystack.shop/pay/x0rmg9yt1d";
-    }, 1200); // short delay so user sees the toast
+    }, 1200);
 }
+
+
 
 function handleReferralSimulation() {
     const friendName = prompt("Enter referred friend's full name to simulate a signup:");
