@@ -1264,7 +1264,8 @@ main > p {
       }
 
       .refund-content {
-        background: rgb(243, 226, 226);
+        margin: 10px;
+        background: var(--surface);
         padding: 2rem;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
       }
@@ -1341,7 +1342,7 @@ main > p {
       .prike {
         margin: 0;
         padding: 0;
-        background: linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 80%);
+        background: var(--surface);
       }
 
       .terms-container {
@@ -1369,7 +1370,7 @@ main > p {
       }
 
       .terms-content {
-        background: white;
+            background: var(--surface);
         border-radius: 12px;
         border: 1px solid rgba(0, 0, 0, 0.06);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);

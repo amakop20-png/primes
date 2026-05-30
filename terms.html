@@ -7,26 +7,44 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-   <header>
-    <div class="logo">
-      <img src="" alt="daveslogo">
+  <!-- Loader (first thing inside body) -->
+  <div class="loader-wrapper" id="loaderWrapper">
+    
+      <img src="77825-removebg-preview.png">
+  </div>
+  <!-- Header -->
+  <header >
+    <div class="header__logo">
+      <img src="77825-removebg-preview.png" alt="Dave's Social - Virtual Phone Numbers" width="80px" height="80px">
     </div>
-      <div class="nav">
-        <a href="index.html">Home</a>
-        <a href="terms.html">Terms of service</a>
-         <a href="">Privacy Policy</a>
-        <a href="">Help Center</a>
-        <a href="refund.html">Refund Policy</a>
-        <button class="btn">
-          <a href="login.html">Login</a>
-        </button>
-        <button class="btn2">Sign Up</button>
-       </div>
-     </header>
+    
+    <nav class="header__nav" id="nav">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="terms.html" class="nav-link">Terms</a>
+      <a href="#" class="nav-link">Privacy</a>
+      <a href="#" class="nav-link">Help</a>
+      <a href="refund.html" class="nav-link">Refunds</a>
+    </nav>
+
+    <div class="header__actions">
+      <!-- Theme Switcher -->
+      <button id="themeToggle" aria-label="Toggle theme" style="background: none; border: none; font-size: 1.25rem; color: var(--text); cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.25s; outline: none; margin-right: 8px;">
+        <i class="fa-solid fa-moon"></i>
+      </button>
+      <button class="btn-secondary"><a href="login.html">Log In</a></button>
+      <button class="btn-primary"><a href="signup.html">Sign Up</a></button>
+    </div>
+
+    <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </header>
      <div class="prike">
    <div class="terms-container">
         <div class="terms-header">
-            <h1>daveslogo</br></br> Terms of Service</h1>
+            <h1><img src="77825-removebg-preview.png" width="80px" height="80px"></h1></br></br> Terms of Service</h1>
             <p>Last Updated: 18-07-2025</p>
         </div>
         
@@ -117,26 +135,68 @@
         </div>
     </div>
     </div>
-    <script>
-          // Mobile menu toggle
-    const menuToggle = document.getElementById('menu-toggle');
-    const nav = document.getElementById('nav');
-
-    if (menuToggle) {
-      menuToggle.addEventListener('click', function() {
-        menuToggle.classList.toggle('open');
-        nav.classList.toggle('open');
-      });
-
-      // Close menu when a link is clicked
-      nav.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', function() {
-          menuToggle.classList.remove('open');
-          nav.classList.remove('open');
-        });
-      });
+<script>
+  // ── Theme: update icon based on dark/light ──
+  function updateLandingThemeUI(isDark) {
+    const themeToggle = document.getElementById('themeToggle');
+    if (!themeToggle) return;
+    const icon = themeToggle.querySelector('i');
+    if (icon) {
+      icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
     }
+  }
 
-    </script>
+  // ── Restore saved theme before page paints ──
+  const savedTheme = localStorage.getItem('dashboardTheme');
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-theme');
+  } else {
+    document.body.classList.remove('dark-theme');
+  }
+
+  // ── Mobile menu toggle ──
+  const menuToggle = document.getElementById('menu-toggle');
+  const nav        = document.getElementById('nav');
+
+  if (menuToggle && nav) {
+    menuToggle.addEventListener('click', function () {
+      menuToggle.classList.toggle('open');
+      nav.classList.toggle('open');
+    });
+
+    nav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', function () {
+        menuToggle.classList.remove('open');
+        nav.classList.remove('open');
+      });
+    });
+  }
+
+  // ── Theme toggle button ──
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-theme');
+      const isDark = document.body.classList.contains('dark-theme');
+      localStorage.setItem('dashboardTheme', isDark ? 'dark' : 'light');
+      updateLandingThemeUI(isDark);
+    });
+
+        // Hide loader when page fully loads
+    window.addEventListener('load', function () {
+      const loader = document.getElementById('loaderWrapper');
+      if (loader) {
+        loader.classList.add('hidden');
+
+        // Remove from DOM completely after fade out
+        setTimeout(function () {
+          loader.remove();
+        }, 500);
+      }
+    });
+    // Set correct icon on load
+    updateLandingThemeUI(document.body.classList.contains('dark-theme'));
+  }
+</script>
 </body>
 </html>
