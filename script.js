@@ -280,14 +280,124 @@ function renderDashboard() {
         }
     }
 }
-  function handleAddFunds() {
-    const paystackURL = new URL("https://paystack.shop/pay/x0rmg9yt1d");
-    paystackURL.searchParams.set("key", "pk_live_3ca1325fab85ff43b8f4232cbf01cd76077a021c");
+// ── Paystack Configuration ──
+const PAYSTACK_CONFIG = {
+    publicKey:   'pk_live_3ca1325fab85ff43b8f4232cbf01cd76077a021c',
+    paymentPage: 'https://paystack.shop/pay/x0rmg9yt1d',
+    minAmount:   100,
+    currency:    'NGN',
+};
 
-    showToast("Redirecting to payment page... 💳", "info");
-    setTimeout(() => {
-        window.location.href = "https://paystack.shop/pay/x0rmg9yt1d";
-    }, 1200);
+// ── Add Funds Handler ──
+async function handleAddFunds() {
+
+    // ── 1. Check Paystack is loaded ──
+    if (typeof PaystackPop === 'undefined') {
+        showToast('Payment system unavailable. Please refresh.', 'error');
+        return;
+    }
+
+    // ── 2. Get logged-in user ──
+    const user = getLiveUser();
+    if (!user) {
+        showToast('Session expired. Please log in again.', 'error');
+        setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+        return;
+    }
+
+    // ── 3. Get currency & prompt amount ──
+    const currency = getCurrency();
+    const symbol   = currency === 'NGN' ? '₦' : '$';
+
+    const input = prompt(`Enter amount to deposit (${symbol}):`);
+    if (input === null || input.trim() === '') return;
+
+    const rawVal = parseFloat(input.replace(/[^0-9.]/g, ''));
+
+    // ── 4. Validate amount ──
+    if (isNaN(rawVal) || rawVal <= 0) {
+        showToast('Please enter a valid amount.', 'error');
+        return;
+    }
+
+    if (currency === 'NGN' && rawVal < PAYSTACK_CONFIG.minAmount) {
+        showToast(`Minimum deposit is ₦${PAYSTACK_CONFIG.minAmount}.`, 'error');
+        return;
+    }
+
+    // ── 5. Convert to kobo ──
+    const amountInKobo = currency === 'NGN'
+        ? Math.round(rawVal * 100)
+        : Math.round(rawVal * CONVERSION_RATE * 100);
+
+    // ── 6. Generate unique reference ──
+    const transactionRef = 'DAVE-' + Date.now() + '-' + Math.random()
+        .toString(36)
+        .substr(2, 6)
+        .toUpperCase();
+
+    // ── 7. Open Paystack popup ──
+    showToast(`Opening payment for ${symbol}${rawVal.toLocaleString()}... 💳`, 'info');
+
+    const handler = PaystackPop.setup({
+        key:      PAYSTACK_CONFIG.publicKey,
+        email:    `${user.username}@daveslogo.com`, // generated email — Paystack requires one
+        amount:   amountInKobo,
+        currency: PAYSTACK_CONFIG.currency,
+        ref:      transactionRef,
+        channels: ['card', 'bank_transfer', 'ussd', 'bank'],
+
+        metadata: {
+            custom_fields: [
+                {
+                    display_name:  'Username',
+                    variable_name: 'username',
+                    value:         user.username || 'N/A'
+                },
+                {
+                    display_name:  'Full Name',
+                    variable_name: 'full_name',
+                    value:         user.name || 'N/A'
+                }
+            ]
+        },
+
+        callback: function(response) {
+            try {
+                const addedUSD = currency === 'NGN'
+                    ? rawVal / CONVERSION_RATE
+                    : rawVal;
+
+                user.balance       += addedUSD;
+                user.totalRecharge += addedUSD;
+
+                user.transactions.unshift({
+                    id:          transactionRef,
+                    type:        'Recharge',
+                    amount:      addedUSD,
+                    description: `Deposited ${symbol}${rawVal.toLocaleString()} via Paystack`,
+                    ref:         response.reference,
+                    status:      'success',
+                    timestamp:   new Date().toISOString()
+                });
+
+                saveLiveUser(user);
+                renderDashboard();
+                showToast(`✅ ${symbol}${rawVal.toLocaleString()} deposited successfully!`, 'success');
+                console.info(`[Paystack] Payment verified — Ref: ${response.reference}`);
+
+            } catch (err) {
+                console.error('[Paystack] Callback error:', err);
+                showToast('Payment received but balance update failed. Contact support.', 'warning');
+            }
+        },
+
+        onClose: function() {
+            showToast('Payment window closed. No charge was made.', 'warning');
+        }
+    });
+
+    handler.openIframe();
 }
 
 
