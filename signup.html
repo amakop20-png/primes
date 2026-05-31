@@ -650,19 +650,33 @@ function initForm() {
                 timestamp: new Date().toISOString()
             });
 
+            // Auto log in by setting the session data
+            const sessionData = {
+                username: newUser.username,
+                email:    newUser.email,
+                name:     newUser.name,
+                role:     'user',
+                loggedAt: new Date().toISOString()
+            };
+            localStorage.setItem('primes_session', JSON.stringify(sessionData));
+
+            // Add activity log entry for auto-login
+            saveActivity({
+                type:      'login',
+                username:  sessionData.username,
+                message:   `${sessionData.name} signed in (auto-login after sign-up)`,
+                timestamp: new Date().toISOString()
+            });
+
             toast.show(
-                'Account created successfully!',
+                'Account created successfully! Logging you in...',
                 'success'
             );
 
             toggleButton(button, spinner, false);
 
             setTimeout(() => {
-                window.location.href =
-                    'login.html?success=' +
-                    encodeURIComponent(
-                        'Account created successfully. Please log in.'
-                    );
+                window.location.href = 'dashboard.html';
             }, 1200);
 
         }, 1000);
