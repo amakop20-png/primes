@@ -225,10 +225,20 @@ function initForm() {
             const result = await response.json();
 
             if (response.ok) {
+                // Auto log in by setting the session data
+                const sessionData = {
+                    username: username,
+                    email:    email,
+                    name:     name,
+                    role:     'user',
+                    loggedAt: new Date().toISOString()
+                };
+                localStorage.setItem('primes_session', JSON.stringify(sessionData));
+
                 toast.show('Account created successfully 🎉', 'success');
                 form.reset();
                 setTimeout(() => {
-                    window.location.href = '/dashboard.html';
+                    window.location.href = 'dashboard.html';
                 }, 1500);
             } else {
                 // Formspree returns errors array on failure
