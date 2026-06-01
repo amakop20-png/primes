@@ -37,11 +37,13 @@ if (overlay && sidebar) {
 function toggleDropdown() {
     const dropdown = document.getElementById('dropdown');
     const arrow    = document.getElementById('dropdownArrow');
+    const profileToggle = document.getElementById('profileToggle');
 
-    if (!dropdown || !arrow) return;
+    if (!dropdown || !arrow || !profileToggle) return;
 
-    dropdown.classList.toggle('show');
+    const isOpen = dropdown.classList.toggle('show');
     arrow.classList.toggle('open');
+    profileToggle.setAttribute('aria-expanded', isOpen.toString());
 }
 
 // ── Close dropdown when clicking outside ──
@@ -55,6 +57,7 @@ document.addEventListener('click', function(e) {
     if (!profileToggle.contains(e.target) && !dropdown.contains(e.target)) {
         dropdown.classList.remove('show');
         arrow.classList.remove('open');
+        profileToggle.setAttribute('aria-expanded', 'false');
     }
 });
 
@@ -78,10 +81,17 @@ function logout() {
 // ── Set username in dropdown on page load ──
 document.addEventListener('DOMContentLoaded', function() {
     const session  = JSON.parse(localStorage.getItem('primes_session') || '{}');
-    const nameEl   = document.getElementById('dashboardUsername');
+    const displayName = session.name || session.username || 'Guest';
+    const displayEmail = session.email || session.useremail || 'user@example.com';
 
-    if (nameEl) {
-        nameEl.textContent = session.name || session.username || 'Guest';
+    const nameEls = document.querySelectorAll('#dashboardUsername, .dropdown-name');
+    nameEls.forEach(el => {
+        el.textContent = displayName;
+    });
+
+    const emailEl = document.querySelector('.dropdown-email');
+    if (emailEl) {
+        emailEl.textContent = displayEmail;
     }
 });
 
