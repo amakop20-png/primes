@@ -200,9 +200,109 @@ header {
   color: var(--primary);
 }
 
-/* ══════════════════════════════════════
-   SIDEBAR
-══════════════════════════════════════ */
+/* ── Dropdown Wrapper ── */
+.profile-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* ── Profile Toggle (image + name + arrow) ── */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+.profile:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.profile img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+
+.username {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ── Arrow icon ── */
+.dropdown-arrow {
+  font-size: 11px;
+  transition: transform 0.25s ease;
+}
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+/* ── Dropdown Menu ── */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;              /* aligns to the right so it won't overflow left */
+  left: auto;            /* prevents it stretching toward sidebar */
+  background: #1c1c27;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  z-index: 999;          /* high enough to float above content but not block sidebar */
+  overflow: hidden;
+}
+
+/* ── Dropdown Links ── */
+.dropdown-content a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #f0f0f8;
+  text-decoration: none;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.dropdown-content a:last-child {
+  border-bottom: none;
+}
+.dropdown-content a:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+}
+
+/* ── Logout link special color ── */
+.dropdown-content a.logout {
+  color: #ff4d6d;
+}
+.dropdown-content a.logout:hover {
+  background: rgba(255, 77, 109, 0.1);
+}
+
+/* ── Show state ── */
+.dropdown-content.show {
+  display: block;
+  animation: dropIn 0.2s ease;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Sidebar stays on top ── */
+aside,
+.sidebar {
+  position: relative;
+  z-index: 100; /* lower than dropdown so dropdown floats above page but sidebar is independent */
+}
 aside {
   width: 260px;
   min-height: 100vh;

@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Balance Dashboard</title>
- <script src="https://js.paystack.co/v1/inline.js"></script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 
@@ -24,7 +24,7 @@
   </script>
 
 
-  
+
   <header>
     <div class="pride">
       <div class="logo">
@@ -36,16 +36,32 @@
     </div>
 
     <div class="match">
-      <div class="currency-switch" id="currencySwitch" style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: var(--border-light); padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; color: var(--text); border: 1px solid var(--border); transition: all 0.2s; user-select: none;">
+      <div class="currency-switch" id="currencySwitch"
+        style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: var(--border-light); padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; color: var(--text); border: 1px solid var(--border); transition: all 0.2s; user-select: none;">
         <span id="currencySymbol">$</span> <span id="currencyName">USD</span>
       </div>
       <div class="notification">
         <i class="fa-solid lfa-bel"></i>
         <span class="badge">3</span>
       </div>
-      <div class="profile">
-        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
-        <span class="username" id="dashboardUsername">Guest</span>
+    <div class="profile-dropdown">
+  
+  <!-- Clicking this toggles the dropdown -->
+  <div class="profile" onclick="toggleDropdown()" id="profileToggle">
+    <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
+    <span class="username" id="dashboardUsername">Guest</span>
+    <i class="fa-solid fa-chevron-down dropdown-arrow" id="dropdownArrow"></i>
+  </div>
+
+  <!-- Dropdown menu -->
+  <div id="dropdown" class="dropdown-content">
+    <a href="#home">🏠 Home</a>
+    <a href="#about">👤 About</a>
+    <a href="#contact">📞 Contact</a>
+    <a href="login.html" onclick="logout()">🚪 Logout</a>
+  </div>
+
+</div>
       </div>
     </div>
   </header>
@@ -147,7 +163,7 @@
         </ul>
       </div>
     </div>
-
+ 
   </main>
 
   <!-- Wallet Overview Popup -->
