@@ -201,7 +201,7 @@ header {
 }
 
 /* ── Dropdown Wrapper ── */
-.profile-dropdown {
+#ropdown {
   position: relative;
   display: inline-block;
 }
@@ -235,7 +235,7 @@ header {
 
 /* ── Arrow icon ── */
 .dropdown-arrow {
-  font-size: 11px;
+  font-size: 1rem;
   transition: transform 0.25s ease;
 }
 .dropdown-arrow.open {
@@ -246,7 +246,7 @@ header {
 .dropdown-content {
   display: none;
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(80% + 8px);
   right: 0;              /* aligns to the right so it won't overflow left */
   left: auto;            /* prevents it stretching toward sidebar */
   background: #1c1c27;

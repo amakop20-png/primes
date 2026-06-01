@@ -41,11 +41,14 @@
         <i class="fa-solid lfa-bel"></i>
         <span class="badge">3</span>
       </div>
-      <div class="profile">
-        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
-        <span class="username" id="buyUsername">John Doe</span>
-      </div>
-    </div>
+  
+  <!-- Clicking this toggles the dropdown -->
+  <div class="profile" onclick="toggleDropdown()" id="profileToggle">
+    <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
+    <span class="username" id="Username">precious emmanuel</span>
+    <i class="fa-solid fa-chevron-down dropdown-arrow" id="dropdownArrow"></i>
+  </div>
+  
   </header>
  
      <!-- Sidebar -->
@@ -150,7 +153,6 @@
       }
     });
   </script>
-  <script src="script.js"></script>
   <script src="buy.js"></script>
 </body>
 

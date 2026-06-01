@@ -31,6 +31,60 @@ if (overlay && sidebar) {
   });
 }
 
+
+
+// ── Dropdown Toggle ──
+function toggleDropdown() {
+    const dropdown = document.getElementById('dropdown');
+    const arrow    = document.getElementById('dropdownArrow');
+
+    if (!dropdown || !arrow) return;
+
+    dropdown.classList.toggle('show');
+    arrow.classList.toggle('open');
+}
+
+// ── Close dropdown when clicking outside ──
+document.addEventListener('click', function(e) {
+    const profileToggle = document.getElementById('profileToggle');
+    const dropdown      = document.getElementById('dropdown');
+    const arrow         = document.getElementById('dropdownArrow');
+
+    if (!profileToggle || !dropdown || !arrow) return;
+
+    if (!profileToggle.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('show');
+        arrow.classList.remove('open');
+    }
+});
+
+// ── Close dropdown on ESC key ──
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const dropdown = document.getElementById('dropdown');
+        const arrow    = document.getElementById('dropdownArrow');
+        if (dropdown) dropdown.classList.remove('show');
+        if (arrow)    arrow.classList.remove('open');
+    }
+});
+
+// ── Logout ──
+function logout() {
+    localStorage.removeItem('primes_session');
+    localStorage.removeItem('primes_currency');
+    window.location.href = 'login.html';
+}
+
+// ── Set username in dropdown on page load ──
+document.addEventListener('DOMContentLoaded', function() {
+    const session  = JSON.parse(localStorage.getItem('primes_session') || '{}');
+    const nameEl   = document.getElementById('dashboardUsername');
+
+    if (nameEl) {
+        nameEl.textContent = session.name || session.username || 'Guest';
+    }
+});
+
 // CLOSE ON WINDOW RESIZE
 window.addEventListener("resize", () => {
   if (window.innerWidth > 768 && sidebar) {
