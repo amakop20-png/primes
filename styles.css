@@ -1392,49 +1392,66 @@ main > p {
 
 
       .refund-container {
-        max-width: 800px;
-        margin: 2rem auto;
-        padding: 1.5rem;
+        max-width: 860px;
+        margin: 3rem auto;
+        padding: 0;
       }
 
       .refund-header {
         text-align: center;
+        padding: 2rem 1.25rem 0.75rem;
+      }
+
+      .refund-logo {
+        width: 50px;
+        height: auto;
+        margin: 0 auto 1rem;
+        display: block;
+        border-radius: 18px;
+        box-shadow: 0 12px 40px rgba(124, 58, 237, 0.12);
       }
 
       .refund-header h1 {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--dark);
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--text);
+        margin: 0;
         line-height: 1.1;
       }
 
-      .refund-header p {
-        font-size: 1rem;
+      .section-subtitle {
+        margin: 0.75rem auto 0;
+        color: var(--muted);
+        font-size: 0.98rem;
+        max-width: 34rem;
+        line-height: 1.6;
       }
 
       .refund-content {
-        margin: 10px;
+        margin: 0 1rem 2rem;
         background: var(--surface);
+        border: 1px solid rgba(229, 231, 235, 0.9);
+        border-radius: 28px;
         padding: 2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 28px 80px rgba(15, 23, 42, 0.08);
       }
 
       .refund-section {
-        margin-bottom: 1.5rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        padding-bottom: 1rem;
+        margin-bottom: 1.75rem;
+      }
+
+      .refund-section:last-child {
+        margin-bottom: 0;
       }
 
       .refund-section h2 {
-        font-size: 1.15rem;
-        font-weight: 600;
-        color: var(--dark);
-        margin-bottom: 0.75rem;
-        padding-bottom: 0.4rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 1rem;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        gap: 0.75rem;
       }
 
       .refund-section p {
