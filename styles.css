@@ -164,8 +164,8 @@ header {
 
 .badge {
   position: absolute;
-  top: -4px;
-  right: -6px;
+  top: 2px;
+  right: -4px;
   background: #ef4444;
   color: #fff;
   font-size: 9px;
@@ -268,12 +268,12 @@ header {
 .dropdown-content {
   display: none;
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 4px);
   right: 0;
   background: rgba(10, 14, 26, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
-  min-width: 240px;
+  min-width: 220px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
   z-index: 999;
   overflow: hidden;
