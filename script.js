@@ -79,7 +79,256 @@ function initPopupEvents() {
             }
         });
     }
+
+    // Support ?open=wallet query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('open') === 'wallet') {
+        setTimeout(openPopup, 100);
+    }
+
+    // Bind sidebar Wallet click
+    const sidebarWalletBtn = document.getElementById('sidebarWalletBtn');
+    if (sidebarWalletBtn) {
+        sidebarWalletBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openPopup();
+        });
+    }
+
+    // Bind sidebar Settings click
+    const sidebarSettingsBtn = document.getElementById('sidebarSettingsBtn');
+    if (sidebarSettingsBtn) {
+        sidebarSettingsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openSettings();
+        });
+    }
 }
+
+/* ══════════════════════════════════════
+   SETTINGS PANEL
+══════════════════════════════════════ */
+function openSettings() {
+    const overlay = document.getElementById('settingsOverlay');
+    if (!overlay) return;
+
+    // Pre-fill profile fields from session
+    const session = JSON.parse(localStorage.getItem('primes_session') || '{}');
+    const nameEl  = document.getElementById('settingsDisplayName');
+    const emailEl = document.getElementById('settingsEmail');
+    const phoneEl = document.getElementById('settingsPhone');
+    if (nameEl && session.name)   nameEl.value  = session.name;
+    if (emailEl && session.email) emailEl.value = session.email;
+    if (phoneEl && session.phone) phoneEl.value = session.phone;
+
+    // Pre-fill preferences
+    const currEl = document.getElementById('settingsCurrency');
+    if (currEl) currEl.value = localStorage.getItem('preferredCurrency') || 'NGN';
+    const langEl = document.getElementById('settingsLanguage');
+    if (langEl) langEl.value = localStorage.getItem('preferredLanguage') || 'en';
+
+    // Highlight current theme
+    updateSettingsThemeBtns();
+
+    // Pre-fill notifications
+    const notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{}');
+    const n = (id, def) => { const el = document.getElementById(id); if (el) el.checked = notifSettings[id] !== undefined ? notifSettings[id] : def; };
+    n('notifOtp', true); n('notifOrder', true); n('notifBalance', true); n('notifPromo', false);
+
+    // Password strength watcher
+    const newPwEl = document.getElementById('settingsNewPw');
+    if (newPwEl && !newPwEl._strengthWired) {
+        newPwEl.addEventListener('input', () => checkPasswordStrength(newPwEl.value));
+        newPwEl._strengthWired = true;
+    }
+
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    // Tab switching
+    document.querySelectorAll('.stab').forEach(btn => {
+        if (!btn._settingsWired) {
+            btn.addEventListener('click', () => switchSettingsTab(btn.dataset.tab));
+            btn._settingsWired = true;
+        }
+    });
+
+    // Close button
+    const closeBtn = document.getElementById('settingsCloseBtn');
+    if (closeBtn && !closeBtn._wired) {
+        closeBtn.addEventListener('click', closeSettings);
+        closeBtn._wired = true;
+    }
+
+    // Click outside to close
+    if (!overlay._wired) {
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeSettings(); });
+        overlay._wired = true;
+    }
+}
+
+function closeSettings() {
+    const overlay = document.getElementById('settingsOverlay');
+    if (overlay) overlay.classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function switchSettingsTab(tab) {
+    document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.stab-content').forEach(c => c.classList.remove('active'));
+    const activeBtn = document.querySelector(`.stab[data-tab="${tab}"]`);
+    const activeContent = document.getElementById(`stab-${tab}`);
+    if (activeBtn)     activeBtn.classList.add('active');
+    if (activeContent) activeContent.classList.add('active');
+}
+
+function saveProfileSettings() {
+    const name  = document.getElementById('settingsDisplayName')?.value.trim();
+    const email = document.getElementById('settingsEmail')?.value.trim();
+    const phone = document.getElementById('settingsPhone')?.value.trim();
+
+    if (!name) { showToast('Please enter your display name.', 'error'); return; }
+
+    const session = JSON.parse(localStorage.getItem('primes_session') || '{}');
+    session.name  = name;
+    if (email) session.email = email;
+    if (phone) session.phone = phone;
+    localStorage.setItem('primes_session', JSON.stringify(session));
+
+    // Update visible username in header
+    const usernameEl = document.getElementById('buyUsername') || document.getElementById('profileName');
+    if (usernameEl) usernameEl.textContent = name;
+
+    showToast('✅ Profile updated successfully!', 'success');
+}
+
+function savePasswordSettings() {
+    const oldPw  = document.getElementById('settingsOldPw')?.value;
+    const newPw  = document.getElementById('settingsNewPw')?.value;
+    const confPw = document.getElementById('settingsConfirmPw')?.value;
+
+    if (!oldPw || !newPw || !confPw) { showToast('Please fill in all password fields.', 'error'); return; }
+    if (newPw.length < 8)            { showToast('New password must be at least 8 characters.', 'error'); return; }
+    if (newPw !== confPw)            { showToast('Passwords do not match.', 'error'); return; }
+
+    // In a real app this would call your backend. For now we confirm & clear.
+    showToast('🔒 Password updated successfully!', 'success');
+    document.getElementById('settingsOldPw').value  = '';
+    document.getElementById('settingsNewPw').value  = '';
+    document.getElementById('settingsConfirmPw').value = '';
+    document.getElementById('pwStrengthBar').style.display = 'none';
+    document.getElementById('pwStrengthText').textContent = '';
+}
+
+function checkPasswordStrength(pw) {
+    const bar  = document.getElementById('pwStrengthBar');
+    const fill = document.getElementById('pwStrengthFill');
+    const text = document.getElementById('pwStrengthText');
+    if (!bar || !fill || !text) return;
+
+    bar.style.display = 'block';
+    let score = 0;
+    if (pw.length >= 8)              score++;
+    if (/[A-Z]/.test(pw))            score++;
+    if (/[0-9]/.test(pw))            score++;
+    if (/[^A-Za-z0-9]/.test(pw))     score++;
+
+    const levels = [
+        { w: '25%',  bg: '#ef4444', label: 'Weak' },
+        { w: '50%',  bg: '#f59e0b', label: 'Fair' },
+        { w: '75%',  bg: '#3b82f6', label: 'Good' },
+        { w: '100%', bg: '#10b981', label: 'Strong' },
+    ];
+    const l = levels[Math.max(0, score - 1)] || levels[0];
+    fill.style.width      = l.w;
+    fill.style.background = l.bg;
+    text.textContent      = `Password strength: ${l.label}`;
+}
+
+function savePreferences() {
+    const currency = document.getElementById('settingsCurrency')?.value;
+    const language = document.getElementById('settingsLanguage')?.value;
+    if (currency) localStorage.setItem('preferredCurrency', currency);
+    if (language) localStorage.setItem('preferredLanguage', language);
+
+    // Sync currency switch in buy page
+    if (currency === 'USD') {
+        const sym  = document.getElementById('currencySymbol');
+        const name = document.getElementById('currencyName');
+        if (sym)  sym.textContent  = '$';
+        if (name) name.textContent = 'USD';
+        localStorage.setItem('buyPageCurrency', 'USD');
+    } else {
+        const sym  = document.getElementById('currencySymbol');
+        const name = document.getElementById('currencyName');
+        if (sym)  sym.textContent  = '₦';
+        if (name) name.textContent = 'NGN';
+        localStorage.setItem('buyPageCurrency', 'NGN');
+    }
+
+    showToast('✅ Preferences saved!', 'success');
+}
+
+function saveNotifSettings() {
+    const settings = {
+        notifOtp:     document.getElementById('notifOtp')?.checked,
+        notifOrder:   document.getElementById('notifOrder')?.checked,
+        notifBalance: document.getElementById('notifBalance')?.checked,
+        notifPromo:   document.getElementById('notifPromo')?.checked,
+    };
+    localStorage.setItem('notifSettings', JSON.stringify(settings));
+    showToast('🔔 Notification settings saved!', 'success');
+}
+
+function setTheme(theme) {
+    if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+        localStorage.setItem('dashboardTheme', 'dark');
+    } else {
+        document.body.classList.remove('dark-theme');
+        localStorage.setItem('dashboardTheme', 'light');
+    }
+    updateThemeUI(theme === 'dark');
+    updateSettingsThemeBtns();
+}
+
+function updateSettingsThemeBtns() {
+    const isDark = document.body.classList.contains('dark-theme');
+    const lightBtn = document.getElementById('themeLight');
+    const darkBtn  = document.getElementById('themeDark');
+    if (lightBtn) lightBtn.classList.toggle('active', !isDark);
+    if (darkBtn)  darkBtn.classList.toggle('active',  isDark);
+}
+
+function togglePw(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+}
+
+function previewAvatar(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = document.getElementById('settingsAvatarImg');
+        if (img) img.src = e.target.result;
+        // Also update header profile image
+        const headerImg = document.querySelector('.profile img');
+        if (headerImg) headerImg.src = e.target.result;
+        localStorage.setItem('userAvatar', e.target.result);
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+function confirmDeleteAccount() {
+    if (confirm('⚠️ Are you sure you want to permanently delete your account? This action cannot be undone.')) {
+        localStorage.clear();
+        window.location.href = 'login.html';
+    }
+}
+
 
 
 function initScrollEvents() {
@@ -174,21 +423,41 @@ function getLiveUser() {
     if (!session || !session.username) return null;
     const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
     let user = users.find(u => u.username.toLowerCase() === session.username.toLowerCase());
-    if (user) {
-        let changed = false;
-        if (user.balance === undefined) { user.balance = 0.00; changed = true; }
-        if (user.referralBalance === undefined) { user.referralBalance = 0.00; changed = true; }
-        if (user.referralCount === undefined) { user.referralCount = 0; changed = true; }
-        if (user.referrals === undefined) { user.referrals = []; changed = true; }
-        if (user.transactions === undefined) { user.transactions = []; changed = true; }
-        if (user.numbersPurchased === undefined) { user.numbersPurchased = 0; changed = true; }
-        if (user.totalRecharge === undefined) { user.totalRecharge = 0.00; changed = true; }
-        
-        if (changed) {
-            const index = users.findIndex(u => u.username.toLowerCase() === user.username.toLowerCase());
-            users[index] = user;
-            localStorage.setItem('primes_users', JSON.stringify(users));
-        }
+
+    // ── Auto-create record for users who registered before the fix ──
+    if (!user) {
+        user = {
+            username:        session.username,
+            email:           session.email || '',
+            name:            session.name  || session.username,
+            role:            session.role  || 'user',
+            balance:         0.00,
+            totalRecharge:   0.00,
+            referralBalance: 0.00,
+            referralCount:   0,
+            numbersPurchased:0,
+            referrals:       [],
+            transactions:    [],
+            createdAt:       new Date().toISOString()
+        };
+        users.push(user);
+        localStorage.setItem('primes_users', JSON.stringify(users));
+    }
+
+    // ── Ensure all fields exist (migration guard) ──
+    let changed = false;
+    if (user.balance === undefined)          { user.balance = 0.00; changed = true; }
+    if (user.referralBalance === undefined)  { user.referralBalance = 0.00; changed = true; }
+    if (user.referralCount === undefined)    { user.referralCount = 0; changed = true; }
+    if (user.referrals === undefined)        { user.referrals = []; changed = true; }
+    if (user.transactions === undefined)     { user.transactions = []; changed = true; }
+    if (user.numbersPurchased === undefined) { user.numbersPurchased = 0; changed = true; }
+    if (user.totalRecharge === undefined)    { user.totalRecharge = 0.00; changed = true; }
+
+    if (changed) {
+        const index = users.findIndex(u => u.username.toLowerCase() === user.username.toLowerCase());
+        users[index] = user;
+        localStorage.setItem('primes_users', JSON.stringify(users));
     }
     return user;
 }
@@ -214,14 +483,19 @@ function toggleCurrency() {
 }
 
 function formatCurrency(val) {
+    const p = parseFloat(val) || 0;
+    const naira = p * CONVERSION_RATE;
+    const usdStr = '$' + p.toFixed(2);
+    const nairaStr = '₦' + naira.toLocaleString('en-NG', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+    
     const currency = getCurrency();
     if (currency === 'USD') {
-        return '$' + val.toFixed(2);
+        return `${usdStr} (${nairaStr})`;
     } else {
-        return '₦' + (val * CONVERSION_RATE).toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
+        return `${nairaStr} (${usdStr})`;
     }
 }
 
@@ -283,21 +557,57 @@ function renderDashboard() {
 // ── Paystack Configuration ──
 const PAYSTACK_CONFIG = {
     publicKey:   'pk_live_3ca1325fab85ff43b8f4232cbf01cd76077a021c',
-    paymentPage: 'https://paystack.shop/pay/x0rmg9yt1d',
-    minAmount:   100,
-    currency:    'NGN',
+    minAmountNGN: 100,   // ₦100 minimum
+    minAmountUSD: 1,     // $1 minimum
 };
 
-// ── Add Funds Handler ──
-async function handleAddFunds() {
+// ── Dynamically load Paystack SDK if not present ──
+function loadPaystackSDK() {
+    return new Promise((resolve, reject) => {
+        if (typeof PaystackPop !== 'undefined') { resolve(); return; }
+        const existing = document.querySelector('script[src*="paystack"]');
+        if (existing) {
+            existing.addEventListener('load', resolve);
+            existing.addEventListener('error', reject);
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://js.paystack.co/v1/inline.js';
+        script.onload  = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
 
-    // ── 1. Check Paystack is loaded ──
-    if (typeof PaystackPop === 'undefined') {
-        showToast('Payment system unavailable. Please refresh.', 'error');
-        return;
-    }
+// ── Open the styled deposit modal ──
+function openDepositModal() {
+    const currency = getCurrency();
+    const isNGN    = currency === 'NGN';
+    const symbol   = isNGN ? '₦' : '$';
+    const minAmt   = isNGN ? PAYSTACK_CONFIG.minAmountNGN : PAYSTACK_CONFIG.minAmountUSD;
 
-    // ── 2. Get logged-in user ──
+    // Update modal labels
+    const symEl = document.getElementById('depositSymbol');
+    const minEl = document.getElementById('depositMinLabel');
+    const inp   = document.getElementById('depositAmountInput');
+    const errEl = document.getElementById('depositError');
+    if (symEl) symEl.textContent = symbol;
+    if (minEl) minEl.textContent = symbol + minAmt.toLocaleString();
+    if (inp)   { inp.value = ''; inp.min = minAmt; inp.placeholder = `e.g. ${isNGN ? '1000' : '10'}`; }
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+
+    // Show modal as flex
+    const modal = document.getElementById('depositModal');
+    if (modal) { modal.style.display = 'flex'; setTimeout(() => inp && inp.focus(), 100); }
+}
+
+function closeDepositModal() {
+    const modal = document.getElementById('depositModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// ── Launch Paystack after user enters amount ──
+async function launchPaystack(rawVal) {
     const user = getLiveUser();
     if (!user) {
         showToast('Session expired. Please log in again.', 'error');
@@ -305,100 +615,138 @@ async function handleAddFunds() {
         return;
     }
 
-    // ── 3. Get currency & prompt amount ──
     const currency = getCurrency();
-    const symbol   = currency === 'NGN' ? '₦' : '$';
+    const isNGN   = currency === 'NGN';
+    const symbol  = isNGN ? '₦' : '$';
 
-    const input = prompt(`Enter amount to deposit (${symbol}):`);
-    if (input === null || input.trim() === '') return;
-
-    const rawVal = parseFloat(input.replace(/[^0-9.]/g, ''));
-
-    // ── 4. Validate amount ──
-    if (isNaN(rawVal) || rawVal <= 0) {
-        showToast('Please enter a valid amount.', 'error');
-        return;
-    }
-
-    if (currency === 'NGN' && rawVal < PAYSTACK_CONFIG.minAmount) {
-        showToast(`Minimum deposit is ₦${PAYSTACK_CONFIG.minAmount}.`, 'error');
-        return;
-    }
-
-    // ── 5. Convert to kobo ──
-    const amountInKobo = currency === 'NGN'
+    // Amount in kobo (Paystack always expects NGN kobo)
+    const amountInKobo = isNGN
         ? Math.round(rawVal * 100)
         : Math.round(rawVal * CONVERSION_RATE * 100);
 
-    // ── 6. Generate unique reference ──
     const transactionRef = 'DAVE-' + Date.now() + '-' + Math.random()
-        .toString(36)
-        .substr(2, 6)
-        .toUpperCase();
-
-    // ── 7. Open Paystack popup ──
-    showToast(`Opening payment for ${symbol}${rawVal.toLocaleString()}... 💳`, 'info');
+        .toString(36).substr(2, 6).toUpperCase();
 
     const handler = PaystackPop.setup({
         key:      PAYSTACK_CONFIG.publicKey,
-        email:    `${user.username}@daveslogo.com`, // generated email — Paystack requires one
+        email:    user.email || (user.username + '@davessocial.com'),
         amount:   amountInKobo,
-        currency: PAYSTACK_CONFIG.currency,
+        currency: 'NGN',
         ref:      transactionRef,
         channels: ['card', 'bank_transfer', 'ussd', 'bank'],
+        label:    user.name || user.username,
 
         metadata: {
             custom_fields: [
-                {
-                    display_name:  'Username',
-                    variable_name: 'username',
-                    value:         user.username || 'N/A'
-                },
-                {
-                    display_name:  'Full Name',
-                    variable_name: 'full_name',
-                    value:         user.name || 'N/A'
-                }
+                { display_name: 'Username',  variable_name: 'username',  value: user.username || 'N/A' },
+                { display_name: 'Full Name', variable_name: 'full_name', value: user.name      || 'N/A' }
             ]
         },
 
         callback: function(response) {
-            try {
-                const addedUSD = currency === 'NGN'
-                    ? rawVal / CONVERSION_RATE
-                    : rawVal;
+            const addedUSD = isNGN ? rawVal / CONVERSION_RATE : rawVal;
 
-                user.balance       += addedUSD;
-                user.totalRecharge += addedUSD;
+            user.balance       = (user.balance       || 0) + addedUSD;
+            user.totalRecharge = (user.totalRecharge || 0) + addedUSD;
+            user.transactions  = user.transactions   || [];
 
-                user.transactions.unshift({
-                    id:          transactionRef,
-                    type:        'Recharge',
-                    amount:      addedUSD,
-                    description: `Deposited ${symbol}${rawVal.toLocaleString()} via Paystack`,
-                    ref:         response.reference,
-                    status:      'success',
-                    timestamp:   new Date().toISOString()
-                });
+            user.transactions.unshift({
+                id:          transactionRef,
+                type:        'Recharge',
+                amount:      addedUSD,
+                description: `Deposited ${symbol}${rawVal.toLocaleString()} via Paystack`,
+                ref:         response.reference,
+                status:      'success',
+                timestamp:   new Date().toISOString()
+            });
 
-                saveLiveUser(user);
-                renderDashboard();
-                showToast(`✅ ${symbol}${rawVal.toLocaleString()} deposited successfully!`, 'success');
-                console.info(`[Paystack] Payment verified — Ref: ${response.reference}`);
-
-            } catch (err) {
-                console.error('[Paystack] Callback error:', err);
-                showToast('Payment received but balance update failed. Contact support.', 'warning');
-            }
+            saveLiveUser(user);
+            renderDashboard();
+            showToast(`✅ ${symbol}${rawVal.toLocaleString()} added to your balance!`, 'success');
+            console.info('[Paystack] Verified — Ref:', response.reference);
         },
 
         onClose: function() {
-            showToast('Payment window closed. No charge was made.', 'warning');
+            showToast('Payment window closed. Your balance was not changed.', 'info');
         }
     });
 
     handler.openIframe();
 }
+
+// ── Add Funds button handler ──
+async function handleAddFunds() {
+    // Ensure Paystack SDK is loaded
+    try {
+        await loadPaystackSDK();
+    } catch (e) {
+        showToast('Payment system could not load. Check your internet connection.', 'error');
+        return;
+    }
+
+    // Check session
+    if (!getLiveUser()) {
+        showToast('Session expired. Please log in again.', 'error');
+        setTimeout(() => { window.location.href = 'login.html'; }, 1500);
+        return;
+    }
+
+    openDepositModal();
+}
+
+// ── Wire up modal confirm/close ──
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmBtn  = document.getElementById('depositConfirmBtn');
+    const closeBtn    = document.getElementById('depositModalClose');
+    const modalEl     = document.getElementById('depositModal');
+    const amountInput = document.getElementById('depositAmountInput');
+    const errEl       = document.getElementById('depositError');
+
+    function showDepositError(msg) {
+        if (!errEl) return;
+        errEl.textContent    = msg;
+        errEl.style.display  = 'block';
+    }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async function() {
+            const currency = getCurrency();
+            const isNGN   = currency === 'NGN';
+            const symbol  = isNGN ? '₦' : '$';
+            const minAmt  = isNGN ? PAYSTACK_CONFIG.minAmountNGN : PAYSTACK_CONFIG.minAmountUSD;
+
+            const rawVal = parseFloat((amountInput?.value || '').replace(/[^0-9.]/g, ''));
+
+            if (isNaN(rawVal) || rawVal <= 0) {
+                showDepositError('Please enter a valid amount.');
+                return;
+            }
+            if (rawVal < minAmt) {
+                showDepositError(`Minimum deposit is ${symbol}${minAmt}.`);
+                return;
+            }
+
+            closeDepositModal();
+            await launchPaystack(rawVal);
+        });
+    }
+
+    // Allow pressing Enter in the input field
+    if (amountInput) {
+        amountInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') confirmBtn && confirmBtn.click();
+        });
+    }
+
+    if (closeBtn)  closeBtn.addEventListener('click',  closeDepositModal);
+
+    // Close modal by clicking the backdrop
+    if (modalEl) {
+        modalEl.addEventListener('click', function(e) {
+            if (e.target === modalEl) closeDepositModal();
+        });
+    }
+});
 
 
 
@@ -470,30 +818,12 @@ function initDashboard() {
 /* =========================
    REMOVE LOADER
 ========================= */
-window.addEventListener("load", () => {
-
-    const loader = document.getElementById("loader");
-
-    setTimeout(() => {
-        loader.classList.add("hide");
-    }, 2500);
-
-});
-window.addEventListener("load", () => {
-
-    const loader = document.getElementById("loader");
-
-    setTimeout(() => {
-        loader.classList.add("hide");
-    }, 3000);
-
-});
 window.addEventListener("load", function () {
   const loader = document.querySelector(".loader-wrapper");
-  loader.style.transition = "opacity 0.6s ease";
+  if (!loader) return;
+  loader.style.transition = "opacity 0.5s ease";
   loader.style.opacity = "0";
-
   setTimeout(function () {
     loader.style.display = "none";
-  }, 300);
+  }, 500);
 });

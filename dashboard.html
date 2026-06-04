@@ -5,7 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Balance Dashboard</title>
- <script src="https://js.paystack.co/v1/inline.js"></script>
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 
@@ -53,24 +52,22 @@
   <!-- Sidebar -->
   <aside id="aside">
     <div class="top">
-      <a href="dashboard.html">
+      <a href="dashboard.html" class="active">
         <span><i class="fa-solid fa-gauge-high"></i> Dashboard</span>
       </a>
-      <a href="#">
+      <a href="#" id="sidebarWalletBtn">
         <span><i class="fa-solid fa-wallet"></i> Wallet</span>
       </a>
-      <a href="#">
+      <a href="#recentActivity" id="sidebarActivityBtn">
         <span><i class="fa-solid fa-chart-line"></i> Activity</span>
       </a>
-      <a href="#">
+      <a href="#" id="sidebarSettingsBtn">
         <span><i class="fa-solid fa-gear"></i> Settings</span>
       </a>
-      <a href="#">
-        <span><i class="fa-solid fa-cart-shopping"></i> 
-          <a href="buy.html">Buy Number</a>
-        </span>
+      <a href="buy.html">
+        <span><i class="fa-solid fa-cart-shopping"></i> Buy Number</span>
       </a>
-      <a href="#">
+      <a href="buy.html">
         <span><i class="fa-solid fa-globe"></i> All Countries Numbers</span>
       </a>
 
@@ -139,7 +136,7 @@
     </section>
 
     <!-- Recent Transactions -->
-    <div class="active">
+    <div class="active" id="recentActivity">
       <div class="card">
         <h3>Recent Transactions</h3>
         <ul class="transactions" id="transactionsList">
@@ -210,6 +207,39 @@
     </span>
   </div>
 
+  <!-- Deposit Modal -->
+  <style>
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+  <div id="depositModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:var(--surface); border-radius:16px; padding:2rem; width:100%; max-width:400px; margin:1rem; box-shadow:0 20px 60px rgba(0,0,0,0.25); animation:slideUp 0.3s ease;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <h2 style="margin:0; font-size:1.3rem; font-weight:700; color:var(--text);">💳 Add Funds</h2>
+        <button id="depositModalClose" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--muted); line-height:1;">&times;</button>
+      </div>
+      <p style="margin:0 0 1rem; color:var(--muted); font-size:0.9rem;">Enter the amount you want to deposit. Minimum: <strong id="depositMinLabel">₦100</strong></p>
+      <div style="position:relative; margin-bottom:1.2rem;">
+        <span id="depositSymbol" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:1.1rem; font-weight:700; color:var(--primary);">₦</span>
+        <input
+          id="depositAmountInput"
+          type="number"
+          min="1"
+          placeholder="e.g. 1000"
+          style="width:100%; padding:0.85rem 1rem 0.85rem 2.2rem; border:2px solid var(--border); border-radius:10px; font-size:1.1rem; font-family:inherit; outline:none; box-sizing:border-box; background:var(--bg); color:var(--text); transition:border-color 0.2s;"
+          onfocus="this.style.borderColor='var(--primary)'"
+          onblur="this.style.borderColor=''"
+        />
+      </div>
+      <div id="depositError" style="display:none; color:#ef4444; font-size:0.85rem; margin-bottom:0.8rem;"></div>
+      <button id="depositConfirmBtn" style="width:100%; padding:0.95rem; background:linear-gradient(135deg,var(--primary),var(--accent)); color:#fff; border:none; border-radius:10px; font-weight:700; font-size:1rem; cursor:pointer; transition:opacity 0.2s; font-family:inherit;">
+        Pay with Paystack
+      </button>
+    </div>
+  </div>
+
   <!-- JavaScript -->
   <script>
     // Load user info from localStorage on page load
@@ -223,10 +253,66 @@
       }
     });
   </script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
   <script src="script.js"></script>
 
  
 
+
+
+  <!-- ══ SETTINGS MODAL ══ -->
+  <div class="settings-overlay" id="settingsOverlay">
+    <div class="settings-modal" id="settingsModal">
+      <button class="settings-close-x" id="settingsCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+      <div class="settings-header">
+        <div class="settings-header-icon"><i class="fa-solid fa-gear"></i></div>
+        <div>
+          <h2>Settings</h2>
+          <p>Manage your account &amp; preferences</p>
+        </div>
+      </div>
+      <div class="settings-tabs">
+        <button class="stab active" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
+        <button class="stab" data-tab="security"><i class="fa-solid fa-lock"></i> Security</button>
+        <button class="stab" data-tab="prefs"><i class="fa-solid fa-sliders"></i> Preferences</button>
+        <button class="stab" data-tab="notifs"><i class="fa-solid fa-bell"></i> Notifications</button>
+      </div>
+      <div class="stab-content active" id="stab-profile">
+        <div class="sfield-group"><label class="sfield-label"><i class="fa-solid fa-user-circle"></i> Display Name</label><input class="sfield-input" type="text" id="settingsDisplayName" placeholder="Your name"></div>
+        <div class="sfield-group"><label class="sfield-label"><i class="fa-solid fa-envelope"></i> Email Address</label><input class="sfield-input" type="email" id="settingsEmail" placeholder="your@email.com"></div>
+        <div class="sfield-group"><label class="sfield-label"><i class="fa-solid fa-phone"></i> Phone Number</label><input class="sfield-input" type="tel" id="settingsPhone" placeholder="+234 ..."></div>
+        <div class="avatar-section">
+          <div class="avatar-preview"><img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Avatar" id="settingsAvatarImg"></div>
+          <div><p class="sfield-label" style="margin-bottom:6px;"><i class="fa-solid fa-image"></i> Profile Photo</p><p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Click to upload or drag &amp; drop</p><label class="sbtn sbtn-outline" style="cursor:pointer;"><i class="fa-solid fa-upload"></i> Upload Photo<input type="file" accept="image/*" id="settingsAvatarFile" style="display:none;" onchange="previewAvatar(this)"></label></div>
+        </div>
+        <button class="sbtn sbtn-primary" onclick="saveProfileSettings()"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
+      </div>
+      <div class="stab-content" id="stab-security">
+        <div class="security-info-box"><i class="fa-solid fa-shield-halved"></i><span>Keep your account safe. Change your password regularly.</span></div>
+        <div class="sfield-group"><label class="sfield-label"><i class="fa-solid fa-key"></i> Current Password</label><div class="sfield-pw-wrap"><input class="sfield-input" type="password" id="settingsOldPw" placeholder="Enter current password"><button class="pw-toggle" onclick="togglePw('settingsOldPw', this)"><i class="fa-solid fa-eye"></i></button></div></div>
+        <div class="sfield-group"><label class="sfield-label"><i class="fa-solid fa-lock"></i> New Password</label><div class="sfield-pw-wrap"><input class="sfield-input" type="password" id="settingsNewPw" placeholder="Min 8 characters"><button class="pw-toggle" onclick="togglePw('settingsNewPw', this)"><i class="fa-solid fa-eye"></i></button></div></div>
+        <div class="sfield-group"><label class="sfield-label"><i class="fa-solid fa-check-double"></i> Confirm Password</label><div class="sfield-pw-wrap"><input class="sfield-input" type="password" id="settingsConfirmPw" placeholder="Repeat new password"><button class="pw-toggle" onclick="togglePw('settingsConfirmPw', this)"><i class="fa-solid fa-eye"></i></button></div></div>
+        <div class="pw-strength" id="pwStrengthBar" style="display:none;"><div class="pw-strength-fill" id="pwStrengthFill"></div></div>
+        <p id="pwStrengthText" style="font-size:12px;color:var(--muted);margin:4px 0 14px;"></p>
+        <button class="sbtn sbtn-primary" onclick="savePasswordSettings()"><i class="fa-solid fa-lock"></i> Update Password</button>
+      </div>
+      <div class="stab-content" id="stab-prefs">
+        <div class="sfield-group"><label class="sfield-label"><i class="fa-solid fa-coins"></i> Default Currency</label><select class="sfield-input" id="settingsCurrency"><option value="NGN">🇳🇬 Nigerian Naira (₦ NGN)</option><option value="USD">🇺🇸 US Dollar ($ USD)</option></select></div>
+        <div class="sfield-group"><label class="sfield-label"><i class="fa-solid fa-moon"></i> Theme</label><div class="theme-toggle-row"><button class="theme-btn" id="themeLight" onclick="setTheme('light')"><i class="fa-solid fa-sun"></i> Light</button><button class="theme-btn" id="themeDark" onclick="setTheme('dark')"><i class="fa-solid fa-moon"></i> Dark</button></div></div>
+        <div class="sfield-group"><label class="sfield-label"><i class="fa-solid fa-language"></i> Language</label><select class="sfield-input" id="settingsLanguage"><option value="en">🇬🇧 English</option><option value="fr">🇫🇷 French</option><option value="es">🇪🇸 Spanish</option></select></div>
+        <button class="sbtn sbtn-primary" onclick="savePreferences()"><i class="fa-solid fa-floppy-disk"></i> Save Preferences</button>
+      </div>
+      <div class="stab-content" id="stab-notifs">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Choose which alerts you want to receive.</p>
+        <div class="notif-row"><div><div class="notif-title">OTP Received</div><div class="notif-sub">Alert when a new OTP arrives on your number</div></div><label class="stoggle"><input type="checkbox" id="notifOtp" checked><span class="stoggle-knob"></span></label></div>
+        <div class="notif-row"><div><div class="notif-title">Order Status Updates</div><div class="notif-sub">Notify on order completion or cancellation</div></div><label class="stoggle"><input type="checkbox" id="notifOrder" checked><span class="stoggle-knob"></span></label></div>
+        <div class="notif-row"><div><div class="notif-title">Low Balance Warning</div><div class="notif-sub">Alert when your wallet balance is below ₦500</div></div><label class="stoggle"><input type="checkbox" id="notifBalance" checked><span class="stoggle-knob"></span></label></div>
+        <div class="notif-row"><div><div class="notif-title">Promotional Offers</div><div class="notif-sub">Special deals and discounts from Dave's Social</div></div><label class="stoggle"><input type="checkbox" id="notifPromo"><span class="stoggle-knob"></span></label></div>
+        <button class="sbtn sbtn-primary" onclick="saveNotifSettings()"><i class="fa-solid fa-floppy-disk"></i> Save Notifications</button>
+        <div class="danger-zone"><p class="danger-title"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</p><button class="sbtn sbtn-danger" onclick="confirmDeleteAccount()"><i class="fa-solid fa-trash"></i> Delete My Account</button></div>
+      </div>
+    </div>
+  </div>
 
 </body>
 

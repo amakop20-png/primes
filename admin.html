@@ -1,73 +1,340 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="admin.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <title>Admin Panel</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — Dave's Social</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="icon" type="image/png" href="77825-removebg-preview.png">
+  <link rel="stylesheet" href="admin.css">
 </head>
-
 <body>
-    <div class="container">
-        <aside>
-            <div class="top">
-                <div class="logo">
-                    <img src="" alt="Daves Social">
-                </div>
-            </div>
-            <div class="sidebar">
 
-                <nav>
-                    <ul>
-                        <li><a href="#">Dashboard</a></li>
-                        <li><a href="https://www.facebook.com/profile.php?id=61573212606636">Messages
-
-                                <span class="badge" id="badge">0</span>
-                            </a>
-                        </li>
-                        <li><a href="#">Users</a></li>
-                        <li><a href="#">Settings</a></li>
-                        <li><a href="#">Logout</a></li>
-                    </ul>
-                </nav>
-            </div>
-        </aside>
-        <main>
-            <h1>Admin Dashboard</h1>
-            <input type="date" id="datePicker">
-            <div class="stats">
-                <div class="stat">
-                    <h2>Total Users</h2>
-
-                    <div class="description">
-                        <p>All registered users</p>
-                    </div>
-                    <div class="num">
-                        <p id="totalUsersCount">0</p>
-                    </div>
-                </div>
-                <div class="stat">
-                    <h2>Active Users</h2>
-                    <p id="activeUsersCount">0</p>
-                </div>
-                <div class="stat">
-                    <h2>New Signups</h2>
-                    <p id="newSignupsCount">0</p>
-                </div>
-            </div>
-        </main>
-        <div class="right">
-            <h2>Recent Activity</h2>
-            <ul id="activityList">
-                <li>No activity recorded yet.</li>
-            </ul>
-        </div>
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div>
+        <div class="brand-name">Dave's Social</div>
+        <div class="brand-sub">Admin Console</div>
+      </div>
     </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-link active" data-section="overview" onclick="showSection('overview',this)">
+        <i class="fa-solid fa-gauge-high"></i> Overview
+      </a>
+      <a href="#" class="nav-link" data-section="users" onclick="showSection('users',this)">
+        <i class="fa-solid fa-users"></i> Users
+        <span class="nav-badge" id="navUsersBadge">0</span>
+      </a>
+      <a href="#" class="nav-link" data-section="orders" onclick="showSection('orders',this)">
+        <i class="fa-solid fa-receipt"></i> Orders
+        <span class="nav-badge" id="navOrdersBadge">0</span>
+      </a>
+      <a href="#" class="nav-link" data-section="activity" onclick="showSection('activity',this)">
+        <i class="fa-solid fa-chart-line"></i> Activity Log
+      </a>
+      <a href="#" class="nav-link" data-section="settings" onclick="showSection('settings',this)">
+        <i class="fa-solid fa-gear"></i> Settings
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="admin-profile">
+        <div class="admin-avatar"><i class="fa-solid fa-user-shield"></i></div>
+        <div>
+          <div class="admin-name" id="sidebarAdminName">Admin</div>
+          <div class="admin-role">Super Admin</div>
+        </div>
+      </div>
+      <a href="dashboard.html" class="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+    </div>
+  </aside>
+
+  <!-- ── Top Bar ── -->
+  <div class="topbar">
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="topbar-title" id="topbarTitle">Overview</div>
+    <div class="topbar-right">
+      <div class="provider-chip" id="providerChip">
+        <span class="chip-dot" id="providerDot"></span>
+        <span id="providerStatus">Checking 5sim...</span>
+      </div>
+      <button class="refresh-btn" onclick="refreshAll()" title="Refresh data">
+        <i class="fa-solid fa-rotate-right" id="refreshIcon"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Main ── -->
+  <main class="main-content">
+
+    <!-- ═══ OVERVIEW ═══ -->
+    <section id="section-overview" class="section active">
+      <div class="page-header">
+        <h1>Dashboard Overview</h1>
+        <div class="header-actions">
+          <input type="date" id="datePicker" onchange="refreshAll()">
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stat-grid">
+        <div class="stat-card blue">
+          <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value" id="totalUsers">—</div>
+            <div class="stat-sub" id="newUsersThisWeek">+0 this week</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Active Users (7d)</div>
+            <div class="stat-value" id="activeUsers">—</div>
+            <div class="stat-sub">Logged in last 7 days</div>
+          </div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon"><i class="fa-solid fa-receipt"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-value" id="totalOrders">—</div>
+            <div class="stat-sub" id="ordersToday">+0 today</div>
+          </div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon"><i class="fa-solid fa-naira-sign"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value" id="totalRevenue">—</div>
+            <div class="stat-sub" id="revenueToday">+₦0 today</div>
+          </div>
+        </div>
+        <div class="stat-card teal">
+          <div class="stat-icon"><i class="fa-solid fa-wallet"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">5sim Provider Balance</div>
+            <div class="stat-value" id="providerBalance">—</div>
+            <div class="stat-sub" id="providerFrozen">Frozen: $0.00</div>
+          </div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon"><i class="fa-solid fa-person-circle-xmark"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">New Signups Today</div>
+            <div class="stat-value" id="signupsToday">—</div>
+            <div class="stat-sub" id="signupsWeek">+0 this week</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Users & Recent Orders side-by-side -->
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-header">
+            <span><i class="fa-solid fa-users"></i> Recent Users</span>
+            <button class="panel-link" onclick="showSection('users', document.querySelector('[data-section=users]'))">View all →</button>
+          </div>
+          <div class="panel-body">
+            <table class="data-table" id="recentUsersTable">
+              <thead><tr><th>Name</th><th>Joined</th><th>Balance</th></tr></thead>
+              <tbody id="recentUsersTbody"><tr><td colspan="3" class="empty-cell">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <span><i class="fa-solid fa-receipt"></i> Recent Orders</span>
+            <button class="panel-link" onclick="showSection('orders', document.querySelector('[data-section=orders]'))">View all →</button>
+          </div>
+          <div class="panel-body">
+            <table class="data-table" id="recentOrdersTable">
+              <thead><tr><th>Service</th><th>Country</th><th>Amount</th><th>Status</th></tr></thead>
+              <tbody id="recentOrdersTbody"><tr><td colspan="4" class="empty-cell">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ USERS ═══ -->
+    <section id="section-users" class="section">
+      <div class="page-header">
+        <h1>All Users</h1>
+        <div class="header-actions">
+          <div class="search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="userSearch" placeholder="Search users..." oninput="filterUsers()">
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-body">
+          <table class="data-table" id="usersTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Wallet (₦)</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody">
+              <tr><td colspan="7" class="empty-cell">Loading users...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ORDERS ═══ -->
+    <section id="section-orders" class="section">
+      <div class="page-header">
+        <h1>All Orders</h1>
+        <div class="header-actions">
+          <div class="search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="orderSearch" placeholder="Search orders..." oninput="filterOrders()">
+          </div>
+          <select id="orderStatusFilter" onchange="filterOrders()" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="RECEIVED">Received</option>
+            <option value="FINISHED">Finished</option>
+            <option value="CANCELED">Canceled</option>
+            <option value="BANNED">Banned</option>
+            <option value="PENDING">Pending</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-body">
+          <table class="data-table" id="ordersTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Order ID</th>
+                <th>User</th>
+                <th>Service</th>
+                <th>Country</th>
+                <th>Number</th>
+                <th>Amount (₦)</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTbody">
+              <tr><td colspan="9" class="empty-cell">Loading orders...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ACTIVITY ═══ -->
+    <section id="section-activity" class="section">
+      <div class="page-header">
+        <h1>Activity Log</h1>
+        <div class="header-actions">
+          <input type="date" id="activityDatePicker" onchange="renderActivityLog()">
+          <button class="btn-outline" onclick="clearActivity()"><i class="fa-solid fa-trash"></i> Clear Log</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-body" style="padding:0;">
+          <div id="activityLog" class="activity-log">
+            <div class="empty-cell" style="padding:40px;text-align:center;">No activity recorded yet.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SETTINGS ═══ -->
+    <section id="section-settings" class="section">
+      <div class="page-header">
+        <h1>Admin Settings</h1>
+      </div>
+      <div class="two-col">
+        <!-- Admin Login Config -->
+        <div class="panel">
+          <div class="panel-header"><span><i class="fa-solid fa-key"></i> Admin Access</span></div>
+          <div class="panel-body">
+            <div class="sfield-group">
+              <label class="sfield-label">Admin Username</label>
+              <input class="sfield-input" type="text" id="adminUsername" placeholder="admin">
+            </div>
+            <div class="sfield-group">
+              <label class="sfield-label">Admin Password</label>
+              <input class="sfield-input" type="password" id="adminPassword" placeholder="New password">
+            </div>
+            <button class="btn-primary" onclick="saveAdminCreds()"><i class="fa-solid fa-floppy-disk"></i> Save Credentials</button>
+          </div>
+        </div>
+        <!-- Platform Config -->
+        <div class="panel">
+          <div class="panel-header"><span><i class="fa-solid fa-sliders"></i> Platform Config</span></div>
+          <div class="panel-body">
+            <div class="sfield-group">
+              <label class="sfield-label">NGN/USD Exchange Rate</label>
+              <input class="sfield-input" type="number" id="adminRate" placeholder="e.g. 1500">
+            </div>
+            <div class="sfield-group">
+              <label class="sfield-label">Markup Multiplier (e.g. 1.5 = 50% profit)</label>
+              <input class="sfield-input" type="number" step="0.01" id="adminMarkup" placeholder="e.g. 1.5">
+            </div>
+            <div class="sfield-group">
+              <label class="sfield-label">Maintenance Mode</label>
+              <label class="stoggle" style="margin-top:6px;">
+                <input type="checkbox" id="maintenanceMode">
+                <span class="stoggle-knob"></span>
+              </label>
+            </div>
+            <button class="btn-primary" onclick="savePlatformConfig()"><i class="fa-solid fa-floppy-disk"></i> Save Config</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fund a User -->
+      <div class="panel" style="margin-top:24px;">
+        <div class="panel-header"><span><i class="fa-solid fa-money-bill-transfer"></i> Fund User Wallet</span></div>
+        <div class="panel-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="sfield-group" style="flex:1;min-width:180px;margin-bottom:0;">
+            <label class="sfield-label">Select User</label>
+            <select class="sfield-input" id="fundUserSelect"></select>
+          </div>
+          <div class="sfield-group" style="flex:1;min-width:140px;margin-bottom:0;">
+            <label class="sfield-label">Amount (₦)</label>
+            <input class="sfield-input" type="number" id="fundAmount" placeholder="e.g. 5000">
+          </div>
+          <button class="btn-primary" onclick="fundUser()" style="height:44px;margin-bottom:0;">
+            <i class="fa-solid fa-plus"></i> Add Funds
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── User Detail Modal ── -->
+  <div class="modal-overlay" id="userModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeUserModal()"><i class="fa-solid fa-xmark"></i></button>
+      <h2 class="modal-title"><i class="fa-solid fa-user-circle"></i> User Detail</h2>
+      <div id="userModalBody" class="modal-body-grid"></div>
+    </div>
+  </div>
+
+  <!-- ── Toast ── -->
+  <div id="adminToast" class="admin-toast"></div>
+
+  <script src="admin.js"></script>
 </body>
-<script src="admin.js">
-
-</script>
-
 </html>

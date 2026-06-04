@@ -38,9 +38,10 @@ body {
    HEADER
 ══════════════════════════════════════ */
 header {
-  width: 100%;
+  width: calc(100% - 270px);
+  margin-left: 270px;
   height: 72px;
-  padding: 0 20px;
+  padding: 0 24px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -330,6 +331,11 @@ aside .top a.active {
     transform: translateX(0);
   }
 
+  header {
+    width: 100%;
+    margin-left: 0;
+  }
+
   .container {
     margin-left: 0;
     padding: 24px 16px;
@@ -354,8 +360,10 @@ aside .top a.active {
   /* =========================
      HEADER
   ========================= */
-  .header {
+  .header,
+  header {
     width: 100%;
+    margin-left: 0;
     padding: 12px;
     margin: 0;
   }

@@ -235,6 +235,28 @@ function initForm() {
                 };
                 localStorage.setItem('primes_session', JSON.stringify(sessionData));
 
+                // ── Create the user record so getLiveUser() can find them ──
+                const existingUsers = JSON.parse(localStorage.getItem('primes_users') || '[]');
+                const alreadyExists = existingUsers.some(u => u.username.toLowerCase() === username.toLowerCase());
+                if (!alreadyExists) {
+                    existingUsers.push({
+                        username:        username,
+                        email:           email,
+                        name:            name,
+                        password:        password, // stored locally only for login check
+                        role:            'user',
+                        balance:         0.00,
+                        totalRecharge:   0.00,
+                        referralBalance: 0.00,
+                        referralCount:   0,
+                        numbersPurchased:0,
+                        referrals:       [],
+                        transactions:    [],
+                        createdAt:       new Date().toISOString()
+                    });
+                    localStorage.setItem('primes_users', JSON.stringify(existingUsers));
+                }
+
                 toast.show('Account created successfully 🎉', 'success');
                 form.reset();
                 setTimeout(() => {
