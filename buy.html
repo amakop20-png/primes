@@ -772,8 +772,12 @@
     }
   </script>
 
+<<<<<<< HEAD
   <!-- Header -->
   <header class="header">
+=======
+ <header>
+>>>>>>> 23d9343abf7f42c645e0f4f611ac5112cc3b6055
     <div class="pride">
       <div class="logo">
         <img src="77825-removebg-preview.png" alt="Dave's Social">
@@ -784,16 +788,42 @@
     </div>
 
     <div class="match">
+<<<<<<< HEAD
       <div class="currency-switch" id="currencySwitch" style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--border-light);padding:6px 12px;border-radius:20px;font-weight:700;font-size:13px;color:var(--text);border:1px solid var(--border);transition:all 0.2s;user-select:none;">
+=======
+      <div class="currency-switch" id="currencySwitch"
+        style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: var(--border-light); padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; color: var(--text); border: 1px solid var(--border); transition: all 0.2s; user-select: none;">
+>>>>>>> 23d9343abf7f42c645e0f4f611ac5112cc3b6055
         <span id="currencySymbol">$</span> <span id="currencyName">USD</span>
       </div>
       <div class="notification">
         <i class="fa-solid fa-bell"></i>
         <span class="badge">3</span>
       </div>
-      <div class="profile">
-        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
-        <span class="username" id="buyUsername">John Doe</span>
+      <div class="profile-dropdown">
+        <button class="profile-toggle" onclick="toggleDropdown()" id="profileToggle" type="button" aria-expanded="false">
+          <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
+          <div class="profile-info">
+            <span class="username" id="Username">username</span>
+            <span class="user-role">Premium user</span>
+          </div>
+          <i class="fa-solid fa-chevron-down dropdown-arrow" id="dropdownArrow" aria-hidden="true"></i>
+        </button>
+
+        <div id="dropdown" class="dropdown-content" aria-label="User menu">
+          <div class="dropdown-header">
+            <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile" width="40" height="40">
+            <div>
+              <p class="dropdown-name">username</p>
+              <p class="dropdown-email">precious@example.com</p>
+            </div>
+          </div>
+          <a href="#profile"><i class="fa-solid fa-user"></i> profile</a>
+          <a href="buy.html"><i class="fa-solid fa-cart-shopping"></i> Buy Number</a>
+          <a href="#contact"><i class="fa-solid fa-phone"></i> Contact</a>
+          <a href="login.html" class="logout" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+        </div>
+      </div>
       </div>
     </div>
   </header>
@@ -1107,8 +1137,11 @@
       if (el) el.textContent = session.name;
     });
   </script>
+<<<<<<< HEAD
 
   <script src="script.js"></script>
+=======
+>>>>>>> 23d9343abf7f42c645e0f4f611ac5112cc3b6055
   <script src="buy.js"></script>
 </body>
 </html>

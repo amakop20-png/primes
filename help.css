@@ -1,0 +1,136 @@
+/* Help page styling */
+
+.help-container {
+  max-width: 860px;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
+
+.help-header {
+  text-align: center;
+  padding: 2rem 0 1rem;
+}
+
+.help-logo {
+  width: 50px;
+  max-width: 72px;
+  margin: 0 auto 1rem;
+  display: block;
+  border-radius: 18px;
+  box-shadow: 0 16px 35px rgba(124, 58, 237, 0.12);
+}
+
+.help-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.05;
+}
+
+.section-subtitle {
+  margin: 1rem auto 0;
+  max-width: 36rem;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.help-content {
+  background: var(--surface);
+  border: 1px solid rgba(229, 231, 235, 0.9);
+  border-radius: 28px;
+  padding: 2rem;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.08);
+}
+
+.help-section {
+  margin-bottom: 1.75rem;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.help-section p {
+  font-size: 1rem;
+  color: var(--text);
+  line-height: 1.75;
+  margin: 0 0 1rem;
+}
+
+.help-section ul {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+
+.help-section li {
+  margin-bottom: 0.9rem;
+  color: var(--text);
+  position: relative;
+  padding-left: 1.75rem;
+  line-height: 1.75;
+}
+
+.help-section li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  top: 0.08rem;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.contact-info {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(229, 231, 235, 0.7);
+  text-align: center;
+  color: var(--muted);
+}
+
+.contact-info p {
+  margin: 0;
+}
+
+.contact-email {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.contact-email:hover {
+  text-decoration: underline;
+}
+
+.header__nav .nav-link.active {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .help-container {
+    margin: 2rem auto;
+    padding: 0 1rem;
+  }
+
+  .help-content {
+    padding: 1.75rem;
+  }
+
+  .help-header {
+    padding-top: 1.5rem;
+  }
+}

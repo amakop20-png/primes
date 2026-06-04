@@ -41,10 +41,14 @@ header {
   width: calc(100% - 270px);
   margin-left: 270px;
   height: 72px;
+<<<<<<< HEAD
   padding: 0 24px;
+=======
+>>>>>>> 23d9343abf7f42c645e0f4f611ac5112cc3b6055
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;
+
   align-items: center;
   justify-content: space-between;
   position: sticky;
@@ -314,6 +318,133 @@ aside .top a.active {
   content: "✓";
 }
 
+
+/* ── Profile dropdown wrapper ── */
+.profile-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.profile-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 38px;
+  padding: 13px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-toggle:hover,
+.profile-toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+}
+
+.profile-toggle img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.profile-toggle .username {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.user-role {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* ── Arrow icon ── */
+.dropdown-arrow {
+  font-size: 1rem;
+  transition: transform 0.25s ease;
+}
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+/* ── Dropdown Menu ── */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: calc(80% + 4px);
+  right: 0;              /* aligns to the right so it won't overflow left */
+  left: auto;            /* prevents it stretching toward sidebar */
+  background: #1c1c27;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  z-index: 999;          /* high enough to float above content but not block sidebar */
+  overflow: hidden;
+}
+.dropdown-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.dropdown-email {
+  margin: 4px 0 0;
+  color: rgba(245,245,250,0.72);
+  font-size: 12px;
+}
+
+/* ── Dropdown Links ── */
+.dropdown-content a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #f0f0f8;
+  text-decoration: none;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.dropdown-content a:last-child {
+  border-bottom: none;
+}
+.dropdown-content a:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+}
+
+/* ── Logout link special color ── */
+.dropdown-content a.logout {
+  color: #ff4d6d;
+}
+.dropdown-content a.logout:hover {
+  background: rgba(255, 77, 109, 0.1);
+}
+
+/* ── Show state ── */
+.dropdown-content.show {
+  display: block;
+  animation: dropIn 0.2s ease;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 /* ══════════════════════════════════════
    TABLET
 ══════════════════════════════════════ */

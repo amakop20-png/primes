@@ -5,6 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Balance Dashboard</title>
+<<<<<<< HEAD
+=======
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+>>>>>>> 23d9343abf7f42c645e0f4f611ac5112cc3b6055
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 
@@ -23,11 +27,10 @@
   </script>
 
 
-  
   <header>
     <div class="pride">
       <div class="logo">
-        <img src="77825-removebg-preview.png" alt="Daves Social">
+        <img src="77825-removebg-preview.png" alt="Nura Sms">
       </div>
       <div class="toggle-btn" id="toggle-btn">
         <i class="fa-solid fa-bars"></i>
@@ -35,17 +38,41 @@
     </div>
 
     <div class="match">
-      <div class="currency-switch" id="currencySwitch" style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: var(--border-light); padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; color: var(--text); border: 1px solid var(--border); transition: all 0.2s; user-select: none;">
+      <div class="currency-switch" id="currencySwitch"
+        style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: var(--border-light); padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; color: var(--text); border: 1px solid var(--border); transition: all 0.2s; user-select: none;">
         <span id="currencySymbol">$</span> <span id="currencyName">USD</span>
       </div>
       <div class="notification">
         <i class="fa-solid lfa-bel"></i>
         <span class="badge">3</span>
       </div>
-      <div class="profile">
-        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
-        <span class="username" id="dashboardUsername">Guest</span>
+      <div class="profile-dropdown">
+        <button class="profile-toggle" onclick="toggleDropdown()" id="profileToggle" type="button"
+          aria-expanded="false">
+          <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
+          <div class="profile-info">
+            <span class="username" id="Username">username</span>
+            <p class="dropdown-email">precious@example.com</p>
+          </div>
+          <i class="fa-solid fa-chevron-down dropdown-arrow" id="dropdownArrow" aria-hidden="true"></i>
+        </button>
+
+        <div id="dropdown" class="dropdown-content" aria-label="User menu">
+          <div class="dropdown-header">
+            <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile" width="40" height="40">
+            <div>
+              <p class="dropdown-name">username</p>
+              <p class="dropdown-email">precious@example.com</p>
+            </div>
+          </div>
+          <a href="#home"><i class="fa-solid fa-user"></i> Home</a>
+          <a href="buy.html"><i class="fa-solid fa-cart-shopping"></i> Buy Number</a>
+          <a href="#contact"><i class="fa-solid fa-phone"></i> Contact</a>
+          <a href="login.html" class="logout" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i>
+            Logout</a>
+        </div>
       </div>
+    </div>
     </div>
   </header>
 
@@ -64,8 +91,15 @@
       <a href="#" id="sidebarSettingsBtn">
         <span><i class="fa-solid fa-gear"></i> Settings</span>
       </a>
+<<<<<<< HEAD
       <a href="buy.html">
         <span><i class="fa-solid fa-cart-shopping"></i> Buy Number</span>
+=======
+
+      <a href="buy.html">
+        <span><i class="fa-solid fa-cart-shopping"></i>Buy Number</span>
+      </a>
+>>>>>>> 23d9343abf7f42c645e0f4f611ac5112cc3b6055
       </a>
       <a href="buy.html">
         <span><i class="fa-solid fa-globe"></i> All Countries Numbers</span>
@@ -121,7 +155,8 @@
           <a href="javascript:void(0)">
             <img src="pot2-removebg-preview.png" width="34" alt="Buy Icon">
             <h3>Refer and Earn</h3>
-            <span style="font-size: 11px; opacity: 0.8; font-weight: normal; display: block; margin-top: 4px;">Simulate a referral signup</span>
+            <span style="font-size: 11px; opacity: 0.8; font-weight: normal; display: block; margin-top: 4px;">Simulate
+              a referral signup</span>
           </a>
         </div>
 
@@ -256,7 +291,7 @@
   <script src="https://js.paystack.co/v1/inline.js"></script>
   <script src="script.js"></script>
 
- 
+
 
 
 
