@@ -212,63 +212,31 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled  = true;
 
             try {
-                // ── Check admin credentials ──
-                const isAdminCredentials =
-                    (loginInputValue.toLowerCase() === ADMIN_EMAIL ||
-                     loginInputValue.toLowerCase() === 'admin') &&
-                     passwordValue === ADMIN_PASSWORD;
+                // ── API Login Call ──
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identifier: loginInputValue, password: passwordValue })
+                });
 
-                // ── Check saved users from localStorage ──
-                const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
+                const result = await response.json();
 
-                const matchedUser = users.find(user =>
-                    ((user.email    || '').toLowerCase() === loginInputValue.toLowerCase() ||
-                     (user.username || '').toLowerCase() === loginInputValue.toLowerCase()) &&
-                      user.password === passwordValue
-                );
-
-                // ── Reject if neither admin nor matched user ──
-                if (!isAdminCredentials && !matchedUser) {
-                    toast.show('Invalid email/username or password.', 'error');
-                    return;
-                }
-
-                // ── Build session ──
-                const sessionData = isAdminCredentials
-                    ? {
-                        username: 'admin',
-                        email:    ADMIN_EMAIL,
-                        name:     'Admin',
-                        role:     'admin',
+                if (response.ok && result.success) {
+                    const sessionData = {
+                        ...result.user,
                         loggedAt: new Date().toISOString()
-                      }
-                    : {
-                        username: matchedUser.username,
-                        email:    matchedUser.email,
-                        name:     matchedUser.name,
-                        role:     'user',
-                        loggedAt: new Date().toISOString()
-                      };
+                    };
+                    localStorage.setItem('primes_session', JSON.stringify(sessionData));
+                    localStorage.setItem('primes_token', result.token);
 
-                localStorage.setItem('primes_session', JSON.stringify(sessionData));
-
-                // ── Activity log (non-admin only) ──
-                if (!isAdminCredentials) {
-                    const activityLog = JSON.parse(localStorage.getItem('primes_activity') || '[]');
-                    activityLog.unshift({
-                        type:      'login',
-                        username:  sessionData.username,
-                        message:   `${sessionData.name} signed in`,
-                        timestamp: new Date().toISOString()
-                    });
-                    localStorage.setItem('primes_activity', JSON.stringify(activityLog.slice(0, 100)));
+                    toast.show('Login successful! Redirecting...', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = result.user.role === 'admin' ? 'admin.html' : 'dashboard.html';
+                    }, 1500);
+                } else {
+                    toast.show(result.error || 'Invalid email/username or password.', 'error');
                 }
-
-                toast.show('Login successful! Redirecting... 🎉', 'success');
-                setTimeout(() => {
-                    window.location.href = isAdminCredentials ? 'admin.html' : 'dashboard.html';
-                }, 900);
-
             } catch (error) {
                 console.error('Login error:', error);
                 toast.show(error.message || 'Something went wrong. Please try again.', 'error');

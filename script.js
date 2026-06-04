@@ -495,57 +495,36 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-function getLiveUser() {
-    const session = JSON.parse(localStorage.getItem('primes_session') || '{}');
-    if (!session || !session.username) return null;
-    const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
-    let user = users.find(u => u.username.toLowerCase() === session.username.toLowerCase());
+async function fetchLiveUser() {
+    const token = localStorage.getItem('primes_token');
+    if (!token) return null;
 
-    // ── Auto-create record for users who registered before the fix ──
-    if (!user) {
-        user = {
-            username:        session.username,
-            email:           session.email || '',
-            name:            session.name  || session.username,
-            role:            session.role  || 'user',
-            balance:         0.00,
-            totalRecharge:   0.00,
-            referralBalance: 0.00,
-            referralCount:   0,
-            numbersPurchased:0,
-            referrals:       [],
-            transactions:    [],
-            createdAt:       new Date().toISOString()
-        };
-        users.push(user);
-        localStorage.setItem('primes_users', JSON.stringify(users));
+    try {
+        const res = await fetch('/api/user/profile', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            // Update session cache
+            const session = JSON.parse(localStorage.getItem('primes_session') || '{}');
+            localStorage.setItem('primes_session', JSON.stringify({ ...session, ...data.user }));
+            return data.user;
+        }
+    } catch (err) {
+        console.error('Failed to fetch user:', err);
     }
-
-    // ── Ensure all fields exist (migration guard) ──
-    let changed = false;
-    if (user.balance === undefined)          { user.balance = 0.00; changed = true; }
-    if (user.referralBalance === undefined)  { user.referralBalance = 0.00; changed = true; }
-    if (user.referralCount === undefined)    { user.referralCount = 0; changed = true; }
-    if (user.referrals === undefined)        { user.referrals = []; changed = true; }
-    if (user.transactions === undefined)     { user.transactions = []; changed = true; }
-    if (user.numbersPurchased === undefined) { user.numbersPurchased = 0; changed = true; }
-    if (user.totalRecharge === undefined)    { user.totalRecharge = 0.00; changed = true; }
-
-    if (changed) {
-        const index = users.findIndex(u => u.username.toLowerCase() === user.username.toLowerCase());
-        users[index] = user;
-        localStorage.setItem('primes_users', JSON.stringify(users));
-    }
-    return user;
+    return null;
 }
 
-function saveLiveUser(updatedUser) {
-    const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
-    const index = users.findIndex(u => u.username.toLowerCase() === updatedUser.username.toLowerCase());
-    if (index !== -1) {
-        users[index] = updatedUser;
-        localStorage.setItem('primes_users', JSON.stringify(users));
-    }
+function getLiveUser() {
+    // Fallback synchronous getter using cached session (for non-critical reads)
+    return JSON.parse(localStorage.getItem('primes_session') || 'null');
+}
+
+async function saveLiveUser(updatedUser) {
+    // For now, this is replaced by specific API calls (like update profile)
+    // Legacy support: update cache
+    localStorage.setItem('primes_session', JSON.stringify(updatedUser));
 }
 
 function getCurrency() {
@@ -576,8 +555,8 @@ function formatCurrency(val) {
     }
 }
 
-function renderDashboard() {
-    const user = getLiveUser();
+async function renderDashboard() {
+    const user = await fetchLiveUser();
     if (!user) return;
 
     const currency = getCurrency();

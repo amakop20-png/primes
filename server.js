@@ -14,7 +14,17 @@ app.use(express.static(__dirname));
 
 // API Routes
 const numberRoutes = require('./primes/routes/numbers');
+const authRoutes = require('./primes/routes/auth');
+const userRoutes = require('./primes/routes/user').router;
+const orderRoutes = require('./primes/routes/orders');
+const adminRoutes = require('./primes/routes/admin');
+
 app.use('/api/numbers', numberRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/admin', adminRoutes);
+
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });

@@ -208,54 +208,29 @@ function initForm() {
         const passwordError = Validator.password(password, confirmPassword);
         if (passwordError)                  return toast.show(passwordError, 'error');
 
-        // — Send to Formspree —
+        // — Send to Backend API —
         toggleButton(btn, spinner, true);
 
         try {
-            const response = await fetch('https://formspree.io/f/mredrwzv', {
+            const response = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({ name, username, email })
-                // Note: passwords are intentionally excluded from the submission
+                body: JSON.stringify({ name, username, email, phone, password, acceptTerms: termsInput.checked })
             });
 
             const result = await response.json();
 
-            if (response.ok) {
+            if (response.ok && result.success) {
                 // Auto log in by setting the session data
                 const sessionData = {
-                    username: username,
-                    email:    email,
-                    name:     name,
-                    role:     'user',
+                    ...result.user,
                     loggedAt: new Date().toISOString()
                 };
                 localStorage.setItem('primes_session', JSON.stringify(sessionData));
-
-                // ── Create the user record so getLiveUser() can find them ──
-                const existingUsers = JSON.parse(localStorage.getItem('primes_users') || '[]');
-                const alreadyExists = existingUsers.some(u => u.username.toLowerCase() === username.toLowerCase());
-                if (!alreadyExists) {
-                    existingUsers.push({
-                        username:        username,
-                        email:           email,
-                        name:            name,
-                        password:        password, // stored locally only for login check
-                        role:            'user',
-                        balance:         0.00,
-                        totalRecharge:   0.00,
-                        referralBalance: 0.00,
-                        referralCount:   0,
-                        numbersPurchased:0,
-                        referrals:       [],
-                        transactions:    [],
-                        createdAt:       new Date().toISOString()
-                    });
-                    localStorage.setItem('primes_users', JSON.stringify(existingUsers));
-                }
+                localStorage.setItem('primes_token', result.token);
 
                 toast.show('Account created successfully 🎉', 'success');
                 form.reset();
@@ -263,9 +238,7 @@ function initForm() {
                     window.location.href = 'dashboard.html';
                 }, 1500);
             } else {
-                // Formspree returns errors array on failure
-                const errMsg = result?.errors?.[0]?.message || 'Submission failed. Please try again.';
-                toast.show(errMsg, 'error');
+                toast.show(result.error || 'Submission failed. Please try again.', 'error');
             }
 
         } catch (err) {
