@@ -41,10 +41,7 @@ header {
   width: calc(100% - 270px);
   margin-left: 270px;
   height: 72px;
-<<<<<<< HEAD
   padding: 0 24px;
-=======
->>>>>>> 23d9343abf7f42c645e0f4f611ac5112cc3b6055
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex;

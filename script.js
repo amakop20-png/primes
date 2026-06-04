@@ -90,15 +90,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const displayName = session.name || session.username || 'Guest';
     const displayEmail = session.email || session.useremail || 'user@example.com';
 
-    const nameEls = document.querySelectorAll('#dashboardUsername, .dropdown-name');
+    const nameEls = document.querySelectorAll('#dashboardUsername, #Username, .dropdown-name, .username');
     nameEls.forEach(el => {
         el.textContent = displayName;
     });
 
-    const emailEl = document.querySelector('.dropdown-email');
-    if (emailEl) {
-        emailEl.textContent = displayEmail;
-    }
+    const emailEls = document.querySelectorAll('.dropdown-email');
+    emailEls.forEach(el => {
+        el.textContent = displayEmail;
+    });
 });
 
 function toggleDark() {
@@ -261,9 +261,16 @@ function saveProfileSettings() {
     if (phone) session.phone = phone;
     localStorage.setItem('primes_session', JSON.stringify(session));
 
-    // Update visible username in header
-    const usernameEl = document.getElementById('buyUsername') || document.getElementById('profileName');
-    if (usernameEl) usernameEl.textContent = name;
+    // Update visible username in header and dashboard elements
+    const nameEls = document.querySelectorAll('#dashboardUsername, #Username, .dropdown-name, .username, #buyUsername, #profileName');
+    nameEls.forEach(el => {
+        el.textContent = name;
+    });
+
+    const emailEls = document.querySelectorAll('.dropdown-email');
+    emailEls.forEach(el => {
+        if (email) el.textContent = email;
+    });
 
     showToast('✅ Profile updated successfully!', 'success');
 }
@@ -330,6 +337,10 @@ function savePreferences() {
         if (sym)  sym.textContent  = '₦';
         if (name) name.textContent = 'NGN';
         localStorage.setItem('buyPageCurrency', 'NGN');
+    }
+
+    if (typeof renderDashboard === 'function') {
+        renderDashboard();
     }
 
     showToast('✅ Preferences saved!', 'success');

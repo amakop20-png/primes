@@ -41,83 +41,10 @@ if (overlayBuy && sidebarBuy) {
     overlayBuy.classList.remove('show');
   });
 }
-<<<<<<< HEAD
 window.addEventListener('resize', () => {
   if (window.innerWidth > 768 && sidebarBuy) {
     sidebarBuy.classList.remove('open');
     if (overlayBuy) overlayBuy.classList.remove('show');
-=======
-
-
-
-// ── Dropdown Toggle ──
-function toggleDropdown() {
-    const dropdown = document.getElementById('dropdown');
-    const arrow    = document.getElementById('dropdownArrow');
-    const profileToggle = document.getElementById('profileToggle');
-
-    if (!dropdown || !arrow || !profileToggle) return;
-
-    const isOpen = dropdown.classList.toggle('show');
-    arrow.classList.toggle('open');
-    profileToggle.setAttribute('aria-expanded', isOpen.toString());
-}
-
-// ── Close dropdown when clicking outside ──
-document.addEventListener('click', function(e) {
-    const profileToggle = document.getElementById('profileToggle');
-    const dropdown      = document.getElementById('dropdown');
-    const arrow         = document.getElementById('dropdownArrow');
-
-    if (!profileToggle || !dropdown || !arrow) return;
-
-    if (!profileToggle.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.classList.remove('show');
-        arrow.classList.remove('open');
-        profileToggle.setAttribute('aria-expanded', 'false');
-    }
-});
-
-// ── Close dropdown on ESC key ──
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const dropdown = document.getElementById('dropdown');
-        const arrow    = document.getElementById('dropdownArrow');
-        if (dropdown) dropdown.classList.remove('show');
-        if (arrow)    arrow.classList.remove('open');
-    }
-});
-
-// ── Logout ──
-function logout() {
-    localStorage.removeItem('primes_session');
-    localStorage.removeItem('primes_currency');
-    window.location.href = 'login.html';
-}
-
-// ── Set username in dropdown on page load ──
-document.addEventListener('DOMContentLoaded', function() {
-    const session  = JSON.parse(localStorage.getItem('primes_session') || '{}');
-    const displayName = session.name || session.username || 'Guest';
-    const displayEmail = session.email || session.useremail || 'user@example.com';
-
-    const nameEls = document.querySelectorAll('#dashboardUsername, .dropdown-name');
-    nameEls.forEach(el => {
-        el.textContent = displayName;
-    });
-
-    const emailEl = document.querySelector('.dropdown-email');
-    if (emailEl) {
-        emailEl.textContent = displayEmail;
-    }
-});
-
-// CLOSE ON WINDOW RESIZE
-window.addEventListener("resize", () => {
-  if (window.innerWidth > 768 && sidebar) {
-    sidebar.classList.remove("open");
-    if (overlay) overlay.classList.remove("show");
->>>>>>> 23d9343abf7f42c645e0f4f611ac5112cc3b6055
   }
 });
 
