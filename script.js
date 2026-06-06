@@ -683,14 +683,15 @@ async function launchPaystack(rawVal) {
     const transactionRef = 'DAVE-' + Date.now() + '-' + Math.random()
         .toString(36).substr(2, 6).toUpperCase();
 
-    const handler = PaystackPop.setup({
-        key:      PAYSTACK_CONFIG.publicKey,
-        email:    user.email || (user.username + '@davessocial.com'),
-        amount:   amountInKobo,
-        currency: 'NGN',
-        ref:      transactionRef,
-        channels: ['card', 'bank_transfer', 'ussd', 'bank'],
-        label:    user.name || user.username,
+    try {
+        const handler = PaystackPop.setup({
+            key:      PAYSTACK_CONFIG.publicKey,
+            email:    user.email || (user.username + '@davessocial.com'),
+            amount:   amountInKobo,
+            currency: 'NGN',
+            ref:      transactionRef,
+            channels: ['card', 'bank_transfer', 'ussd', 'bank'],
+            label:    user.name || user.username,
 
         metadata: {
             custom_fields: [
@@ -701,6 +702,18 @@ async function launchPaystack(rawVal) {
 
         callback: function(response) {
             const addedUSD = isNGN ? rawVal / CONVERSION_RATE : rawVal;
+
+            const token = localStorage.getItem('primes_token');
+            fetch('/api/user/recharge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ amount: addedUSD, reference: response.reference })
+            }).catch(err => {
+                console.error('Failed to notify backend of recharge:', err);
+            });
 
             user.balance       = (user.balance       || 0) + addedUSD;
             user.totalRecharge = (user.totalRecharge || 0) + addedUSD;
@@ -728,6 +741,11 @@ async function launchPaystack(rawVal) {
     });
 
     handler.openIframe();
+    } catch (e) {
+        console.error('Paystack SDK error:', e);
+        showToast('Payment system failed to launch. Are you running a Live key on localhost?', 'error');
+        alert('Payment error: ' + e.message + '\n\nNote: Paystack Live keys often block requests from localhost or file:// URLs. Check the console for details.');
+    }
 }
 
 // ── Add Funds button handler ──
@@ -775,10 +793,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (isNaN(rawVal) || rawVal <= 0) {
                 showDepositError('Please enter a valid amount.');
+                alert('Please enter a valid amount. The input field is currently empty!');
                 return;
             }
             if (rawVal < minAmt) {
                 showDepositError(`Minimum deposit is ${symbol}${minAmt}.`);
+                alert(`Minimum deposit is ${symbol}${minAmt}.`);
                 return;
             }
 

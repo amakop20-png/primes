@@ -140,6 +140,7 @@ function renderNumbers() {
 
     if (!countryFilter) {
         // Show all available numbers from mock data
+        allNumbers = [...MOCK_NUMBERS];
         displayNumbers(allNumbers);
         return;
     }
@@ -151,19 +152,22 @@ function renderNumbers() {
             if (data.success && data.products) {
                 console.log('Products fetched from 5sim:', data.products);
                 // Convert API response to card format
-                const numbers = Object.entries(data.products).flatMap(([service, operators]) => 
-                    Object.entries(operators || {}).map(([operator, details]) => ({
-                        id: `${countryFilter}-${service}-${operator}`,
+                const numbers = Object.entries(data.products).map(([service, details]) => {
+                    const price = details.Price || details.price || details.rate || 0;
+                    const count = details.Qty || details.count || 0;
+                    return {
+                        id: `${countryFilter}-${service}-any`,
                         country: countryFilter,
-                        countryCode: details.countryCode || '+1',
-                        flag: details.flag || '🌐',
-                        operator: operator,
+                        countryCode: '+1',
+                        flag: '🌐',
+                        operator: 'any',
                         service: service,
-                        price: details.rate || details.price || 0,
-                        type: 'activation',
-                        available: details.count > 0
-                    }))
-                );
+                        price: price,
+                        type: details.Category || 'activation',
+                        available: count > 0
+                    };
+                });
+                allNumbers = numbers;
                 displayNumbers(numbers);
             } else {
                 showError('No products available');
@@ -172,6 +176,7 @@ function renderNumbers() {
         .catch(err => {
             console.error('Failed to fetch products:', err);
             // Fallback to mock data for selected country
+            allNumbers = [...MOCK_NUMBERS];
             const filtered = allNumbers.filter(n => n.country === countryFilter);
             if (filtered.length > 0) {
                 displayNumbers(filtered);

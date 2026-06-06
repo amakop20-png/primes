@@ -326,7 +326,8 @@
     document.addEventListener('DOMContentLoaded', () => {
       const sessionData = JSON.parse(localStorage.getItem('primes_session') || '{}');
       if (sessionData && sessionData.name) {
-        document.getElementById('dashboardUsername').textContent = sessionData.name;
+        const nameEl = document.getElementById('Username');
+        if (nameEl) nameEl.textContent = sessionData.name;
       } else {
         // Redirect to login if not authenticated
         window.location.href = 'login.html';
