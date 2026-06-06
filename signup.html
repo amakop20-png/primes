@@ -241,7 +241,7 @@
             localStorage.setItem('primes_token', result.token);
             toast.show('🎉 Account created! Redirecting...', 'success');
             form.reset();
-            setTimeout(() => window.location.href = 'http://localhost:3000/dashboard.html', 1500);
+            setTimeout(() => window.location.href = 'dashboard.html', 1500);
           } else {
             const errorMsg = result.error || result.message || 'Signup failed';
             console.error('Signup failed:', errorMsg);
