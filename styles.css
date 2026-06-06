@@ -1416,6 +1416,133 @@ main > p {
         margin-bottom: 0.4rem;
       }
 
+      .plan {
+  padding: 1.5rem;
+}
+
+.plan h1 {
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin: 0 0 1rem;
+}
+
+.jacket {
+  display: flex;
+  gap: 12px;
+}
+.jacket h2{
+  font-size: 10px;
+}
+.action-card {
+  width: 9%;
+  height: 90px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--color-border-tertiary);
+  padding: 12px 8px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.action-icon {
+  min-width: 10px;
+  height: 20px;
+  font-size: 18px;
+  color: var(--primary);
+  transition: all 0.3s ease;
+}
+
+.action-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.action-card:hover .action-icon {
+  transform: scale(1.15);
+}
+
+
+
+
+
+
+      .smart {
+  padding: 2rem;
+}
+
+.smart h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 1.5rem;
+  letter-spacing: -0.3px;
+}
+
+.box1 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  border-radius: 14px;
+  max-width: 100%;
+    background: var(--surface);
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+
+
+
+.smile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+
+}
+
+.smile h1 {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0;
+  color: var(--text);
+}
+
+.stat-icon {
+  font-size: 20px;
+  color: var(--primary);
+  width: 13px;
+  height: 26px;
+  display: flex;
+  color: 7;
+  align-items: center;
+  justify-content: center;
+  background: rgb(55, 55, 255);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.box1:hover {
+  border-color: var(--primary);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.smile:hover .stat-icon {
+  transform: scale(1.1);
+  background: rgba(102, 102, 255, 0.15);
+}
       .contact-info {
         margin-top: 1.5rem;
         padding-top: 1rem;
