@@ -2,38 +2,7 @@
    BUY PAGE - VIRTUAL NUMBERS & OTP FUNCTIONALITY
 ══════════════════════════════════════════════════════════════════════ */
 
-// Mock data for available numbers
-const MOCK_NUMBERS = [
-    // United States
-    { id: 1, country: 'US', countryCode: '+1', flag: '🇺🇸', operator: 'Verizon', service: 'WhatsApp', price: 2.50, type: 'activation', available: true },
-    { id: 2, country: 'US', countryCode: '+1', flag: '🇺🇸', operator: 'AT&T', service: 'Telegram', price: 2.30, type: 'activation', available: true },
-    { id: 3, country: 'US', countryCode: '+1', flag: '🇺🇸', operator: 'T-Mobile', service: 'Discord', price: 2.50, type: 'activation', available: true },
-    
-    // UK
-    { id: 4, country: 'UK', countryCode: '+44', flag: '🇬🇧', operator: 'Vodafone', service: 'WhatsApp', price: 3.00, type: 'activation', available: true },
-    { id: 5, country: 'UK', countryCode: '+44', flag: '🇬🇧', operator: 'O2', service: 'Telegram', price: 2.80, type: 'activation', available: true },
-    
-    // Canada
-    { id: 6, country: 'CA', countryCode: '+1', flag: '🇨🇦', operator: 'Rogers', service: 'Discord', price: 2.70, type: 'activation', available: true },
-    { id: 7, country: 'CA', countryCode: '+1', flag: '🇨🇦', operator: 'Bell', service: 'Facebook', price: 2.60, type: 'activation', available: true },
-    
-    // Australia
-    { id: 8, country: 'AU', countryCode: '+61', flag: '🇦🇺', operator: 'Telstra', service: 'WhatsApp', price: 3.50, type: 'activation', available: true },
-    { id: 9, country: 'AU', countryCode: '+61', flag: '🇦🇺', operator: 'Vodafone', service: 'Telegram', price: 3.20, type: 'activation', available: true },
-    
-    // India
-    { id: 10, country: 'IN', countryCode: '+91', flag: '🇮🇳', operator: 'Jio', service: 'WhatsApp', price: 0.80, type: 'activation', available: true },
-    { id: 11, country: 'IN', countryCode: '+91', flag: '🇮🇳', operator: 'Airtel', service: 'Telegram', price: 0.85, type: 'activation', available: true },
-    
-    // Nigeria
-    { id: 12, country: 'NG', countryCode: '+234', flag: '🇳🇬', operator: 'MTN', service: 'WhatsApp', price: 1.20, type: 'activation', available: true },
-    { id: 13, country: 'NG', countryCode: '+234', flag: '🇳🇬', operator: 'Airtel', service: 'Telegram', price: 1.15, type: 'activation', available: true },
-];
-
-const SERVICES = ['WhatsApp', 'Telegram', 'Discord', 'Facebook', 'TikTok', 'Instagram', 'Gmail', 'Microsoft'];
-const COUNTRIES = [...new Set(MOCK_NUMBERS.map(n => n.country))];
-
-let allNumbers = [...MOCK_NUMBERS];
+let allNumbers = [];
 let activeOrders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
 let currentModal = null;
 
@@ -101,16 +70,14 @@ function loadCountries() {
                     return `<option value="${code}">${flag} ${name}</option>`;
                 }).join('');
                 
-                select.innerHTML = '<option value="">🌍 All Countries</option>' + options;
+                select.innerHTML = '<option value="">🌍 Select a Country</option>' + options;
                 select.addEventListener('change', () => renderNumbers());
             }
         })
         .catch(err => {
             console.error('Failed to load countries:', err);
-            // Fallback to country codes if API fails
-            const uniqueCountries = [...new Set(allNumbers.map(n => ({ code: n.country, flag: n.flag })))];
-            select.innerHTML = '<option value="">🌍 All Countries</option>' + 
-                uniqueCountries.map(c => `<option value="${c.code}">${c.flag} ${c.code}</option>`).join('');
+            // Fallback if API fails
+            select.innerHTML = '<option value="">🌍 Error loading countries</option>';
             select.addEventListener('change', () => renderNumbers());
         });
 }
@@ -139,9 +106,14 @@ function renderNumbers() {
     `;
 
     if (!countryFilter) {
-        // Show all available numbers from mock data
-        allNumbers = [...MOCK_NUMBERS];
-        displayNumbers(allNumbers);
+        // Prompt user to select a country
+        cardsGrid.innerHTML = `
+            <div class="state-box" style="grid-column: 1 / -1; text-align: center;">
+                <div style="font-size: 2.5rem; margin-bottom: 1rem;">🌍</div>
+                <h3 style="margin: 0 0 8px;">Select a Country</h3>
+                <p style="color: var(--muted); font-size: 0.95rem;">Please select a country from the dropdown above to view available numbers.</p>
+            </div>
+        `;
         return;
     }
 
@@ -175,14 +147,7 @@ function renderNumbers() {
         })
         .catch(err => {
             console.error('Failed to fetch products:', err);
-            // Fallback to mock data for selected country
-            allNumbers = [...MOCK_NUMBERS];
-            const filtered = allNumbers.filter(n => n.country === countryFilter);
-            if (filtered.length > 0) {
-                displayNumbers(filtered);
-            } else {
-                showError('Failed to load numbers');
-            }
+            showError('Failed to load numbers');
         });
 
     function displayNumbers(numbers) {
