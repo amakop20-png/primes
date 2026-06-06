@@ -117,7 +117,10 @@
       <!-- Balance Card -->
       <div class="activities-card">
         <h3>Total Balance</h3>
-        <p id="displayBalance">$0.00</p>
+        <div style="display: flex; gap: 1.5rem; align-items: baseline; margin-top: 0.5rem; margin-bottom: 1rem;">
+          <p id="displayBalanceUSD" style="margin: 0; font-size: 2.2rem; font-weight: 700; color: var(--text-color);">$0.00</p>
+          <p id="displayBalanceNGN" style="margin: 0; font-size: 1.4rem; font-weight: 600; color: var(--text-muted);">₦0.00</p>
+        </div>
         <div class="bid">
           <button class="btn21" id="openPopup">View Details</button>
           <button class="btn12" id="addFundsBtn">Add Funds</button>

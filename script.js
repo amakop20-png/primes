@@ -497,7 +497,10 @@ function showToast(message, type = 'success') {
 
 async function fetchLiveUser() {
     const token = localStorage.getItem('primes_token');
-    if (!token) return null;
+    if (!token) {
+        window.location.href = 'login.html';
+        return null;
+    }
 
     try {
         const res = await fetch('/api/user/profile', {
@@ -509,6 +512,12 @@ async function fetchLiveUser() {
             const session = JSON.parse(localStorage.getItem('primes_session') || '{}');
             localStorage.setItem('primes_session', JSON.stringify({ ...session, ...data.user }));
             return data.user;
+        } else {
+            // Token invalid or expired
+            localStorage.removeItem('primes_token');
+            localStorage.removeItem('primes_session');
+            window.location.href = 'login.html';
+            return null;
         }
     } catch (err) {
         console.error('Failed to fetch user:', err);
@@ -555,6 +564,18 @@ function formatCurrency(val) {
     }
 }
 
+function getDualCurrency(val) {
+    const p = parseFloat(val) || 0;
+    const naira = p * CONVERSION_RATE;
+    return {
+        usd: '$' + p.toFixed(2),
+        ngn: '₦' + naira.toLocaleString('en-NG', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        })
+    };
+}
+
 async function renderDashboard() {
     const user = await fetchLiveUser();
     if (!user) return;
@@ -568,8 +589,11 @@ async function renderDashboard() {
     if (nameEl) nameEl.textContent = currency;
 
     // Main Balance Displays
-    const balanceEl = document.getElementById('displayBalance');
-    if (balanceEl) balanceEl.textContent = formatCurrency(user.balance);
+    const dualFormatted = getDualCurrency(user.balance);
+    const balUsdEl = document.getElementById('displayBalanceUSD');
+    const balNgnEl = document.getElementById('displayBalanceNGN');
+    if (balUsdEl) balUsdEl.textContent = dualFormatted.usd;
+    if (balNgnEl) balNgnEl.textContent = dualFormatted.ngn;
 
     const refBalEl = document.getElementById('displayReferralBalance');
     if (refBalEl) refBalEl.textContent = formatCurrency(user.referralBalance);
@@ -579,7 +603,7 @@ async function renderDashboard() {
 
     // Popup Overview Stats
     const popBalEl = document.getElementById('popupBalanceAmount');
-    if (popBalEl) popBalEl.textContent = formatCurrency(user.balance);
+    if (popBalEl) popBalEl.textContent = dualFormatted.usd + ' / ' + dualFormatted.ngn;
 
     const popPurchasedEl = document.getElementById('popupNumbersPurchased');
     if (popPurchasedEl) popPurchasedEl.textContent = user.numbersPurchased;
