@@ -194,8 +194,10 @@ function initForm() {
         const name            = document.getElementById('name')?.value.trim();
         const username        = document.getElementById('username')?.value.trim();
         const email           = document.getElementById('email')?.value.trim();
+        const phone           = document.getElementById('phone')?.value.trim();
         const password        = document.getElementById('password')?.value;
         const confirmPassword = document.getElementById('confirm_password')?.value;
+        const acceptTerms     = document.getElementById('accept_terms')?.checked || false;
 
         const btn     = document.getElementById('registerBtn');
         const spinner = document.getElementById('btnSpinner');
@@ -204,9 +206,12 @@ function initForm() {
         if (!name)                          return toast.show('Full name is required', 'error');
         if (!Validator.username(username))  return toast.show('Username must be letters and numbers only', 'error');
         if (!Validator.email(email))        return toast.show('Enter a valid email address', 'error');
+        if (!phone)                         return toast.show('Phone number is required', 'error');
 
         const passwordError = Validator.password(password, confirmPassword);
         if (passwordError)                  return toast.show(passwordError, 'error');
+
+        if (!acceptTerms)                   return toast.show('You must accept the Terms & Conditions', 'error');
 
         // — Send to Backend API —
         toggleButton(btn, spinner, true);
@@ -218,7 +223,7 @@ function initForm() {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify({ name, username, email, phone, password, acceptTerms: termsInput.checked })
+                body: JSON.stringify({ name, username, email, phone, password, acceptTerms })
             });
 
             const result = await response.json();

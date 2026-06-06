@@ -442,6 +442,53 @@ aside .top a.active {
   from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ══════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════ */
+.btn {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  background: var(--primary);
+  color: white;
+}
+
+.btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-buy {
+  background: linear-gradient(135deg, var(--primary), #a855f7);
+  font-size: 13px;
+  padding: 11px;
+}
+
+.btn-buy:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
 /* ══════════════════════════════════════
    TABLET
 ══════════════════════════════════════ */
