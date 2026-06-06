@@ -237,6 +237,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     toast.show(result.error || 'Invalid email/username or password.', 'error');
                 }
+<<<<<<< HEAD
+=======
+
+                const redirectPage = isAdminCredentials ? 'admin.html' : 'dashboard.html';
+                toast.show(`Login successful! Redirecting to ${isAdminCredentials ? 'admin' : 'user'} dashboard... 🎉`, 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 500);
+z
+>>>>>>> 4e97ffe (update)
             } catch (error) {
                 console.error('Login error:', error);
                 toast.show(error.message || 'Something went wrong. Please try again.', 'error');
