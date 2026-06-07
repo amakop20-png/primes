@@ -59,7 +59,7 @@ function loadCountries() {
     if (!select) return;
 
     // Fetch countries from 5sim API
-    fetch('http://localhost:3000/api/numbers/countries')
+    fetch('/api/numbers/countries')
         .then(res => res.json())
         .then(data => {
             if (data.success && data.details) {
@@ -118,7 +118,7 @@ function renderNumbers() {
     }
 
     // Fetch products from 5sim API for selected country
-    fetch(`http://localhost:3000/api/numbers/products?country=${countryFilter}`)
+    fetch(`/api/numbers/products?country=${countryFilter}`)
         .then(res => res.json())
         .then(data => {
             if (data.success && data.products) {

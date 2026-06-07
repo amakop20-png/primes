@@ -215,7 +215,7 @@
         toggleButton(btn, spinner, true);
         try {
           console.log('Sending signup request:', { name, username, email, phone, acceptTerms });
-          const response = await fetch('http://localhost:3000/api/auth/signup', {
+          const response = await fetch('/api/auth/signup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, username, email, phone, password, acceptTerms })
