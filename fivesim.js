@@ -6,7 +6,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, 'primes/buy.env') });
 
 const BASE_URL = 'https://5sim.net/v1';
-const TOKEN = process.env.FIVESIM_API_TOKEN; // reads from your .env file
+const TOKEN = process.env.FIVESIM_API_TOKEN || process.env.FIVESIM_API_KEY; // reads from your .env file or Vercel variables
 
 const client = axios.create({
   baseURL: BASE_URL,
