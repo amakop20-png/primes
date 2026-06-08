@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/amakop20-png/primes#readme",
   "dependencies": {
+    "@netlify/database": "^1.0.0",
     "axios": "^1.16.1",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
