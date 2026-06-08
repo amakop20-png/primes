@@ -5,6 +5,7 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["primes/**", "fivesim.js"]
+  external_node_modules = ["pg", "bcrypt", "jsonwebtoken", "axios", "cors", "express", "sqlite3"]
 
 [[redirects]]
   from = "/api/*"
