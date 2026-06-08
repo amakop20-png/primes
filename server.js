@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, 'primes/buy.env') });
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,11 +12,11 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // API Routes
-const numberRoutes = require('./primes/routes/numbers');
-const authRoutes = require('./primes/routes/auth');
-const userRoutes = require('./primes/routes/user').router;
-const orderRoutes = require('./primes/routes/orders');
-const adminRoutes = require('./primes/routes/admin');
+const numberRoutes = require('./routes/numbers');
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/user').router;
+const orderRoutes = require('./routes/orders');
+const adminRoutes = require('./routes/admin');
 
 app.use('/api/numbers', numberRoutes);
 app.use('/api/auth', authRoutes);
