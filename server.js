@@ -13,11 +13,11 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // API Routes
-const numberRoutes = require('./primes/routes/numbers');
-const authRoutes = require('./primes/routes/auth');
-const userRoutes = require('./primes/routes/user').router;
-const orderRoutes = require('./primes/routes/orders');
-const adminRoutes = require('./primes/routes/admin');
+const numberRoutes = require(path.join(__dirname, 'primes', 'routes', 'numbers'));
+const authRoutes = require(path.join(__dirname, 'primes', 'routes', 'auth'));
+const userRoutes = require(path.join(__dirname, 'primes', 'routes', 'user')).router;
+const orderRoutes = require(path.join(__dirname, 'primes', 'routes', 'orders'));
+const adminRoutes = require(path.join(__dirname, 'primes', 'routes', 'admin'));
 
 app.use('/api/numbers', numberRoutes);
 app.use('/api/auth', authRoutes);
