@@ -172,6 +172,33 @@ function initPopupEvents() {
 }
 
 /* ══════════════════════════════════════
+actve numbers, total orders, total spent, etc. These will be dynamically updated based on user data.
+ ══════════════════════════════════════ */
+ function updateStats(data) {
+  const stats = document.querySelectorAll('.smile');
+
+  // Total Order
+  stats[0].querySelector('h1').textContent = `Total Order: ${data.totalOrder}`;
+
+  // Active Numbers
+  stats[1].querySelector('h1').textContent = `Active Numbers: ${data.activeNumbers}`;
+
+  // SMS Received
+  stats[2].querySelector('h1').textContent = `SMS Received: ${data.smsReceived}`;
+
+  // Total Spent
+  stats[3].querySelector('h1').textContent = `Total Spent: ₦${data.totalSpent}`;
+}
+
+// Call it with your data
+updateStats({
+  totalOrder: 10,
+  activeNumbers: 5,
+  smsReceived: 23,
+  totalSpent: 5000
+});
+
+/* ══════════════════════════════════════
    SETTINGS PANEL
 ══════════════════════════════════════ */
 function openSettings() {
