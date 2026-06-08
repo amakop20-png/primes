@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cleanUrl =
         window.location.pathname +
         (params.toString() ? '?' + params.toString() : '') +
-        window.location.hash;
+        window.location.hash;age
 
     window.history.replaceState({}, document.title, cleanUrl);
 });
