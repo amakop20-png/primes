@@ -63,10 +63,11 @@ router.post('/signup', async (req, res) => {
       user: userData
     });
 
-  } catch (error) {
-    console.error('Signup error:', error);
+  } catch (err) {
+    console.error('Signup error:', err);
+    console.error('Signup error:', err.message);
     res.setHeader('Content-Type', 'application/json');
-    return res.status(500).json({ error: 'An error occurred during registration.', success: false });
+    return res.status(500).json({ error: `An error occurred during registration: ${err.message}`, success: false });
   }
 });
 
