@@ -171,31 +171,36 @@ function initPopupEvents() {
     }
 }
 
-/* ══════════════════════════════════════
-actve numbers, total orders, total spent, etc. These will be dynamically updated based on user data.
- ══════════════════════════════════════ */
- function updateStats(data) {
-  const stats = document.querySelectorAll('.smile');
+// Sample Dashboard Data
+const stats = {
+    orders: 15,
+    numbers: 5,
+    sms: 32,
+    purchased: 18,
+    spent: "₦45,000"
+};
 
-  // Total Order
-  stats[0].querySelector('h1').textContent = `Total Order: ${data.totalOrder}`;
+// Update Dashboard
+document.getElementById("orders").textContent = stats.orders;
+document.getElementById("numbers").textContent = stats.numbers;
+document.getElementById("sms").textContent = stats.sms;
+document.getElementById("purchased").textContent = stats.purchased;
+document.getElementById("spent").textContent = stats.spent;
 
-  // Active Numbers
-  stats[1].querySelector('h1').textContent = `Active Numbers: ${data.activeNumbers}`;
+// Sample Transactions
+const transactions = [
+    "Bought UK Number - ₦2,500",
+    "Received SMS Verification",
+    "Bought USA Number - ₦3,000"
+];
 
-  // SMS Received
-  stats[2].querySelector('h1').textContent = `SMS Received: ${data.smsReceived}`;
+const transactionList = document.getElementById("transactionsList");
+transactionList.innerHTML = "";
 
-  // Total Spent
-  stats[3].querySelector('h1').textContent = `Total Spent: ₦${data.totalSpent}`;
-}
-
-// Call it with your data
-updateStats({
-  totalOrder: 10,
-  activeNumbers: 5,
-  smsReceived: 23,
-  totalSpent: 5000
+transactions.forEach(item => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    transactionList.appendChild(li);
 });
 
 /* ══════════════════════════════════════
