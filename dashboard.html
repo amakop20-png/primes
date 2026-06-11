@@ -154,85 +154,70 @@
         </div>
 
       </div>
+<section class="plan" aria-labelledby="actions-title">
+    <h1 id="actions-title">Quick Actions</h1>
+    <div class="jacket">
+        <button class="action-card" type="button" data-action="buy-number">
+            <i class="action-icon fa-solid fa-credit-card" aria-hidden="true"></i>
+            <span>Buy Number</span>
+        </button>
 
-    </section>
-    <div class="plan">
-    <h1>Quick Actions</h1>
-       <div class="jacket">
-         <div class="action-card">
-      <i class="action-icon fa-solid fa-credit-card"></i>
-      <h2>buy
-        <br>
-         number
+        <button class="action-card" type="button" data-action="countries">
+            <i class="action-icon fa-solid fa-globe" aria-hidden="true"></i>
+            <span>Countries</span>
+        </button>
 
-      </h2>
-    </div>
-    <div class=" action-card">
-      <i class="action-icon fa-solid fa-globe"></i>
-      <h2>Countries</h2>
-    </div>
-       <div class=" action-card">
-      <i class="action-icon fa-solid fa-envelope"></i>
-      <h2>
-        Sms
-        <br>
-        Inbox
-      </h2>
-    </div>
-     <div class=" action-card">
-      <i class="action-icon fa-solid fa-box"></i>
-      <h2>
-        My
-        <br>
-        order
-      </h2>
-    </div>
-    </div>
-    </div>
-    <div class="smart">
-      <h1>Statistic</h1>
-      <div class="box1">
-  
-        <div class="smile">
-          <i class="stat-icon fa-solid fa-shopping-bag"></i>
-          <h1>Total Order</h1>
-          <span class="stat-value">0</span>
-        </div>
+        <button class="action-card" type="button" data-action="sms-inbox">
+            <i class="action-icon fa-solid fa-envelope" aria-hidden="true"></i>
+            <span>SMS Inbox</span>
+        </button>
 
-          <div class="smile">
-          <i class="stat-icon fa-solid fa-phone"></i>
-          <h1>Active  Numbers</h1>
-          <span class="stat-value">0</span>
-        </div>
-            <div class="smile">
-          <i class="stat-icon fa-solid fa-envelope"></i>
-          <h1>SMS recieved</h1>
-          <span class="stat-value">0</span>
-        </div>
-             <div class="smile">
-          <i class="stat-icon fa-solid fa-cart-shopping"></i>
-          <h1>Numbers Purchased</h1>
-          <span class="stat-value">0</span>
-      </div>
-      <div class="smile">
-          <i class="stat-icon fa-solid fa-wallet"></i>
-          <h1>Total spent</h1>
-          <span class="stat-value">0</span>
-      </div>
-      </div>
+        <button class="action-card" type="button" data-action="my-order">
+            <i class="action-icon fa-solid fa-box" aria-hidden="true"></i>
+            <span>My Order</span>
+        </button>
     </div>
-    
-    <!-- Recent Transactions -->
-    <div class="active" id="recentActivity">
-      <div class="card">
-        <h3>Recent Transactions</h3>
-        <ul class="transactions" id="transactionsList">
-          <li style="justify-content: center; color: var(--muted);">No transactions yet.</li>
-        </ul>
-      </div>
-    </div>
+</section>
 
-  </main>
+<section class="smart" aria-labelledby="stats-title">
+    <h1 id="stats-title">Statistics</h1>
+    <div class="box1">
+        <article class="smile">
+            <div class="stat-heading">
+                <i class="stat-icon fa-solid fa-shopping-bag" aria-hidden="true"></i>
+                <h2>Total Orders</h2>
+            </div>
+            <span class="stat-value" data-stat="totalOrders">0</span>
+        </article>
+
+        <article class="smile">
+            <div class="stat-heading">
+                <i class="stat-icon fa-solid fa-phone" aria-hidden="true"></i>
+                <h2>Active Numbers</h2>
+            </div>
+            <span class="stat-value" data-stat="activeNumbers">0</span>
+        </article>
+
+        <article class="smile">
+            <div class="stat-heading">
+                <i class="stat-icon fa-solid fa-envelope" aria-hidden="true"></i>
+                <h2>SMS Received</h2>
+            </div>
+            <span class="stat-value" data-stat="smsReceived">0</span>
+        </article>
+
+     
+       
+
+        <article class="smile">
+            <div class="stat-heading">
+                <i class="stat-icon fa-solid fa-wallet" aria-hidden="true"></i>
+                <h2>Total Spent</h2>
+            </div>
+            <span class="stat-value" data-stat="totalSpent" data-prefix="&#8358;">0</span>
+        </article>
+    </div>
+</section>
 
   <!-- Wallet Overview Popup -->
   <div id="popup_balance">
