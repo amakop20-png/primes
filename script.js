@@ -959,3 +959,93 @@ window.addEventListener("load", function () {
     loader.style.display = "none";
   }, 500);
 });
+
+const actionMessages = {
+  'buy-number': 'Purchase successful. Your stats have been updated.',
+  countries: 'Showing available countries...',
+  'sms-inbox': 'Opening your SMS inbox...',
+  'my-order': 'Loading your orders...'
+};
+
+const stats = {
+  totalOrders: 0,
+  activeNumbers: 0,
+  smsReceived: 0,
+  numbersPurchased: 0,
+  totalSpent: 0
+};
+
+const numberPrice = 500;
+let toastTimer;
+
+function setMenuOpen(isOpen) {
+  nav.classList.toggle('open', isOpen);
+  menuButton.classList.toggle('is-active', isOpen);
+  menuButton.setAttribute('aria-expanded', String(isOpen));
+  menuButton.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+}
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('show');
+
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2200);
+}
+
+function formatNumber(value, prefix = '') {
+  return `${prefix}${value.toLocaleString()}`;
+}
+
+function updateStats() {
+  statValues.forEach((element) => {
+    const statName = element.dataset.stat;
+    const prefix = element.dataset.prefix || '';
+    const value = stats[statName] || 0;
+
+    element.textContent = formatNumber(value, prefix);
+  });
+}
+
+function purchaseNumber() {
+  stats.totalOrders += 1;
+  stats.activeNumbers += 1;
+  stats.numbersPurchased += 1;
+  stats.totalSpent += numberPrice;
+
+  updateStats();
+}
+
+menuButton.addEventListener('click', () => {
+  setMenuOpen(!nav.classList.contains('open'));
+});
+
+nav.addEventListener('click', (event) => {
+  if (event.target.matches('a')) {
+    setMenuOpen(false);
+  }
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setMenuOpen(false);
+  }
+});
+
+actionCards.forEach((card) => {
+  card.addEventListener('click', () => {
+    actionCards.forEach((item) => item.classList.remove('is-selected'));
+    card.classList.add('is-selected');
+
+    const action = card.dataset.action;
+    if (action === 'buy-number') {
+      purchaseNumber();
+    }
+
+    showToast(actionMessages[action] || 'Action selected');
+  });
+});
+
+updateStats();
