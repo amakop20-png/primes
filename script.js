@@ -668,7 +668,7 @@ async function renderDashboard() {
 }
 // ── Paystack Configuration ──
 const PAYSTACK_CONFIG = {
-    publicKey:   'pk_live_3ca1325fab85ff43b8f4232cbf01cd76077a021c',
+    publicKey:   'pk_test_36b4ab7a4bb105c653f572f382c09bb1de905c7b',
     minAmountNGN: 100,   // ₦100 minimum
     minAmountUSD: 1,     // $1 minimum
 };
