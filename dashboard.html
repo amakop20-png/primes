@@ -314,12 +314,16 @@
   <button class="scroll-top" id="scrollTopBtn">
     <i class="fa-solid fa-arrow-up"></i>
   </button>
-  <!-- Screen Loader (fixed: moved outside main, first child of body) -->
-  <div class="loader-wrapper">
-    <img src="77825-removebg-preview.png" width="80px" height="80px" class="">
-
-    </span>
-  </div>
+<!-- Screen Loader -->
+<div class="loader-wrapper" id="loaderWrapper" role="status" aria-live="polite" aria-label="Loading">
+  <img
+    src="77825-removebg-preview.png"
+    alt="Loading..."
+    class="loader-logo"
+    width="80"
+    height="80"
+  >
+</div>
 
   <!-- Deposit Modal -->
   <style>
