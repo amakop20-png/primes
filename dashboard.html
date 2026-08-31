@@ -15,6 +15,7 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="styles.css">
+ 
 </head>
 
 <body>
@@ -24,7 +25,7 @@
   <header>
     <div class="pride">
       <div class="logo">
-        <img src="77825-removebg-preview.png" alt="Nura Sms">
+        <img src="IMG-20260820-WA0006.jpg" alt="Nura Sms">
       </div>
       <div class="toggle-btn" id="toggle-btn">
         <i class="fa-solid fa-bars"></i>
@@ -66,7 +67,6 @@
             Logout</a>
         </div>
       </div>
-    </div>
     </div>
   </header>
 
@@ -154,6 +154,7 @@
         </div>
 
       </div>
+      
 <section class="plan" aria-labelledby="actions-title">
     <h1 id="actions-title">Quick Actions</h1>
     <div class="jacket">
@@ -206,9 +207,6 @@
             <span class="stat-value" data-stat="smsReceived">0</span>
         </article>
 
-     
-       
-
         <article class="smile">
             <div class="stat-heading">
                 <i class="stat-icon fa-solid fa-wallet" aria-hidden="true"></i>
@@ -221,45 +219,27 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<section class="smart" aria-labelledby="stats-title">
-    <h1 id="stats-title">Statistics</h1>
-    <div class="box1">
-        <article class="smile">
-            <div class="stat-heading">
-                <i class="stat-icon fa-solid fa-shopping-bag" aria-hidden="true"></i>
-                <h2>Total Orders</h2>
-            </div>
-            <span class="stat-value" data-stat="totalOrders">0</span>
-        </article>
+<!-- ── Recent Transactions ── -->
+<section class="smart" id="recentActivity" aria-labelledby="tx-title" style="margin-top:0;">
+  <h1 id="tx-title">Recent Transactions</h1>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow);">
+    <ul id="transactionsList" style="list-style:none;padding:0;margin:0;">
+      <li style="text-align:center;padding:20px;color:var(--muted);">Loading transactions…</li>
+    </ul>
 
-        <article class="smile">
-            <div class="stat-heading">
-                <i class="stat-icon fa-solid fa-phone" aria-hidden="true"></i>
-                <h2>Active Numbers</h2>
-            </div>
-            <span class="stat-value" data-stat="activeNumbers">0</span>
-        </article>
-
-        <article class="smile">
-            <div class="stat-heading">
-                <i class="stat-icon fa-solid fa-envelope" aria-hidden="true"></i>
-                <h2>SMS Received</h2>
-            </div>
-            <span class="stat-value" data-stat="smsReceived">0</span>
-        </article>
-
-     
-       
-
-        <article class="smile">
-            <div class="stat-heading">
-                <i class="stat-icon fa-solid fa-wallet" aria-hidden="true"></i>
-                <h2>Total Spent</h2>
-            </div>
-            <span class="stat-value" data-stat="totalSpent" data-prefix="&#8358;">0</span>
-        </article>
-    </div>
+    <!-- Pagination -->
+    <div id="txPagination" style="display:none;align-items:center;justify-content:space-between;margin-top:16px;gap:12px;flex-wrap:wrap;">
+      <button id="txPrevBtn" style="padding:8px 18px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;transition:0.2s;" disabled>
+        ← Prev
+      </button>
+      <span id="txPageLabel" style="font-size:13px;font-weight:600;color:var(--muted);">Page 1 of 1</span>
+      <button id="txNextBtn" style="padding:8px 18px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-weight:700;font-size:13px;cursor:pointer;transition:0.2s;" disabled>
+        Next →
+      </button>
+  </div>
 </section>
+
+  </main>
 
   <!-- Wallet Overview Popup -->
   <div id="popup_balance">
@@ -303,6 +283,16 @@
           <div>
             <div class="stat-label">Total Recharge</div>
             <span class="stat-value" id="popupTotalRecharge">$0.00</span>
+          </div>
+        </div>
+
+        <!-- Virtual Account Info -->
+        <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">
+            <i class="fa-solid fa-building-columns"></i> Virtual Account (Fund Wallet)
+          </div>
+          <div id="virtualAccountContainer">
+            <p style="font-size:13px;color:var(--muted);">Loading virtual account…</p>
           </div>
         </div>
 
@@ -358,21 +348,8 @@
     </div>
   </div>
 
-  <!-- JavaScript -->
-  <script>
-    // Load user info from localStorage on page load
-    document.addEventListener('DOMContentLoaded', () => {
-      const sessionData = JSON.parse(localStorage.getItem('primes_session') || '{}');
-      if (sessionData && sessionData.name) {
-        const nameEl = document.getElementById('Username');
-        if (nameEl) nameEl.textContent = sessionData.name;
-      } else {
-        // Redirect to login if not authenticated
-        window.location.href = 'login.html';
-      }
-    });
-  </script>
   <script src="https://js.paystack.co/v1/inline.js"></script>
+  <script src="api.js"></script>
   <script src="script.js"></script>
 
 

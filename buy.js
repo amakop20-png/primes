@@ -1,535 +1,792 @@
 /* ══════════════════════════════════════════════════════════════════════
-   BUY PAGE - VIRTUAL NUMBERS & OTP FUNCTIONALITY
+   buy.js — Virtual Numbers & OTP Order Integration
+   Requires api.js to be loaded FIRST.
+   All API calls use the centralized functions from api.js:
+   - getWalletBalance()
+   - getCountries()
+   - getProducts(country)
+   - buyActivation(country, product)
+   - getOrder(orderId)
+   - finishOrder(orderId)
+   - cancelOrder(orderId)
+   - banOrder(orderId)
 ══════════════════════════════════════════════════════════════════════ */
 
-let allNumbers = [];
-let activeOrders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
-let currentModal = null;
+/* ── Module State ── */
+let allProducts      = [];   // Products from API for the selected country
+let selectedCountry  = '';   // Currently selected country key (e.g. 'usa')
+let selectedProduct  = '';   // Currently selected product key (e.g. 'whatsapp')
 
-// Initialize on page load
+let currentOrderId   = null; // Active order ID (from backend)
+let currentOrderData = null; // Full order object from backend
+
+let pollInterval     = null; // setInterval reference for SMS polling
+let isBuying         = false; // Guard against double-click on Buy
+let isActionBusy     = false; // Guard against multiple finish/cancel/ban requests
+
+const POLL_INTERVAL_MS = 5000;
+const CONVERSION_RATE  = 1500;
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
-    initBuyPage();
-    renderWalletBalance();
-    loadCountries();
-    loadServices();
-    renderNumbers();
-    renderActiveNumbers();
-    attachEventListeners();
-});
+    // Auth guard — redirect if no token
+    if (!requireAuth()) return;
 
-function initBuyPage() {
-    const session = JSON.parse(localStorage.getItem('primes_session') || '{}');
-    if (!session || !session.name) {
-        window.location.href = 'login.html';
-        return;
-    }
-
+    // Restore theme
     if (localStorage.getItem('dashboardTheme') === 'dark') {
         document.body.classList.add('dark-theme');
     }
 
-    const currency = localStorage.getItem('primes_currency') || 'USD';
-    updateCurrencyDisplay(currency);
+    // Restore currency UI
+    updateCurrencyDisplay(getCurrency());
+
+    renderUserInfo();
+    loadWalletBalanceBuyPage();
+    loadCountries();
+    attachEventListeners();
+
+    // Restore any in-progress order from previous session
+    const savedOrderId = localStorage.getItem('currentOrderId');
+    if (savedOrderId) {
+        currentOrderId = savedOrderId;
+        openOrderModal(currentOrderId);
+    }
+});
+
+/* ══════════════════════════════════════════
+   USER INFO
+══════════════════════════════════════════ */
+function renderUserInfo() {
+    const session     = getSession() || {};
+    const displayName  = session.name || session.username || 'User';
+    const displayEmail = session.email || '';
+    document.querySelectorAll('#Username, .dropdown-name, .username, #buyUsername').forEach(el => {
+        el.textContent = displayName;
+    });
+    document.querySelectorAll('.dropdown-email').forEach(el => {
+        el.textContent = displayEmail;
+    });
 }
 
-function renderWalletBalance() {
-    const user = getLiveUser();
-    if (!user) return;
+/* ══════════════════════════════════════════
+   CURRENCY (display helpers, no financial ops)
+══════════════════════════════════════════ */
+function getCurrency() {
+    return localStorage.getItem('primes_currency') || 'NGN';
+}
 
-    const currency = getCurrency();
-    const balance = currency === 'USD' ? user.balance : (user.balance * CONVERSION_RATE);
-    const symbol = currency === 'USD' ? '$' : '₦';
-    
+function updateCurrencyDisplay(currency) {
+    const sym  = document.getElementById('currencySymbol');
+    const name = document.getElementById('currencyName');
+    if (sym)  sym.textContent  = currency === 'USD' ? '$' : '₦';
+    if (name) name.textContent = currency;
+}
+
+function toggleBuyCurrency() {
+    const next = getCurrency() === 'NGN' ? 'USD' : 'NGN';
+    localStorage.setItem('primes_currency', next);
+    updateCurrencyDisplay(next);
+    loadWalletBalanceBuyPage();
+    // Re-render product cards if products are already loaded
+    if (allProducts.length > 0) renderProductCards(allProducts);
+    showToast(`💱 Currency switched to ${next}`, 'info');
+}
+
+/* ══════════════════════════════════════════
+   WALLET BALANCE (buy page)
+   Uses: getWalletBalance() from api.js
+══════════════════════════════════════════ */
+async function loadWalletBalanceBuyPage() {
     const balEl = document.getElementById('buyWalletBalance');
-    if (balEl) {
-        balEl.textContent = `${symbol}${balance.toLocaleString('en-US', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
-        })}`;
+    if (balEl) balEl.textContent = 'Loading…';
+
+    try {
+        const data       = await getWalletBalance();
+        const balanceNGN = data?.wallet?.balance ?? data?.balance ?? 0;
+        const ngn        = parseFloat(balanceNGN) || 0;
+        const currency   = getCurrency();
+        const displayed  = currency === 'USD' ? (ngn / CONVERSION_RATE) : ngn;
+        const symbol     = currency === 'USD' ? '$' : '₦';
+
+        if (balEl) balEl.textContent = symbol + displayed.toLocaleString('en-NG', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2
+        });
+
+        // Store raw NGN for balance reference
+        localStorage.setItem('_walletBalance', String(ngn));
+    } catch (err) {
+        console.error('loadWalletBalanceBuyPage error:', err);
+        if (balEl) balEl.textContent = '—';
     }
 
+    // Service status indicator
     const statusEl = document.getElementById('fivesimBalance');
     if (statusEl) {
-        statusEl.innerHTML = '<span style="color: #16a34a; font-weight: 700;">✅ Online</span>';
+        statusEl.innerHTML = '<span style="color:#16a34a;font-weight:700;">✅ Online</span>';
     }
 }
 
-function loadCountries() {
+/* ══════════════════════════════════════════
+   COUNTRIES
+   Uses: getCountries() from api.js
+══════════════════════════════════════════ */
+async function loadCountries() {
     const select = document.getElementById('countryFilter');
     if (!select) return;
 
-    // Fetch countries from 5sim API
-    fetch('/api/numbers/countries')
-        .then(res => res.json())
-        .then(data => {
-            if (data.success && data.details) {
-                const countryDetails = data.details;
-                const options = Object.entries(countryDetails).map(([code, details]) => {
-                    const name = details.name || code;
-                    const flag = details.flag || '🌐';
-                    return `<option value="${code}">${flag} ${name}</option>`;
-                }).join('');
-                
-                select.innerHTML = '<option value="">🌍 Select a Country</option>' + options;
-                select.addEventListener('change', () => renderNumbers());
+    select.innerHTML = '<option value="">⏳ Loading countries…</option>';
+    select.disabled  = true;
+
+    try {
+        const data = await getCountries();
+
+        /*
+         * Expected shapes:
+         * 1) { countries: { afghanistan: { text_en: "Afghanistan", prefix: { "+93": 1 } }, … } }
+         * 2) { usa: { name: "USA", prefix: "+1" }, … }
+         */
+        const countries = data?.countries || data;
+
+        if (!countries || typeof countries !== 'object') {
+            throw new Error('Unexpected countries response format.');
+        }
+
+        const entries = Object.entries(countries);
+        if (entries.length === 0) throw new Error('No countries returned from API.');
+
+        function getCountryName(key, info) {
+            if (!info || typeof info !== 'object') return key.toUpperCase();
+            return info.text_en || info.name || info.text_ru || (key.charAt(0).toUpperCase() + key.slice(1));
+        }
+
+        function getCountryPrefix(info) {
+            if (!info || typeof info !== 'object' || !info.prefix) return '';
+            if (typeof info.prefix === 'string') return info.prefix;
+            if (typeof info.prefix === 'object') {
+                const keys = Object.keys(info.prefix);
+                return keys.length > 0 ? keys[0] : '';
             }
-        })
-        .catch(err => {
-            console.error('Failed to load countries:', err);
-            // Fallback if API fails
-            select.innerHTML = '<option value="">🌍 Error loading countries</option>';
-            select.addEventListener('change', () => renderNumbers());
-        });
+            return '';
+        }
+
+        const options = entries
+            .sort((a, b) => getCountryName(a[0], a[1]).localeCompare(getCountryName(b[0], b[1])))
+            .map(([key, info]) => {
+                const name = getCountryName(key, info);
+                const prefix = getCountryPrefix(info);
+                const prefixStr = prefix ? ` (${prefix})` : '';
+                return `<option value="${key}">${name}${prefixStr}</option>`;
+            })
+            .join('');
+
+        select.innerHTML = '<option value="">🌍 Select a Country</option>' + options;
+        select.disabled  = false;
+        select.addEventListener('change', onCountryChange);
+    } catch (err) {
+        console.error('loadCountries error:', err);
+        select.innerHTML = '<option value="">⚠ Failed to load countries (Click to retry)</option>';
+        select.disabled  = false;
+        showToast('Unable to load countries. Backend may be waking up, please retry.', 'error');
+        select.onclick = () => { if (select.disabled || select.value === '') loadCountries(); };
+    }
 }
 
-function loadServices() {
-    const select = document.getElementById('serviceFilter');
-    if (!select) return;
+function onCountryChange() {
+    const select = document.getElementById('countryFilter');
+    selectedCountry = select?.value || '';
+    selectedProduct = '';
 
-    select.innerHTML = '<option value="">📱 All Services</option>' +
-        SERVICES.map(s => `<option value="${s}">${s}</option>`).join('');
-    
-    select.addEventListener('change', () => renderNumbers());
+    if (!selectedCountry) {
+        showSelectCountryPrompt();
+        return;
+    }
+
+    loadProducts(selectedCountry);
 }
 
-function renderNumbers() {
-    const countryFilter = document.getElementById('countryFilter')?.value || '';
+/* ══════════════════════════════════════════
+   PRODUCTS
+   Uses: getProducts(country) from api.js
+══════════════════════════════════════════ */
+async function loadProducts(country) {
     const cardsGrid = document.getElementById('cardsGrid');
     if (!cardsGrid) return;
 
-    // Show loading state
-    cardsGrid.innerHTML = `
-        <div class="state-box" style="grid-column: 1 / -1; text-align: center;">
-            <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
-            <p>Loading numbers...</p>
-        </div>
-    `;
+    // Loading skeletons
+    cardsGrid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join('');
+    const resultCount = document.getElementById('resultCount');
+    if (resultCount) resultCount.textContent = 'Loading products…';
 
-    if (!countryFilter) {
-        // Prompt user to select a country
-        cardsGrid.innerHTML = `
-            <div class="state-box" style="grid-column: 1 / -1; text-align: center;">
-                <div style="font-size: 2.5rem; margin-bottom: 1rem;">🌍</div>
-                <h3 style="margin: 0 0 8px;">Select a Country</h3>
-                <p style="color: var(--muted); font-size: 0.95rem;">Please select a country from the dropdown above to view available numbers.</p>
-            </div>
-        `;
-        return;
-    }
+    try {
+        const data = await getProducts(country);
 
-    // Fetch products from 5sim API for selected country
-    fetch(`/api/numbers/products?country=${countryFilter}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.success && data.products) {
-                console.log('Products fetched from 5sim:', data.products);
-                // Convert API response to card format
-                const numbers = Object.entries(data.products).map(([service, details]) => {
-                    const price = details.Price || details.price || details.rate || 0;
-                    const count = details.Qty || details.count || 0;
-                    return {
-                        id: `${countryFilter}-${service}-any`,
-                        country: countryFilter,
-                        countryCode: '+1',
-                        flag: '🌐',
-                        operator: 'any',
-                        service: service,
-                        price: price,
-                        type: details.Category || 'activation',
-                        available: count > 0
-                    };
-                });
-                allNumbers = numbers;
-                displayNumbers(numbers);
-            } else {
-                showError('No products available');
-            }
-        })
-        .catch(err => {
-            console.error('Failed to fetch products:', err);
-            showError('Failed to load numbers');
-        });
+        /*
+         * Handles both flat shapes { whatsapp: { Price, Qty } }
+         * and nested 5SIM operator shapes { whatsapp: { virtual21: { cost, count } } }
+         */
+        const raw = data?.products || data;
 
-    function displayNumbers(numbers) {
-        const serviceFilter = document.getElementById('serviceFilter')?.value || '';
-        const typeFilter = document.getElementById('typeFilter')?.value || 'activation';
-        const searchInput = document.getElementById('searchInput')?.value.toLowerCase() || '';
-
-        let filtered = numbers.filter(n => {
-            if (serviceFilter && n.service !== serviceFilter) return false;
-            if (typeFilter && n.type !== typeFilter) return false;
-            if (searchInput && !n.country.toLowerCase().includes(searchInput) && 
-                !n.operator.toLowerCase().includes(searchInput)) return false;
-            return true;
-        });
-
-        const currency = getCurrency();
-
-        if (filtered.length === 0) {
-            cardsGrid.innerHTML = `
-                <div class="state-box" style="grid-column: 1 / -1;">
-                    <i class="fa-solid fa-phone-slash"></i>
-                    <p>No numbers available</p>
-                </div>
-            `;
+        if (!raw || typeof raw !== 'object') {
+            showEmptyState(cardsGrid, 'No products returned from server.');
             return;
         }
 
-        cardsGrid.innerHTML = filtered.map(num => {
-            const price = currency === 'USD' ? num.price : (num.price * CONVERSION_RATE);
-            const symbol = currency === 'USD' ? '$' : '₦';
-            const isActive = activeOrders.some(o => o.numberId === num.id);
-            
-            return `
-                <div class="card" style="position: relative;">
-                    ${isActive ? '<div style="position: absolute; top: 10px; right: 10px; background: #10b981; color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;">ACTIVE</div>' : ''}
-                    <div class="card-flag">${num.flag}</div>
-                    <div class="card-title">${num.country}</div>
-                    <div class="card-meta">
-                        <span style="font-size: 12px; color: var(--muted);">${num.operator}</span>
-                        <span class="card-service-badge">${num.service}</span>
-                    </div>
-                    <div class="card-price">${symbol}${price.toFixed(2)}</div>
-                    <button class="btn btn-buy" onclick="purchaseNumber('${num.id}')" ${!num.available ? 'disabled' : ''}>
-                        ${num.available ? '🛒 Buy Now' : '❌ Unavailable'}
-                    </button>
-                </div>
-            `;
-        }).join('');
+        allProducts = Object.entries(raw)
+            .filter(([, info]) => info && typeof info === 'object')
+            .map(([key, info]) => {
+                let price = 0;
+                let qty = 0;
+                let category = 'activation';
 
-        const countEl = document.getElementById('resultCount');
-        if (countEl) countEl.textContent = `${filtered.length} number${filtered.length !== 1 ? 's' : ''} available`;
-    }
+                if (info.Price !== undefined || info.price !== undefined || info.cost !== undefined || info.rate !== undefined) {
+                    // Flat format
+                    price = parseFloat(info.Price || info.price || info.rate || info.cost || 0);
+                    qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
+                    category = (info.Category || info.category || 'activation').toLowerCase();
+                } else {
+                    // Operator map format
+                    const operators = Object.values(info).filter(v => v && typeof v === 'object');
+                    if (operators.length > 0) {
+                        const validPrices = operators.map(op => parseFloat(op.cost || op.price || op.rate || 0)).filter(p => p > 0);
+                        price = validPrices.length > 0 ? Math.min(...validPrices) : 0;
+                        qty = operators.reduce((sum, op) => sum + parseInt(op.count || op.qty || op.quantity || 0, 10), 0);
+                        category = (operators[0].category || 'activation').toLowerCase();
+                    }
+                }
 
-    function showError(msg) {
-        cardsGrid.innerHTML = `
-            <div class="state-box" style="grid-column: 1 / -1;">
-                <i class="fa-solid fa-exclamation-circle"></i>
-                <p>${msg}</p>
-            </div>
-        `;
+                return {
+                    key,
+                    name: key.charAt(0).toUpperCase() + key.slice(1),
+                    price,
+                    qty,
+                    category
+                };
+            })
+            .filter(p => p.price >= 0);
+
+        if (allProducts.length === 0) {
+            showEmptyState(cardsGrid, 'No numbers available for this country right now.');
+            return;
+        }
+
+        renderProductCards(allProducts);
+    } catch (err) {
+        console.error('loadProducts error:', err);
+        showErrorState(cardsGrid, 'Failed to load products for this country. Please try again.');
     }
 }
 
-function renderActiveNumbers() {
-    const section = document.getElementById('activeNumbersSection');
-    const grid = document.getElementById('activeNumbersGrid');
-    
-    if (!section || !grid) return;
+function renderProductCards(products) {
+    const cardsGrid     = document.getElementById('cardsGrid');
+    const searchInput   = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const serviceFilter = document.getElementById('serviceFilter')?.value || '';
+    const typeFilter    = document.getElementById('typeFilter')?.value || '';
+    const resultCount   = document.getElementById('resultCount');
+    if (!cardsGrid) return;
 
-    if (activeOrders.length === 0) {
-        section.style.display = 'none';
-        return;
-    }
-
-    section.style.display = 'block';
-    
-    grid.innerHTML = activeOrders.map(order => `
-        <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px; cursor: pointer;" onclick="openOrderModal(${order.id})">
-            <div style="font-size: 24px; margin-bottom: 6px;">${order.flag}</div>
-            <div style="font-size: 13px; font-weight: 700; color: var(--text);">${order.number}</div>
-            <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Click to view</div>
-        </div>
-    `).join('');
-}
-
-async function purchaseNumber(numberId) {
-    const user = getLiveUser();
-    if (!user) {
-        showToast('Please log in first', 'error');
-        return;
-    }
-
-    const num = allNumbers.find(n => n.id === numberId);
-    if (!num) return;
-
-    const currency = getCurrency();
-    const priceUSD = num.price;
-    const priceLocal = currency === 'USD' ? priceUSD : (priceUSD * CONVERSION_RATE);
-
-    if (user.balance < priceUSD) {
-        showToast('❌ Insufficient balance. Please add funds.', 'error');
-        setTimeout(() => window.location.href = 'dashboard.html?open=wallet', 1500);
-        return;
-    }
-
-    user.balance -= priceUSD;
-    user.numbersPurchased = (user.numbersPurchased || 0) + 1;
-
-    const virtualNumber = generateVirtualNumber(num.countryCode);
-
-    const order = {
-        id: Date.now(),
-        numberId: numberId,
-        number: virtualNumber,
-        country: num.country,
-        flag: num.flag,
-        operator: num.operator,
-        service: num.service,
-        price: priceUSD,
-        status: 'waiting',
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-        sms: [],
-        otp: null
-    };
-
-    activeOrders.push(order);
-    localStorage.setItem('activeOrders', JSON.stringify(activeOrders));
-
-    user.transactions = user.transactions || [];
-    user.transactions.unshift({
-        id: order.id,
-        type: 'Purchase',
-        amount: -priceUSD,
-        description: `Purchased ${num.service} number (${num.country})`,
-        timestamp: new Date().toISOString()
+    let filtered = products.filter(p => {
+        if (searchInput   && !p.name.toLowerCase().includes(searchInput) && !p.key.toLowerCase().includes(searchInput)) return false;
+        if (serviceFilter && p.key !== serviceFilter) return false;
+        if (typeFilter    && p.category !== typeFilter) return false;
+        return true;
     });
 
-    saveLiveUser(user);
-    renderWalletBalance();
-    renderNumbers();
-    renderActiveNumbers();
+    if (resultCount) resultCount.textContent = `${filtered.length} service${filtered.length !== 1 ? 's' : ''} available`;
 
-    const symbol = currency === 'USD' ? '$' : '₦';
-    showToast(`✅ Number purchased! ${symbol}${priceLocal.toFixed(2)} deducted`, 'success');
+    if (filtered.length === 0) {
+        showEmptyState(cardsGrid, 'No services match your search or filter.');
+        return;
+    }
 
-    setTimeout(() => openOrderModal(order.id), 500);
+    const currency = getCurrency();
+    const symbol   = currency === 'USD' ? '$' : '₦';
+
+    cardsGrid.innerHTML = filtered.map(p => {
+        const displayPrice = currency === 'USD' ? (p.price / CONVERSION_RATE) : p.price;
+        const priceStr     = symbol + displayPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const isSelected   = selectedProduct === p.key;
+
+        return `
+        <div class="card${isSelected ? ' selected' : ''}" style="position:relative;cursor:pointer;" onclick="selectProduct('${p.key}')">
+            <span class="card-flag" style="font-size:2rem;display:block;margin-bottom:6px;">📱</span>
+            <div class="card-title" style="font-weight:800;font-size:15px;color:var(--text);">${p.name}</div>
+            <div class="card-meta">
+                <span style="font-size:12px;color:var(--muted);">${p.qty > 0 ? p.qty.toLocaleString() + ' available' : 'In stock'}</span>
+                <span class="card-service-badge">${p.category}</span>
+            </div>
+            <div class="card-price">${priceStr}</div>
+            <button
+                class="btn btn-buy"
+                id="buyBtn-${p.key}"
+                onclick="event.stopPropagation(); handleBuyClick('${selectedCountry}', '${p.key}', this)"
+            >
+                🛒 Buy Now
+            </button>
+        </div>`;
+    }).join('');
 }
 
-function generateVirtualNumber(countryCode) {
-    const areaCode = Math.floor(Math.random() * 900) + 100;
-    const exchange = Math.floor(Math.random() * 900) + 100;
-    const line = Math.floor(Math.random() * 9000) + 1000;
-    return `${countryCode} ${areaCode}-${exchange}-${line}`;
+function selectProduct(key) {
+    selectedProduct = key;
+    renderProductCards(allProducts);
 }
 
-function openOrderModal(orderId) {
-    const order = activeOrders.find(o => o.id === orderId);
-    if (!order) return;
+/* ══════════════════════════════════════════
+   BUY ACTIVATION
+   Uses: buyActivation(country, product) from api.js
+══════════════════════════════════════════ */
+async function handleBuyClick(country, product, btnEl) {
+    if (isBuying) return; // Prevent duplicate rapid clicks
 
-    currentModal = order;
+    if (!country || !product) {
+        showToast('Please select a country and service first.', 'error');
+        return;
+    }
+
+    isBuying = true;
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = '⏳ Purchasing…';
+    }
+
+    try {
+        const result = await buyActivation(country, product);
+        const order  = result?.order || result;
+
+        if (!order || (!order.id && !order._id)) {
+            throw new Error('Server did not return a valid order.');
+        }
+
+        const orderId = order.id || order._id;
+
+        // Save real backend order ID
+        currentOrderId   = orderId;
+        currentOrderData = order;
+        localStorage.setItem('currentOrderId', String(orderId));
+
+        showToast('✅ Number purchased successfully! Opening order…', 'success');
+
+        // Refresh wallet balance from backend
+        await loadWalletBalanceBuyPage();
+
+        // Open SMS modal and start polling
+        openOrderModal(orderId, order);
+    } catch (err) {
+        console.error('buyActivation error:', err);
+        showToast(err.message || 'Failed to purchase number. Check your wallet balance.', 'error');
+    } finally {
+        isBuying = false;
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = '🛒 Buy Now';
+        }
+    }
+}
+
+/* ══════════════════════════════════════════
+   ORDER MODAL & DETAILS
+   Uses: getOrder(orderId) from api.js
+══════════════════════════════════════════ */
+async function openOrderModal(orderId, initialOrder = null) {
+    currentOrderId = orderId;
 
     const overlay = document.getElementById('smsModalOverlay');
     if (!overlay) return;
 
-    document.getElementById('modalPhone').textContent = order.number;
-    document.getElementById('modalOrderId').textContent = `#${order.id}`;
-    document.getElementById('modalExpires').textContent = new Date(order.expiresAt).toLocaleTimeString();
-
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    if (statusDot && statusText) {
-        statusDot.className = 'dot pulse';
-        statusText.textContent = 'Waiting for SMS...';
-    }
-
-    const otpBox = document.getElementById('smsOtpBox');
-    if (otpBox) otpBox.classList.remove('show');
-
-    const inboxList = document.getElementById('smsInboxList');
-    if (inboxList) inboxList.classList.remove('show');
-
+    // Show modal with loading state
     overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
 
-    simulateSmsReceiving(order);
+    setModalLoading();
+
+    // Use initial order data if provided, otherwise fetch fresh
+    let order = initialOrder;
+    if (!order) {
+        try {
+            const res = await getOrder(orderId);
+            order = res?.order || res;
+        } catch (err) {
+            console.error('fetchOrder error:', err);
+            setModalError('Could not load order details: ' + err.message);
+            return;
+        }
+    }
+
+    currentOrderData = order;
+    updateOrderUI(order);
+
+    // If order is pending, start polling every 5000ms
+    if (order.status === 'PENDING') {
+        startPolling(orderId);
+    }
 }
 
-function simulateSmsReceiving(order) {
-    const delay = Math.random() * 5000 + 3000;
-    
-    setTimeout(() => {
-        if (currentModal?.id !== order.id) return;
+function setModalLoading() {
+    const phoneEl = document.getElementById('modalPhone');
+    if (phoneEl) phoneEl.textContent = 'Loading…';
+    const statusText = document.getElementById('statusText');
+    if (statusText) statusText.textContent = 'Fetching order status…';
+    const otpBox = document.getElementById('smsOtpBox');
+    if (otpBox) otpBox.classList.remove('show');
+}
 
-        const otp = String(Math.floor(Math.random() * 999999)).padStart(6, '0');
-        order.otp = otp;
-        order.sms.push({
-            sender: order.service,
-            body: `Your ${order.service} verification code is: ${otp}`,
-            time: new Date().toLocaleTimeString()
-        });
+function setModalError(msg) {
+    const statusText = document.getElementById('statusText');
+    if (statusText) statusText.textContent = msg;
+}
 
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
-        const otpBox = document.getElementById('smsOtpBox');
-        const otpCode = document.getElementById('otpCode');
-        const otpFullText = document.getElementById('otpFullText');
+/* ── Update the modal UI from a backend order object ── */
+function updateOrderUI(order) {
+    if (!order) return;
 
-        if (statusDot) statusDot.classList.remove('pulse');
-        if (statusText) statusText.textContent = '✅ SMS Received!';
+    // Phone number
+    const phoneEl = document.getElementById('modalPhone');
+    if (phoneEl) phoneEl.textContent = order.phone || order.number || '—';
+
+    // Order ID
+    const orderIdEl = document.getElementById('modalOrderId');
+    if (orderIdEl) orderIdEl.textContent = '#' + (order.id || order._id || '—');
+
+    // Expiration
+    const expiresEl = document.getElementById('modalExpires');
+    if (expiresEl) {
+        const exp = order.expires || order.expiresAt || order.created_at;
+        expiresEl.textContent = exp ? new Date(exp).toLocaleTimeString() : '—';
+    }
+
+    // Status mapping & badge
+    const statusDot  = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const statusMap  = {
+        PENDING:  { dot: 'pulse',    text: '⏳ Waiting for SMS (Auto-polling every 5s)…', color: '#f59e0b' },
+        RECEIVED: { dot: 'received', text: '✅ SMS Received!',                             color: '#10b981' },
+        FINISHED: { dot: 'received', text: '✔ Order Completed',                            color: '#10b981' },
+        CANCELED: { dot: '',         text: '❌ Order Cancelled',                           color: '#ef4444' },
+        BANNED:   { dot: '',         text: '⚠️ Number Reported & Banned',                  color: '#ef4444' },
+    };
+
+    const currentStatus = String(order.status || 'PENDING').toUpperCase();
+    const s = statusMap[currentStatus] || { dot: '', text: currentStatus, color: '#888' };
+
+    if (statusDot) {
+        statusDot.className = 'dot ' + s.dot;
+        statusDot.style.background = s.color;
+    }
+    if (statusText) statusText.textContent = s.text;
+
+    // OTP / SMS Received Data
+    const otpBox      = document.getElementById('smsOtpBox');
+    const otpCode     = document.getElementById('otpCode');
+    const otpFullText = document.getElementById('otpFullText');
+
+    if (currentStatus === 'RECEIVED' && Array.isArray(order.sms) && order.sms.length > 0) {
+        const sms = order.sms[0];
+        const otp = sms.code || extractOTP(sms.text);
         if (otpBox) otpBox.classList.add('show');
-        if (otpCode) otpCode.textContent = otp;
-        if (otpFullText) otpFullText.textContent = `Your ${order.service} verification code`;
+        if (otpCode) otpCode.textContent = otp || '—';
+        if (otpFullText) {
+            const sender = sms.sender ? `[Sender: ${sms.sender}] ` : '';
+            const time   = sms.created_at || sms.date ? ` (${new Date(sms.created_at || sms.date).toLocaleTimeString()})` : '';
+            otpFullText.textContent = `${sender}${sms.text || ''}${time}`;
+        }
+    } else {
+        if (otpBox) otpBox.classList.remove('show');
+    }
 
-        showToast(`📨 SMS received on ${order.number}!`, 'success');
-    }, delay);
+    // Button States
+    const cancelBtn = document.getElementById('btnCancelOrder');
+    const banBtn    = document.getElementById('btnBanOrder');
+    const finishBtn = document.getElementById('btnFinishOrder');
+
+    const isPending  = currentStatus === 'PENDING';
+    const isReceived = currentStatus === 'RECEIVED';
+    const isFinal    = currentStatus === 'FINISHED' || currentStatus === 'CANCELED' || currentStatus === 'BANNED';
+
+    if (cancelBtn) cancelBtn.disabled = !isPending && !isReceived;
+    if (banBtn)    banBtn.disabled    = isFinal;
+    if (finishBtn) finishBtn.disabled = !isReceived; // Can finish once SMS is received
 }
 
-function refreshInbox() {
-    if (!currentModal) return;
-    showToast('🔄 Refreshing inbox...', 'info');
-    simulateSmsReceiving(currentModal);
+/** Simple OTP code extraction fallback */
+function extractOTP(text) {
+    if (!text) return null;
+    const match = text.match(/\b(\d{4,8})\b/);
+    return match ? match[1] : null;
+}
+
+/* ══════════════════════════════════════════
+   SMS POLLING
+   Uses: getOrder(orderId) from api.js
+══════════════════════════════════════════ */
+function startPolling(orderId) {
+    stopPolling(); // Ensure no duplicate intervals exist
+
+    pollInterval = setInterval(async () => {
+        try {
+            const res   = await getOrder(orderId);
+            const order = res?.order || res;
+            if (!order) return;
+
+            currentOrderData = order;
+            updateOrderUI(order);
+
+            const status = String(order.status || '').toUpperCase();
+
+            if (status === 'RECEIVED') {
+                stopPolling();
+                showToast('📨 SMS received! Your verification code is ready.', 'success');
+            } else if (status === 'FINISHED' || status === 'CANCELED' || status === 'BANNED') {
+                stopPolling();
+            }
+        } catch (err) {
+            console.error('[SMS Polling error]:', err);
+        }
+    }, POLL_INTERVAL_MS);
+}
+
+function stopPolling() {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
 }
 
 function closeSmsModal() {
+    stopPolling();
     const overlay = document.getElementById('smsModalOverlay');
     if (overlay) overlay.classList.remove('show');
     document.body.style.overflow = '';
-    currentModal = null;
 }
 
+/* ══════════════════════════════════════════
+   ORDER ACTIONS
+   Uses: finishOrder, cancelOrder, banOrder from api.js
+══════════════════════════════════════════ */
+async function handleFinishOrder() {
+    if (!currentOrderId || isActionBusy) return;
+
+    const btn = document.getElementById('btnFinishOrder');
+    isActionBusy = true;
+    if (btn) { btn.disabled = true; btn.textContent = 'Finishing…'; }
+
+    try {
+        await finishOrder(currentOrderId);
+        stopPolling();
+        showToast('✅ Order finished and marked complete!', 'success');
+        localStorage.removeItem('currentOrderId');
+        currentOrderId   = null;
+        currentOrderData = null;
+        closeSmsModal();
+        await loadWalletBalanceBuyPage();
+    } catch (err) {
+        console.error('finishOrder error:', err);
+        showToast(err.message || 'Failed to finish order.', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '✅ Done'; }
+    } finally {
+        isActionBusy = false;
+    }
+}
+
+async function handleCancelOrder() {
+    if (!currentOrderId || isActionBusy) return;
+    if (!confirm('Cancel this activation order?')) return;
+
+    const btn = document.getElementById('btnCancelOrder');
+    isActionBusy = true;
+    if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
+
+    try {
+        await cancelOrder(currentOrderId);
+        stopPolling();
+        showToast('✅ Order cancelled successfully.', 'success');
+        localStorage.removeItem('currentOrderId');
+        currentOrderId   = null;
+        currentOrderData = null;
+        closeSmsModal();
+        await loadWalletBalanceBuyPage();
+    } catch (err) {
+        console.error('cancelOrder error:', err);
+        showToast(err.message || 'Failed to cancel order.', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '❌ Cancel'; }
+    } finally {
+        isActionBusy = false;
+    }
+}
+
+async function handleBanOrder() {
+    if (!currentOrderId || isActionBusy) return;
+    if (!confirm('Report this number as banned/unusable?')) return;
+
+    const btn = document.getElementById('btnBanOrder');
+    isActionBusy = true;
+    if (btn) { btn.disabled = true; btn.textContent = 'Reporting…'; }
+
+    try {
+        await banOrder(currentOrderId);
+        stopPolling();
+        showToast('⚠️ Number reported as banned.', 'success');
+        localStorage.removeItem('currentOrderId');
+        currentOrderId   = null;
+        currentOrderData = null;
+        closeSmsModal();
+        await loadWalletBalanceBuyPage();
+    } catch (err) {
+        console.error('banOrder error:', err);
+        showToast(err.message || 'Failed to report ban.', 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '⚠️ Report Ban'; }
+    } finally {
+        isActionBusy = false;
+    }
+}
+
+/* ══════════════════════════════════════════
+   COPY NUMBER
+══════════════════════════════════════════ */
 function copyNumberToClipboard() {
-    if (!currentModal) return;
-    
-    navigator.clipboard.writeText(currentModal.number).then(() => {
+    const phoneEl = document.getElementById('modalPhone');
+    if (!phoneEl) return;
+    const num = phoneEl.textContent.trim();
+    if (!num || num === '—') return;
+    navigator.clipboard.writeText(num).then(() => {
         showToast('📋 Number copied to clipboard!', 'success');
-    }).catch(err => {
-        console.error('Copy failed:', err);
-        showToast('Could not copy number', 'error');
+    }).catch(() => {
+        showToast('Number: ' + num, 'info');
     });
 }
 
-function cancelOrder() {
-    if (!currentModal) return;
-
-    if (!confirm('Are you sure you want to cancel this order? Balance will be refunded.')) return;
-
-    const user = getLiveUser();
-    if (!user) return;
-
-    user.balance += currentModal.price;
-    user.numbersPurchased = Math.max(0, (user.numbersPurchased || 1) - 1);
-
-    user.transactions = user.transactions || [];
-    user.transactions.unshift({
-        id: 'REFUND-' + currentModal.id,
-        type: 'Refund',
-        amount: currentModal.price,
-        description: `Cancelled ${currentModal.service} number`,
-        timestamp: new Date().toISOString()
-    });
-
-    activeOrders = activeOrders.filter(o => o.id !== currentModal.id);
-    localStorage.setItem('activeOrders', JSON.stringify(activeOrders));
-    saveLiveUser(user);
-
-    closeSmsModal();
-    renderWalletBalance();
-    renderActiveNumbers();
-    renderNumbers();
-
-    showToast(`✅ Order cancelled. $${currentModal.price.toFixed(2)} refunded!`, 'success');
+/* ══════════════════════════════════════════
+   STATE HELPERS
+══════════════════════════════════════════ */
+function showSelectCountryPrompt() {
+    const cardsGrid = document.getElementById('cardsGrid');
+    if (!cardsGrid) return;
+    cardsGrid.innerHTML = `
+        <div class="state-box" style="grid-column:1/-1;">
+            <i class="fa-solid fa-globe"></i>
+            <p>Select a country above to see available numbers.</p>
+        </div>`;
+    const resultCount = document.getElementById('resultCount');
+    if (resultCount) resultCount.textContent = '';
+    allProducts = [];
 }
 
-function reportBan() {
-    if (!currentModal) return;
-
-    if (!confirm('Report this number as banned? This will refund your balance.')) return;
-
-    const user = getLiveUser();
-    if (!user) return;
-
-    user.balance += currentModal.price;
-    user.transactions = user.transactions || [];
-    user.transactions.unshift({
-        id: 'BAN-REPORT-' + currentModal.id,
-        type: 'Ban Report',
-        amount: currentModal.price,
-        description: `Reported ${currentModal.service} number as banned`,
-        timestamp: new Date().toISOString()
-    });
-
-    activeOrders = activeOrders.filter(o => o.id !== currentModal.id);
-    localStorage.setItem('activeOrders', JSON.stringify(activeOrders));
-    saveLiveUser(user);
-
-    closeSmsModal();
-    renderWalletBalance();
-    renderActiveNumbers();
-    renderNumbers();
-
-    showToast('⚠️ Ban reported. Balance refunded.', 'success');
+function showEmptyState(grid, msg) {
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><i class="fa-solid fa-phone-slash"></i><p>${msg}</p></div>`;
 }
 
-function finishOrder() {
-    if (!currentModal) return;
-
-    if (!currentModal.otp) {
-        showToast('⏳ Still waiting for SMS. Please wait...', 'info');
-        return;
-    }
-
-    activeOrders = activeOrders.filter(o => o.id !== currentModal.id);
-    localStorage.setItem('activeOrders', JSON.stringify(activeOrders));
-
-    closeSmsModal();
-    renderActiveNumbers();
-    renderNumbers();
-
-    showToast(`✅ Order completed! ${currentModal.otp} was your OTP.`, 'success');
+function showErrorState(grid, msg) {
+    grid.innerHTML = `
+        <div class="state-box" style="grid-column:1/-1;">
+            <i class="fa-solid fa-exclamation-circle"></i>
+            <p>${msg}</p>
+            <button onclick="loadProducts('${selectedCountry}')" style="margin-top:12px;padding:8px 18px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">Retry</button>
+        </div>`;
 }
 
+/* ══════════════════════════════════════════
+   EVENT LISTENERS
+══════════════════════════════════════════ */
 function attachEventListeners() {
+    // Currency switch
     const currencySwitch = document.getElementById('currencySwitch');
-    if (currencySwitch) {
-        currencySwitch.addEventListener('click', toggleBuyCurrency);
-    }
+    if (currencySwitch) currencySwitch.addEventListener('click', toggleBuyCurrency);
 
+    // Modal close X
     const modalCloseX = document.getElementById('modalCloseX');
-    if (modalCloseX) {
-        modalCloseX.addEventListener('click', closeSmsModal);
-    }
+    if (modalCloseX) modalCloseX.addEventListener('click', closeSmsModal);
 
-    const overlay = document.getElementById('smsModalOverlay');
-    if (overlay) {
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) closeSmsModal();
+    // Modal backdrop click
+    const modalOverlay = document.getElementById('smsModalOverlay');
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', e => {
+            if (e.target === modalOverlay) closeSmsModal();
         });
     }
 
-    const copyBtn = document.getElementById('btnCopyNumber');
+    // Order action buttons
+    const copyBtn   = document.getElementById('btnCopyNumber');
     const cancelBtn = document.getElementById('btnCancelOrder');
-    const banBtn = document.getElementById('btnBanOrder');
+    const banBtn    = document.getElementById('btnBanOrder');
     const finishBtn = document.getElementById('btnFinishOrder');
+    if (copyBtn)   copyBtn.addEventListener('click', copyNumberToClipboard);
+    if (cancelBtn) cancelBtn.addEventListener('click', handleCancelOrder);
+    if (banBtn)    banBtn.addEventListener('click', handleBanOrder);
+    if (finishBtn) finishBtn.addEventListener('click', handleFinishOrder);
 
-    if (copyBtn) copyBtn.addEventListener('click', copyNumberToClipboard);
-    if (cancelBtn) cancelBtn.addEventListener('click', cancelOrder);
-    if (banBtn) banBtn.addEventListener('click', reportBan);
-    if (finishBtn) finishBtn.addEventListener('click', finishOrder);
-
+    // Sidebar settings
     const settingsBtn = document.getElementById('sidebarSettingsBtn');
     if (settingsBtn) {
-        settingsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            openSettings();
-        });
+        settingsBtn.addEventListener('click', e => { e.preventDefault(); openSettings(); });
     }
 
+    // Search filter
     const searchInput = document.getElementById('searchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', () => renderNumbers());
-    }
+    if (searchInput) searchInput.addEventListener('input', () => {
+        if (allProducts.length > 0) renderProductCards(allProducts);
+    });
 
-    const typeFilter = document.getElementById('typeFilter');
-    if (typeFilter) {
-        typeFilter.addEventListener('change', () => renderNumbers());
-    }
+    // Service & type filter
+    const serviceFilter = document.getElementById('serviceFilter');
+    const typeFilter    = document.getElementById('typeFilter');
+    if (serviceFilter) serviceFilter.addEventListener('change', () => {
+        if (allProducts.length > 0) renderProductCards(allProducts);
+    });
+    if (typeFilter) typeFilter.addEventListener('change', () => {
+        if (allProducts.length > 0) renderProductCards(allProducts);
+    });
+
+    // Toggle aside (mobile)
+    const toggleBtnEl  = document.getElementById('toggle-btn');
+    const closeAsideEl = document.getElementById('close-btn');
+    const asideEl      = document.getElementById('aside');
+    if (toggleBtnEl) toggleBtnEl.addEventListener('click', () => asideEl && asideEl.classList.toggle('open'));
+    if (closeAsideEl) closeAsideEl.addEventListener('click', () => asideEl && asideEl.classList.remove('open'));
+
+    // Keyboard ESC
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeSmsModal();
+    });
 }
 
-function toggleBuyCurrency() {
-    const currency = getCurrency();
-    const newCurrency = currency === 'USD' ? 'NGN' : 'USD';
-    localStorage.setItem('primes_currency', newCurrency);
-    updateCurrencyDisplay(newCurrency);
-    renderWalletBalance();
-    renderNumbers();
-    showToast(`💱 Currency switched to ${newCurrency}`, 'info');
+/* ══════════════════════════════════════════
+   SETTINGS PANEL FALLBACKS
+══════════════════════════════════════════ */
+if (typeof openSettings === 'undefined') {
+    window.openSettings = function() {
+        const overlay = document.getElementById('settingsOverlay');
+        if (overlay) overlay.classList.add('show');
+    };
+}
+if (typeof closeSettings === 'undefined') {
+    window.closeSettings = function() {
+        const overlay = document.getElementById('settingsOverlay');
+        if (overlay) overlay.classList.remove('show');
+    };
+}
+if (typeof saveProfileSettings === 'undefined')  window.saveProfileSettings = function() {};
+if (typeof savePasswordSettings === 'undefined') window.savePasswordSettings = function() {};
+if (typeof savePreferences === 'undefined')      window.savePreferences = function() {};
+if (typeof saveNotifSettings === 'undefined')    window.saveNotifSettings = function() {};
+if (typeof confirmDeleteAccount === 'undefined') window.confirmDeleteAccount = function() { localStorage.clear(); window.location.href = 'login.html'; };
+if (typeof previewAvatar === 'undefined')        window.previewAvatar = function() {};
+if (typeof togglePw === 'undefined') {
+    window.togglePw = function(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.type = input.type === 'password' ? 'text' : 'password';
+        btn.querySelector('i').className = input.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
+    };
+}
+if (typeof setTheme === 'undefined') {
+    window.setTheme = function(theme) {
+        if (theme === 'dark') { document.body.classList.add('dark-theme'); localStorage.setItem('dashboardTheme', 'dark'); }
+        else                  { document.body.classList.remove('dark-theme'); localStorage.setItem('dashboardTheme', 'light'); }
+    };
 }
 
-function updateCurrencyDisplay(currency) {
-    const symbolEl = document.getElementById('currencySymbol');
-    const nameEl = document.getElementById('currencyName');
-    if (symbolEl) symbolEl.textContent = currency === 'USD' ? '$' : '₦';
-    if (nameEl) nameEl.textContent = currency;
-}
+/* ── Page-level cleanup on unload (stop SMS polling) ── */
+window.addEventListener('beforeunload', stopPolling);
+window.addEventListener('pagehide',    stopPolling);
+

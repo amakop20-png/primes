@@ -903,13 +903,11 @@
 
     <!-- Cards Grid -->
     <div class="cards" id="cardsGrid">
-      <!-- Skeleton loaders -->
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
-      <div class="skeleton-card"></div>
+      <!-- Initial state — replaced dynamically when country is selected -->
+      <div class="state-box" style="grid-column:1/-1;">
+        <i class="fa-solid fa-globe"></i>
+        <p>Select a country above to see available numbers.</p>
+      </div>
     </div>
   </div>
 
@@ -1114,18 +1112,17 @@
   </div>
 
   <script>
-    // ── Auth guard ──
+    // ── Auth guard — check JWT token, not just session name ──
     document.addEventListener('DOMContentLoaded', () => {
-      const session = JSON.parse(localStorage.getItem('primes_session') || '{}');
-      if (!session || !session.name) {
+      const token = localStorage.getItem('primes_token');
+      if (!token) {
         window.location.href = 'login.html';
         return;
       }
-      const el = document.getElementById('buyUsername');
-      if (el) el.textContent = session.name;
     });
   </script>
 
+  <script src="api.js"></script>
   <script src="script.js"></script>
   <script src="buy.js"></script>
 </body>

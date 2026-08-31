@@ -1255,6 +1255,16 @@ header {
           font-size: 16px;
         }
 
+        /* First Name / Last Name row (#registerForm's first child div):
+           stack vertically on small phones instead of squeezing two
+           inputs side-by-side, matching how every other field in this
+           form already goes full-width at this breakpoint. Targeted
+           structurally since the wrapper has no class of its own. */
+        #registerForm > div:first-child {
+          flex-direction: column !important;
+          gap: 0.5rem !important;
+        }
+
         .btn8,
         .btn9 {
           width: 100%;
@@ -1295,4 +1305,3 @@ header {
       }
 
       /* =========================
-  
