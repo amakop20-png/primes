@@ -1,7 +1,5 @@
 // login.js
-// Depends on apiRequest() from api.js.
-// IMPORTANT: login.html previously skipped loading api.js (it re-declared
-// API_BASE_URL locally instead). Now that this file calls apiRequest(),
+// Depends on apiRequest()/loginUser()/clearAuth()/setSession() from api.js.
 // api.js MUST be loaded first:
 //   <script src="api.js"></script>
 //   <script src="login.js"></script>
@@ -104,20 +102,19 @@ function escapeHTML(str) {
     return div.innerHTML;
 }
 
-// ── Initialize Toast ──
-const toast = new SimpleToast();
-
-// NOTE: confirm against your backend — other routes use an "/api/"
-// prefix (e.g. "/api/get-wallet-balance"), so login is most likely
-// "/api/login" rather than "/login". If this 404s, try "/login" or
-// "/api/auth/login" instead and check the Network tab response.
-const LOGIN_ENDPOINT = '/api/login';
+// ── Toast is created inside DOMContentLoaded below (FIX #1) ──
+// Creating it at top-level ran document.body.appendChild() before
+// <body> was guaranteed to exist, which could throw if this script
+// isn't deferred / placed at the end of <body>.
+let toast;
 
 // ── DOM Ready ──
 document.addEventListener('DOMContentLoaded', () => {
 
+    toast = new SimpleToast();
+
     // Redirect already-logged-in users straight to the dashboard
-    if (localStorage.getItem('primes_token')) {
+    if (getAuthToken()) {
         window.location.href = 'dashboard.html';
         return;
     }
@@ -156,42 +153,51 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
-                // ── NuraSMS Login Call — via apiRequest() from api.js.
-                // suppressAuthRedirect: true means a 401 here (wrong
-                // credentials) throws a plain "invalid login" error
+                // ── NuraSMS Login Call — via loginUser() from api.js,
+                // which already wraps apiRequest('/api/login', ...) with
+                // suppressAuthRedirect: true baked in (FIX #4). A 401 here
+                // (wrong credentials) throws a plain "invalid login" error
                 // instead of triggering apiRequest's normal "session
                 // expired, clear token, redirect to login.html" flow —
                 // which would make no sense while already on this page.
-                const result = await apiRequest(LOGIN_ENDPOINT, {
-                    method: 'POST',
-                    body: JSON.stringify({ identifier: loginInputValue, password: passwordValue }),
-                    suppressAuthRedirect: true
-                });
+                const result = await loginUser(loginInputValue, passwordValue);
 
-                // ── Clear any stale auth / order state before writing new session ──
-                localStorage.removeItem('primes_token');
-                localStorage.removeItem('primes_session');
-                localStorage.removeItem('currentOrderId');
+                // ── Clear ALL stale auth / session / order / wallet state
+                // before writing the new session (FIX #3 — was manually
+                // removing only 3 keys; now uses the shared clearAuth()
+                // from api.js so nothing stale survives).
+                clearAuth();
 
+                const token = result.accessToken || result.token || result.access_token || result.data?.token || result.data?.accessToken;
+
+                // FIX #2: only treat this as a successful login — and only
+                // redirect — if we actually got a token back. Previously
+                // the redirect ran unconditionally, so a response missing
+                // a token would still send the user to dashboard.html,
+                // where requireAuth() would immediately bounce them back
+                // here with no explanation.
+                if (!token) {
+                    toast.show('Login succeeded but no session token was returned. Please try again.', 'error');
+                    return;
+                }
+
+                setAuthToken(token);
+
+                // FIX #5: use the shared setSession() from api.js so the
+                // stored shape matches what signup.js writes, but still
+                // include the computed display name login.js relies on.
                 const user = result.user || {};
                 const sessionData = {
                     ...user,
                     name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username,
                     loggedAt: new Date().toISOString()
                 };
-                localStorage.setItem('primes_session', JSON.stringify(sessionData));
-
-                // Always store the access token — it is required for every
-                // protected API call via apiRequest() in api.js
-                const token = result.accessToken || result.token || result.access_token || result.data?.token || result.data?.accessToken;
-                if (token) {
-                    setAuthToken(token);
-                }
+                setSession(sessionData);
 
                 toast.show(result.message || 'Login successful! Redirecting...', 'success');
 
                 setTimeout(() => {
-                    window.location.href = result.user?.role === 'admin' ? 'admin.html' : 'dashboard.html';
+                    window.location.href = user.role === 'admin' ? 'admin.html' : 'dashboard.html';
                 }, 1500);
 
             } catch (error) {
