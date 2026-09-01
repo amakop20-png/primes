@@ -405,6 +405,35 @@ async function signupUser(userData) {
     });
 }
 
+/**
+ * Request password reset link.
+ * POST /api/forgot-password
+ * @param {string} email
+ * @returns {Promise<object>}
+ */
+async function forgotPassword(email) {
+    return await apiRequest('/api/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+        suppressAuthRedirect: true
+    });
+}
+
+/**
+ * Reset password using token.
+ * POST /api/reset-password
+ * @param {string} token - Reset token from email link
+ * @param {string} newPassword - New password
+ * @returns {Promise<object>}
+ */
+async function resetPassword(token, newPassword) {
+    return await apiRequest('/api/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, newPassword }),
+        suppressAuthRedirect: true
+    });
+}
+
 /* ══════════════════════════════════════════
    EXPORT TO GLOBAL NAMESPACE
 ══════════════════════════════════════════ */
