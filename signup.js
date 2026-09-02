@@ -1,9 +1,9 @@
 // signup.js
-// Depends on apiRequest() from api.js — make sure api.js is included
-// BEFORE this file:
+// Depends on signupUser()/setAuthToken()/setSession() from api.js — make sure
+// api.js is included BEFORE this file:
 //   <script src="api.js"></script>
 //   <script src="signup.js"></script>
-// (plain scripts, no type="module" needed — apiRequest is a global function)
+// (plain scripts, no type="module" needed — signupUser is a global function)
 
 
 // ==============================
@@ -136,13 +136,6 @@ function initPasswordToggle() {
 // Form
 // ==============================
 
-// NOTE: confirm this against your backend — other endpoints in api.js
-// use an "/api/" prefix (e.g. "/api/get-wallet-balance"), so signup is
-// most likely "/api/signup" rather than "/signup". Check your backend
-// route file, or watch the Network tab: if this still 404s, try
-// "/signup", "/api/register", or "/api/auth/signup" instead.
-const SIGNUP_ENDPOINT = "/api/signup";
-
 function initForm() {
 
     const form = document.getElementById("registerForm");
@@ -259,25 +252,23 @@ function initForm() {
 
 
         // ==============================
-        // Send Signup Request — via apiRequest() from api.js.
-        // apiRequest already builds the URL, sets headers, parses JSON
-        // safely, and turns non-2xx responses into a friendly Error
-        // message (401/403/404/409/422/429/500 are all handled there).
-        // signup.js just calls it and reacts to success/failure.
+        // Send Signup Request — via signupUser() from api.js.
+        // signupUser() already wraps apiRequest('/api/signup', ...) with
+        // suppressAuthRedirect: true baked in — same fix login.js applies
+        // to loginUser(). Without it, a 401 here (unlikely, but possible)
+        // would wipe tokens and bounce to login.html mid-signup, which
+        // makes no sense on a page the user isn't logged into yet.
         // ==============================
 
         try {
 
-            const result = await apiRequest(SIGNUP_ENDPOINT, {
-                method: "POST",
-                body: JSON.stringify({
-                    username,
-                    email,
-                    password,
-                    firstName,
-                    lastName,
-                    phoneNumber
-                })
+            const result = await signupUser({
+                username,
+                email,
+                password,
+                firstName,
+                lastName,
+                phoneNumber
             });
 
             showToast(

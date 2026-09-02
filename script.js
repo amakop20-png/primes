@@ -155,9 +155,24 @@ function getCurrency() {
     return localStorage.getItem('primes_currency') || 'NGN';
 }
 
+/**
+ * Sync every currency-dependent display element to the given currency.
+ * Called on page load AND every time the currency is toggled, so the
+ * symbol/label never falls out of sync with the balance numbers.
+ */
+function updateCurrencyDisplay(currency) {
+    const sym  = document.getElementById('currencySymbol');
+    const name = document.getElementById('currencyName');
+    if (sym)  sym.textContent  = currency === 'USD' ? '$' : '₦';
+    if (name) name.textContent = currency;
+}
+
 function toggleCurrency() {
     const next = getCurrency() === 'NGN' ? 'USD' : 'NGN';
     localStorage.setItem('primes_currency', next);
+
+    updateCurrencyDisplay(next);
+
     // Refresh balance display with the same stored value — no extra API call
     const stored = parseFloat(localStorage.getItem('_walletBalance') || '0');
     renderBalanceCards(stored);
@@ -212,10 +227,24 @@ async function loadWalletBalance() {
         renderBalanceCards(balanceNGN);
     } catch (err) {
         console.error('loadWalletBalance error:', err);
-        if (balUsdEl) balUsdEl.textContent = '—';
-        if (balNgnEl) balNgnEl.textContent = 'Unable to load balance.';
-        if (popBalEl) popBalEl.textContent = '—';
-        showToast('Unable to load your wallet balance. Please try again.', 'error');
+
+        // A 404 here ("Wallet not found") almost always means the backend
+        // hasn't created a Wallet record for this user yet — a brand-new
+        // account state, not a real failure. Show a calm "setting up"
+        // message instead of an alarming error toast for this specific
+        // case. Any OTHER error (network, 500, etc.) still gets the
+        // normal error treatment.
+        if (err.status === 404) {
+            if (balUsdEl) balUsdEl.textContent = '$0.00';
+            if (balNgnEl) balNgnEl.textContent = '₦0.00';
+            if (popBalEl) popBalEl.textContent = '₦0.00 / $0.00';
+            showToast('Your wallet is still being set up — this can take a moment for new accounts.', 'info');
+        } else {
+            if (balUsdEl) balUsdEl.textContent = '—';
+            if (balNgnEl) balNgnEl.textContent = 'Unable to load balance.';
+            if (popBalEl) popBalEl.textContent = '—';
+            showToast('Unable to load your wallet balance. Please try again.', 'error');
+        }
     }
 }
 
@@ -262,8 +291,16 @@ async function loadVirtualAccount() {
         }
     } catch (err) {
         console.error('loadVirtualAccount error:', err);
-        // If 404 or not found, show create virtual account UI
-        if (err.message && (err.message.includes('not found') || err.message.includes('404'))) {
+
+        // Check the REAL HTTP status first (set by api.js) — this is
+        // reliable regardless of what wording the backend uses for the
+        // message ("No assigned VDA", "Wallet not found", etc.). The
+        // text-matching fallback stays only as a safety net for older
+        // error paths that might not carry a status yet.
+        const isNotFound = err.status === 404 ||
+            (err.message && (err.message.toLowerCase().includes('not found') || err.message.includes('404') || err.message.toLowerCase().includes('no assigned')));
+
+        if (isNotFound) {
             showCreateVirtualAccountUI(container);
         } else {
             container.innerHTML = `
@@ -851,28 +888,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const amountInput = document.getElementById('depositAmountInput');
     const errEl       = document.getElementById('depositError');
 
+    let isSubmittingDeposit = false; // guards against double Enter/click firing launchPaystack() twice
+
     function showDepositError(msg) {
         if (!errEl) return;
         errEl.textContent   = msg;
         errEl.style.display = 'block';
     }
 
-    if (confirmBtn) {
-        confirmBtn.addEventListener('click', async function() {
-            const isNGN  = getCurrency() === 'NGN';
-            const symbol = isNGN ? '₦' : '$';
-            const minAmt = isNGN ? PAYSTACK_CONFIG.minAmountNGN : PAYSTACK_CONFIG.minAmountUSD;
-            const rawVal = parseFloat((amountInput?.value || '').replace(/[^0-9.]/g, ''));
-            if (isNaN(rawVal) || rawVal <= 0) { showDepositError('Please enter a valid amount.'); return; }
-            if (rawVal < minAmt)              { showDepositError(`Minimum deposit is ${symbol}${minAmt}.`); return; }
+    async function handleDepositConfirm() {
+        if (isSubmittingDeposit) return;
+
+        const isNGN  = getCurrency() === 'NGN';
+        const symbol = isNGN ? '₦' : '$';
+        const minAmt = isNGN ? PAYSTACK_CONFIG.minAmountNGN : PAYSTACK_CONFIG.minAmountUSD;
+        const rawVal = parseFloat((amountInput?.value || '').replace(/[^0-9.]/g, ''));
+
+        if (isNaN(rawVal) || rawVal <= 0) { showDepositError('Please enter a valid amount.'); return; }
+        if (rawVal < minAmt)              { showDepositError(`Minimum deposit is ${symbol}${minAmt}.`); return; }
+
+        isSubmittingDeposit = true;
+        try {
             closeDepositModal();
             await launchPaystack(rawVal);
-        });
+        } finally {
+            isSubmittingDeposit = false;
+        }
+    }
+
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', handleDepositConfirm);
     }
 
     if (amountInput) {
         amountInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') confirmBtn && confirmBtn.click();
+            if (e.key === 'Enter') {
+                // Stop the browser's default form-submit behavior — without
+                // this, if the input sits inside a <form>, Enter both
+                // clicks the button AND submits the form natively,
+                // potentially firing the handler twice or reloading the page.
+                e.preventDefault();
+                handleDepositConfirm();
+            }
         });
     }
 
@@ -908,6 +965,11 @@ function init() {
 
     // 2. Render cached user info immediately (no flicker)
     renderUserInfo();
+
+    // 2b. Sync currency symbol/label to whatever was last saved, so a
+    // page reload shows the correct currency immediately (not just NGN
+    // by default) before any balance data has even loaded.
+    updateCurrencyDisplay(getCurrency());
 
     // 3. Wire currency switcher
     const switchEl = document.getElementById('currencySwitch');
