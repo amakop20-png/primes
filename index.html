@@ -5,8 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dave's Social - Virtual Phone Numbers for SMS Business</title>
-  <meta name="description" content="Get instant access to virtual phone numbers from 70+ countries. Secure SMS marketing, verification, and international communication solutions.">
-    <!-- Google Font -->
+  <meta name="description"
+    content="Get instant access to virtual phone numbers from 70+ countries. Secure SMS marketing, verification, and international communication solutions.">
+  <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Font Awesome -->
@@ -25,16 +26,16 @@
 
   <!-- Loader (first thing inside body) -->
   <div class="loader-wrapper" id="loaderWrapper">
-    
-      <img src="77825-removebg-preview.png">
+
+    <img src="77825-removebg-preview.png">
   </div>
 
   <!-- Header -->
-  <header >
+  <header>
     <div class="header__logo">
       <img src="77825-removebg-preview.png" alt="Dave's Social - Virtual Phone Numbers" width="80px" height="80px">
     </div>
-    
+
     <nav class="header__nav" id="nav">
       <a href="index.html" class="nav-link">Home</a>
       <a href="terms.html" class="nav-link">Terms</a>
@@ -45,7 +46,8 @@
 
     <div class="header__actions">
       <!-- Theme Switcher -->
-      <button id="themeToggle" aria-label="Toggle theme" style="background: none; border: none; font-size: 1.25rem; color: var(--text); cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.25s; outline: none; margin-right: 8px;">
+      <button id="themeToggle" aria-label="Toggle theme"
+        style="background: none; border: none; font-size: 1.25rem; color: var(--text); cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.25s; outline: none; margin-right: 8px;">
         <i class="fa-solid fa-moon"></i>
       </button>
       <button class="btn-secondary"><a href="login.html">Log In</a></button>
@@ -68,7 +70,7 @@
       </h1>
 
       <p class="hero__subtitle">
-        Get instant access to virtual phone numbers from 70+ countries. 
+        Get instant access to virtual phone numbers from 70+ countries.
         Perfect for SMS verification, marketing campaigns, and international business communication.
       </p>
 
@@ -98,7 +100,7 @@
     <div class="section-header">
       <h2>Powerful Features for SMS Business Success</h2>
       <p>
-        Unlock the full potential of SMS marketing and customer engagement with 
+        Unlock the full potential of SMS marketing and customer engagement with
         our feature-rich virtual number platform.
       </p>
     </div>
@@ -107,7 +109,8 @@
       <div class="feature-card">
         <div class="feature-icon">📱</div>
         <h3>Virtual Numbers</h3>
-        <p>Get instant access to reliable virtual numbers for SMS verification, marketing, and customer communication.</p>
+        <p>Get instant access to reliable virtual numbers for SMS verification, marketing, and customer communication.
+        </p>
       </div>
 
       <div class="feature-card">
@@ -137,7 +140,8 @@
       <div class="feature-card">
         <div class="feature-icon">🔒</div>
         <h3>Secure Messaging</h3>
-        <p>Protect your business communication with secure, encrypted messaging and compliance with industry standards.</p>
+        <p>Protect your business communication with secure, encrypted messaging and compliance with industry standards.
+        </p>
       </div>
     </div>
   </section>
@@ -145,7 +149,7 @@
     <div class="section-header">
       <h2>Why Choose Nura Sms?</h2>
       <p>
-        Experience the difference with our reliable virtual number services, designed to 
+        Experience the difference with our reliable virtual number services, designed to
         empower your SMS marketing and customer communication strategies.
       </p>
     </div>
@@ -243,14 +247,14 @@
     const nav = document.getElementById('nav');
 
     if (menuToggle) {
-      menuToggle.addEventListener('click', function() {
+      menuToggle.addEventListener('click', function () {
         menuToggle.classList.toggle('open');
         nav.classList.toggle('open');
       });
 
       // Close menu when a link is clicked
       nav.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', function() {
+        link.addEventListener('click', function () {
           menuToggle.classList.remove('open');
           nav.classList.remove('open');
         });
@@ -304,7 +308,7 @@
         localStorage.setItem('dashboardTheme', isDark ? 'dark' : 'light');
         updateLandingThemeUI(isDark);
       });
-      
+
       // Initial UI update based on current state
       const isDark = document.body.classList.contains('dark-theme');
       updateLandingThemeUI(isDark);
@@ -312,4 +316,5 @@
   </script>
 
 </body>
+
 </html>

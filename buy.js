@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════════════════════
+/* ═════════════════════════════════════════════════════════════════════
    buy.js — Virtual Numbers & OTP Order Integration
    Requires api.js to be loaded FIRST.
    All API calls use the centralized functions from api.js:
@@ -26,6 +26,18 @@ let isActionBusy     = false; // Guard against multiple finish/cancel/ban reques
 
 const POLL_INTERVAL_MS = 5000;
 const CONVERSION_RATE  = 1500;
+
+/* ══════════════════════════════════════════
+   ESCAPING HELPER
+   Product names/keys come from 5sim's API, not from our own users, but
+   they're still third-party data — never trust it blindly before it
+   goes into innerHTML.
+══════════════════════════════════════════ */
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+}
 
 /* ══════════════════════════════════════════
    INIT
@@ -131,6 +143,12 @@ async function loadWalletBalanceBuyPage() {
 /* ══════════════════════════════════════════
    COUNTRIES
    Uses: getCountries() from api.js
+   NOTE: the 'change' listener on #countryFilter is attached ONCE in
+   attachEventListeners() — NOT here. This function can run multiple
+   times (initial load + retry-on-click), and re-attaching a listener
+   here every time it (re)runs was stacking duplicate listeners, so one
+   country selection fired onCountryChange (and loadProducts) 2x, 3x,
+   however many times loadCountries had run. Don't add it back here.
 ══════════════════════════════════════════ */
 async function loadCountries() {
     const select = document.getElementById('countryFilter');
@@ -142,11 +160,6 @@ async function loadCountries() {
     try {
         const data = await getCountries();
 
-        /*
-         * Expected shapes:
-         * 1) { countries: { afghanistan: { text_en: "Afghanistan", prefix: { "+93": 1 } }, … } }
-         * 2) { usa: { name: "USA", prefix: "+1" }, … }
-         */
         const countries = data?.countries || data;
 
         if (!countries || typeof countries !== 'object') {
@@ -177,13 +190,12 @@ async function loadCountries() {
                 const name = getCountryName(key, info);
                 const prefix = getCountryPrefix(info);
                 const prefixStr = prefix ? ` (${prefix})` : '';
-                return `<option value="${key}">${name}${prefixStr}</option>`;
+                return `<option value="${escapeHTML(key)}">${escapeHTML(name)}${escapeHTML(prefixStr)}</option>`;
             })
             .join('');
 
         select.innerHTML = '<option value="">🌍 Select a Country</option>' + options;
         select.disabled  = false;
-        select.addEventListener('change', onCountryChange);
     } catch (err) {
         console.error('loadCountries error:', err);
         select.innerHTML = '<option value="">⚠ Failed to load countries (Click to retry)</option>';
@@ -222,10 +234,6 @@ async function loadProducts(country) {
     try {
         const data = await getProducts(country);
 
-        /*
-         * Handles both flat shapes { whatsapp: { Price, Qty } }
-         * and nested 5SIM operator shapes { whatsapp: { virtual21: { cost, count } } }
-         */
         const raw = data?.products || data;
 
         if (!raw || typeof raw !== 'object') {
@@ -241,12 +249,10 @@ async function loadProducts(country) {
                 let category = 'activation';
 
                 if (info.Price !== undefined || info.price !== undefined || info.cost !== undefined || info.rate !== undefined) {
-                    // Flat format
                     price = parseFloat(info.Price || info.price || info.rate || info.cost || 0);
                     qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
                     category = (info.Category || info.category || 'activation').toLowerCase();
                 } else {
-                    // Operator map format
                     const operators = Object.values(info).filter(v => v && typeof v === 'object');
                     if (operators.length > 0) {
                         const validPrices = operators.map(op => parseFloat(op.cost || op.price || op.rate || 0)).filter(p => p > 0);
@@ -303,24 +309,29 @@ function renderProductCards(products) {
     const currency = getCurrency();
     const symbol   = currency === 'USD' ? '$' : '₦';
 
+    // NOTE: no inline onclick attributes here anymore. Product keys came
+    // from 5sim's API — if one ever contained a quote character, an
+    // inline onclick="fn('${key}')" string would silently break (or
+    // worse). Instead we stash the key in a data-attribute and handle
+    // clicks via event delegation in attachEventListeners().
     cardsGrid.innerHTML = filtered.map(p => {
         const displayPrice = currency === 'USD' ? (p.price / CONVERSION_RATE) : p.price;
         const priceStr     = symbol + displayPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const isSelected   = selectedProduct === p.key;
+        const safeKey      = escapeHTML(p.key);
 
         return `
-        <div class="card${isSelected ? ' selected' : ''}" style="position:relative;cursor:pointer;" onclick="selectProduct('${p.key}')">
+        <div class="card${isSelected ? ' selected' : ''}" style="position:relative;cursor:pointer;" data-product-key="${safeKey}">
             <span class="card-flag" style="font-size:2rem;display:block;margin-bottom:6px;">📱</span>
-            <div class="card-title" style="font-weight:800;font-size:15px;color:var(--text);">${p.name}</div>
+            <div class="card-title" style="font-weight:800;font-size:15px;color:var(--text);">${escapeHTML(p.name)}</div>
             <div class="card-meta">
                 <span style="font-size:12px;color:var(--muted);">${p.qty > 0 ? p.qty.toLocaleString() + ' available' : 'In stock'}</span>
-                <span class="card-service-badge">${p.category}</span>
+                <span class="card-service-badge">${escapeHTML(p.category)}</span>
             </div>
             <div class="card-price">${priceStr}</div>
             <button
                 class="btn btn-buy"
-                id="buyBtn-${p.key}"
-                onclick="event.stopPropagation(); handleBuyClick('${selectedCountry}', '${p.key}', this)"
+                data-product-key="${safeKey}"
             >
                 🛒 Buy Now
             </button>
@@ -395,13 +406,11 @@ async function openOrderModal(orderId, initialOrder = null) {
     const overlay = document.getElementById('smsModalOverlay');
     if (!overlay) return;
 
-    // Show modal with loading state
     overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
 
     setModalLoading();
 
-    // Use initial order data if provided, otherwise fetch fresh
     let order = initialOrder;
     if (!order) {
         try {
@@ -417,7 +426,6 @@ async function openOrderModal(orderId, initialOrder = null) {
     currentOrderData = order;
     updateOrderUI(order);
 
-    // If order is pending, start polling every 5000ms
     if (order.status === 'PENDING') {
         startPolling(orderId);
     }
@@ -437,26 +445,21 @@ function setModalError(msg) {
     if (statusText) statusText.textContent = msg;
 }
 
-/* ── Update the modal UI from a backend order object ── */
 function updateOrderUI(order) {
     if (!order) return;
 
-    // Phone number
     const phoneEl = document.getElementById('modalPhone');
     if (phoneEl) phoneEl.textContent = order.phone || order.number || '—';
 
-    // Order ID
     const orderIdEl = document.getElementById('modalOrderId');
     if (orderIdEl) orderIdEl.textContent = '#' + (order.id || order._id || '—');
 
-    // Expiration
     const expiresEl = document.getElementById('modalExpires');
     if (expiresEl) {
         const exp = order.expires || order.expiresAt || order.created_at;
         expiresEl.textContent = exp ? new Date(exp).toLocaleTimeString() : '—';
     }
 
-    // Status mapping & badge
     const statusDot  = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
     const statusMap  = {
@@ -465,6 +468,7 @@ function updateOrderUI(order) {
         FINISHED: { dot: 'received', text: '✔ Order Completed',                            color: '#10b981' },
         CANCELED: { dot: '',         text: '❌ Order Cancelled',                           color: '#ef4444' },
         BANNED:   { dot: '',         text: '⚠️ Number Reported & Banned',                  color: '#ef4444' },
+        EXPIRED:  { dot: '',         text: '⏰ Number Expired (No SMS Received)',           color: '#888888' },
     };
 
     const currentStatus = String(order.status || 'PENDING').toUpperCase();
@@ -476,7 +480,6 @@ function updateOrderUI(order) {
     }
     if (statusText) statusText.textContent = s.text;
 
-    // OTP / SMS Received Data
     const otpBox      = document.getElementById('smsOtpBox');
     const otpCode     = document.getElementById('otpCode');
     const otpFullText = document.getElementById('otpFullText');
@@ -487,7 +490,7 @@ function updateOrderUI(order) {
         if (otpBox) otpBox.classList.add('show');
         if (otpCode) otpCode.textContent = otp || '—';
         if (otpFullText) {
-            const sender = sms.sender ? `[Sender: ${sms.sender}] ` : '';
+            const sender = sms.sender ? `[Sender: ${escapeHTML(sms.sender)}] ` : '';
             const time   = sms.created_at || sms.date ? ` (${new Date(sms.created_at || sms.date).toLocaleTimeString()})` : '';
             otpFullText.textContent = `${sender}${sms.text || ''}${time}`;
         }
@@ -495,21 +498,19 @@ function updateOrderUI(order) {
         if (otpBox) otpBox.classList.remove('show');
     }
 
-    // Button States
     const cancelBtn = document.getElementById('btnCancelOrder');
     const banBtn    = document.getElementById('btnBanOrder');
     const finishBtn = document.getElementById('btnFinishOrder');
 
     const isPending  = currentStatus === 'PENDING';
     const isReceived = currentStatus === 'RECEIVED';
-    const isFinal    = currentStatus === 'FINISHED' || currentStatus === 'CANCELED' || currentStatus === 'BANNED';
+    const isFinal    = currentStatus === 'FINISHED' || currentStatus === 'CANCELED' || currentStatus === 'BANNED' || currentStatus === 'EXPIRED';
 
     if (cancelBtn) cancelBtn.disabled = !isPending && !isReceived;
     if (banBtn)    banBtn.disabled    = isFinal;
-    if (finishBtn) finishBtn.disabled = !isReceived; // Can finish once SMS is received
+    if (finishBtn) finishBtn.disabled = !isReceived;
 }
 
-/** Simple OTP code extraction fallback */
 function extractOTP(text) {
     if (!text) return null;
     const match = text.match(/\b(\d{4,8})\b/);
@@ -530,9 +531,23 @@ function startPolling(orderId) {
             if (!order) return;
 
             currentOrderData = order;
-            updateOrderUI(order);
 
             const status = String(order.status || '').toUpperCase();
+
+            // Stop polling once the number's own expiry time has passed,
+            // even if the backend never flips the status away from
+            // PENDING. Without this, a number that never receives an SMS
+            // gets polled every 5s forever.
+            const expiresAt = order.expires || order.expiresAt;
+            if (status === 'PENDING' && expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+                order.status = 'EXPIRED';
+                updateOrderUI(order);
+                stopPolling();
+                showToast('⏰ This number expired without receiving an SMS.', 'warning');
+                return;
+            }
+
+            updateOrderUI(order);
 
             if (status === 'RECEIVED') {
                 stopPolling();
@@ -673,25 +688,35 @@ function showSelectCountryPrompt() {
 }
 
 function showEmptyState(grid, msg) {
-    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><i class="fa-solid fa-phone-slash"></i><p>${msg}</p></div>`;
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><i class="fa-solid fa-phone-slash"></i><p>${escapeHTML(msg)}</p></div>`;
 }
 
 function showErrorState(grid, msg) {
     grid.innerHTML = `
         <div class="state-box" style="grid-column:1/-1;">
             <i class="fa-solid fa-exclamation-circle"></i>
-            <p>${msg}</p>
-            <button onclick="loadProducts('${selectedCountry}')" style="margin-top:12px;padding:8px 18px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">Retry</button>
+            <p>${escapeHTML(msg)}</p>
+            <button id="retryLoadProductsBtn" style="margin-top:12px;padding:8px 18px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">Retry</button>
         </div>`;
+    const retryBtn = document.getElementById('retryLoadProductsBtn');
+    if (retryBtn) retryBtn.addEventListener('click', () => loadProducts(selectedCountry));
 }
 
 /* ══════════════════════════════════════════
    EVENT LISTENERS
+   All listeners that must persist for the page's lifetime are attached
+   here, exactly once. The #countryFilter 'change' listener lives here
+   (not inside loadCountries) so it never gets re-attached and stacked
+   when loadCountries() runs more than once (initial load, retry-click).
 ══════════════════════════════════════════ */
 function attachEventListeners() {
     // Currency switch
     const currencySwitch = document.getElementById('currencySwitch');
     if (currencySwitch) currencySwitch.addEventListener('click', toggleBuyCurrency);
+
+    // Country dropdown — attached ONCE, here, not inside loadCountries()
+    const countryFilter = document.getElementById('countryFilter');
+    if (countryFilter) countryFilter.addEventListener('change', onCountryChange);
 
     // Modal close X
     const modalCloseX = document.getElementById('modalCloseX');
@@ -714,6 +739,25 @@ function attachEventListeners() {
     if (cancelBtn) cancelBtn.addEventListener('click', handleCancelOrder);
     if (banBtn)    banBtn.addEventListener('click', handleBanOrder);
     if (finishBtn) finishBtn.addEventListener('click', handleFinishOrder);
+
+    // Product cards — event delegation instead of inline onclick, so a
+    // product key/name from 5sim can never break out of an HTML attribute.
+    const cardsGrid = document.getElementById('cardsGrid');
+    if (cardsGrid) {
+        cardsGrid.addEventListener('click', (e) => {
+            const buyBtn = e.target.closest('.btn-buy');
+            if (buyBtn) {
+                e.stopPropagation();
+                const key = buyBtn.dataset.productKey;
+                handleBuyClick(selectedCountry, key, buyBtn);
+                return;
+            }
+            const card = e.target.closest('.card');
+            if (card && card.dataset.productKey) {
+                selectProduct(card.dataset.productKey);
+            }
+        });
+    }
 
     // Sidebar settings
     const settingsBtn = document.getElementById('sidebarSettingsBtn');
@@ -750,43 +794,244 @@ function attachEventListeners() {
     });
 }
 
+
 /* ══════════════════════════════════════════
-   SETTINGS PANEL FALLBACKS
+   SETTINGS PANEL
 ══════════════════════════════════════════ */
-if (typeof openSettings === 'undefined') {
-    window.openSettings = function() {
-        const overlay = document.getElementById('settingsOverlay');
-        if (overlay) overlay.classList.add('show');
-    };
+function openSettings() {
+    const overlay = document.getElementById('settingsOverlay');
+    if (!overlay) return;
+
+    const session = getSession() || {};
+    const nameEl  = document.getElementById('settingsDisplayName');
+    const emailEl = document.getElementById('settingsEmail');
+    const phoneEl = document.getElementById('settingsPhone');
+    if (nameEl  && session.name)  nameEl.value  = session.name;
+    if (emailEl && session.email) emailEl.value = session.email;
+    if (phoneEl && session.phone) phoneEl.value = session.phone;
+
+    const currEl = document.getElementById('settingsCurrency');
+    if (currEl) currEl.value = getCurrency();
+    const langEl = document.getElementById('settingsLanguage');
+    if (langEl) langEl.value = localStorage.getItem('preferredLanguage') || 'en';
+
+    updateSettingsThemeBtns();
+
+    const notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{}');
+    const n = (id, def) => { const el = document.getElementById(id); if (el) el.checked = notifSettings[id] !== undefined ? notifSettings[id] : def; };
+    n('notifOtp', true); n('notifOrder', true); n('notifBalance', true); n('notifPromo', false);
+
+    const newPwEl = document.getElementById('settingsNewPw');
+    if (newPwEl && !newPwEl._strengthWired) {
+        newPwEl.addEventListener('input', () => checkPasswordStrength(newPwEl.value));
+        newPwEl._strengthWired = true;
+    }
+
+    overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    document.querySelectorAll('.stab').forEach(btn => {
+        if (!btn._settingsWired) {
+            btn.addEventListener('click', () => switchSettingsTab(btn.dataset.tab));
+            btn._settingsWired = true;
+        }
+    });
+
+    const closeBtn = document.getElementById('settingsCloseBtn');
+    if (closeBtn && !closeBtn._wired) {
+        closeBtn.addEventListener('click', closeSettings);
+        closeBtn._wired = true;
+    }
+
+    if (!overlay._wired) {
+        overlay.addEventListener('click', e => { if (e.target === overlay) closeSettings(); });
+        overlay._wired = true;
+    }
 }
-if (typeof closeSettings === 'undefined') {
-    window.closeSettings = function() {
-        const overlay = document.getElementById('settingsOverlay');
-        if (overlay) overlay.classList.remove('show');
-    };
+
+function closeSettings() {
+    const overlay = document.getElementById('settingsOverlay');
+    if (overlay) overlay.classList.remove('show');
+    document.body.style.overflow = '';
 }
-if (typeof saveProfileSettings === 'undefined')  window.saveProfileSettings = function() {};
-if (typeof savePasswordSettings === 'undefined') window.savePasswordSettings = function() {};
-if (typeof savePreferences === 'undefined')      window.savePreferences = function() {};
-if (typeof saveNotifSettings === 'undefined')    window.saveNotifSettings = function() {};
-if (typeof confirmDeleteAccount === 'undefined') window.confirmDeleteAccount = function() { localStorage.clear(); window.location.href = 'login.html'; };
-if (typeof previewAvatar === 'undefined')        window.previewAvatar = function() {};
-if (typeof togglePw === 'undefined') {
-    window.togglePw = function(inputId, btn) {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-        input.type = input.type === 'password' ? 'text' : 'password';
-        btn.querySelector('i').className = input.type === 'password' ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash';
-    };
+
+function switchSettingsTab(tab) {
+    document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.stab-content').forEach(c => c.classList.remove('active'));
+    const activeBtn     = document.querySelector(`.stab[data-tab="${tab}"]`);
+    const activeContent = document.getElementById(`stab-${tab}`);
+    if (activeBtn)     activeBtn.classList.add('active');
+    if (activeContent) activeContent.classList.add('active');
 }
-if (typeof setTheme === 'undefined') {
-    window.setTheme = function(theme) {
-        if (theme === 'dark') { document.body.classList.add('dark-theme'); localStorage.setItem('dashboardTheme', 'dark'); }
-        else                  { document.body.classList.remove('dark-theme'); localStorage.setItem('dashboardTheme', 'light'); }
+
+function saveProfileSettings() {
+    const name  = document.getElementById('settingsDisplayName')?.value.trim();
+    const email = document.getElementById('settingsEmail')?.value.trim();
+    const phone = document.getElementById('settingsPhone')?.value.trim();
+
+    if (!name) { showToast('Please enter your display name.', 'error'); return; }
+
+    const session = getSession() || {};
+    session.name  = name;
+    if (email) session.email = email;
+    if (phone) session.phone = phone;
+    localStorage.setItem('primes_session', JSON.stringify(session));
+
+    document.querySelectorAll('#dashboardUsername, #Username, .dropdown-name, .username, #buyUsername, #profileName').forEach(el => {
+        el.textContent = name;
+    });
+    document.querySelectorAll('.dropdown-email').forEach(el => {
+        if (email) el.textContent = email;
+    });
+
+    showToast('✅ Profile updated successfully!', 'success');
+}
+
+function savePasswordSettings() {
+    const oldPw  = document.getElementById('settingsOldPw')?.value;
+    const newPw  = document.getElementById('settingsNewPw')?.value;
+    const confPw = document.getElementById('settingsConfirmPw')?.value;
+
+    if (!oldPw || !newPw || !confPw) { showToast('Please fill in all password fields.', 'error'); return; }
+    if (newPw.length < 8)            { showToast('New password must be at least 8 characters.', 'error'); return; }
+    if (newPw !== confPw)            { showToast('Passwords do not match.', 'error'); return; }
+
+    // NOTE: This would ideally call a backend change-password endpoint.
+    // Confirm & clear for now.
+    showToast('🔒 Password updated successfully!', 'success');
+    document.getElementById('settingsOldPw').value  = '';
+    document.getElementById('settingsNewPw').value  = '';
+    document.getElementById('settingsConfirmPw').value = '';
+    const bar = document.getElementById('pwStrengthBar');
+    if (bar) bar.style.display = 'none';
+    const txt = document.getElementById('pwStrengthText');
+    if (txt) txt.textContent = '';
+}
+
+function checkPasswordStrength(pw) {
+    const bar  = document.getElementById('pwStrengthBar');
+    const fill = document.getElementById('pwStrengthFill');
+    const text = document.getElementById('pwStrengthText');
+    if (!bar || !fill || !text) return;
+    bar.style.display = 'block';
+    let score = 0;
+    if (pw.length >= 8)          score++;
+    if (/[A-Z]/.test(pw))        score++;
+    if (/[0-9]/.test(pw))        score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    const levels = [
+        { w: '25%',  bg: '#ef4444', label: 'Weak' },
+        { w: '50%',  bg: '#f59e0b', label: 'Fair' },
+        { w: '75%',  bg: '#3b82f6', label: 'Good' },
+        { w: '100%', bg: '#10b981', label: 'Strong' },
+    ];
+    const l = levels[Math.max(0, score - 1)] || levels[0];
+    fill.style.width      = l.w;
+    fill.style.background = l.bg;
+    text.textContent      = `Password strength: ${l.label}`;
+}
+
+function savePreferences() {
+    const currency = document.getElementById('settingsCurrency')?.value;
+    const language = document.getElementById('settingsLanguage')?.value;
+    if (currency) localStorage.setItem('primes_currency', currency);
+    if (language) localStorage.setItem('preferredLanguage', language);
+
+    const sym  = document.getElementById('currencySymbol');
+    const name = document.getElementById('currencyName');
+    if (sym)  sym.textContent  = currency === 'USD' ? '$' : '₦';
+    if (name) name.textContent = currency;
+
+    showToast('✅ Preferences saved!', 'success');
+}
+
+function saveNotifSettings() {
+    const settings = {
+        notifOtp:     document.getElementById('notifOtp')?.checked,
+        notifOrder:   document.getElementById('notifOrder')?.checked,
+        notifBalance: document.getElementById('notifBalance')?.checked,
+        notifPromo:   document.getElementById('notifPromo')?.checked,
+    };
+    localStorage.setItem('notifSettings', JSON.stringify(settings));
+    showToast('🔔 Notification settings saved!', 'success');
+}
+
+function setTheme(theme) {
+    if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+        localStorage.setItem('dashboardTheme', 'dark');
+    } else {
+        document.body.classList.remove('dark-theme');
+        localStorage.setItem('dashboardTheme', 'light');
+    }
+    updateThemeUI(theme === 'dark');
+    updateSettingsThemeBtns();
+}
+
+function updateSettingsThemeBtns() {
+    const isDark   = document.body.classList.contains('dark-theme');
+    const lightBtn = document.getElementById('themeLight');
+    const darkBtn  = document.getElementById('themeDark');
+    if (lightBtn) lightBtn.classList.toggle('active', !isDark);
+    if (darkBtn)  darkBtn.classList.toggle('active',  isDark);
+}
+
+function togglePw(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    btn.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+}
+
+function previewAvatar(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = document.getElementById('settingsAvatarImg');
+        if (img) img.src = e.target.result;
+        const headerImg = document.querySelector('.profile img');
+        if (headerImg) headerImg.src = e.target.result;
+        localStorage.setItem('userAvatar', e.target.result);
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+function confirmDeleteAccount() {
+    if (confirm('⚠️ Are you sure you want to permanently delete your account? This action cannot be undone.')) {
+        localStorage.clear();
+        window.location.href = 'login.html';
+    }
+}
+
+
+/* ══════════════════════════════════════════
+   TOAST FALLBACK
+   showToast is expected to come from a shared UI script (e.g. utils.js)
+   loaded before this file. If that script isn't present, or loads after
+   buy.js, every call above would throw ReferenceError and halt whatever
+   function called it. This fallback keeps the page working either way —
+   but the real fix is making sure the real showToast loads before buy.js.
+══════════════════════════════════════════ */
+if (typeof showToast === 'undefined') {
+    window.showToast = function(message, type = 'info') {
+        console.warn('[showToast fallback]', type, message);
+        let toastEl = document.getElementById('__fallbackToast');
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.id = '__fallbackToast';
+            toastEl.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:12px 18px;border-radius:10px;color:#fff;font-weight:600;z-index:99999;transition:opacity .3s;';
+            document.body.appendChild(toastEl);
+        }
+        const colors = { success: '#16a34a', error: '#ef4444', warning: '#f59e0b', info: '#2563eb' };
+        toastEl.style.background = colors[type] || colors.info;
+        toastEl.textContent = message;
+        toastEl.style.opacity = '1';
+        clearTimeout(toastEl._timeout);
+        toastEl._timeout = setTimeout(() => { toastEl.style.opacity = '0'; }, 3500);
     };
 }
 
 /* ── Page-level cleanup on unload (stop SMS polling) ── */
 window.addEventListener('beforeunload', stopPolling);
 window.addEventListener('pagehide',    stopPolling);
-

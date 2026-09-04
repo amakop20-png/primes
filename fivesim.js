@@ -5,12 +5,12 @@ const axios = require('axios');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, 'primes/buy.env') });
 
-const BASE_URL = 'https://5sim.net/v1';
+const BASE_URL = 'ttps://nurasms-api.onrender.com';
 const TOKEN = process.env.FIVESIM_API_TOKEN || process.env.FIVESIM_API_KEY; // reads from your .env file or Vercel variables
 
 const client = axios.create({
   baseURL: BASE_URL,
-  timeout: 8000, // 8-second timeout to prevent server hang-ups
+  timeout: 6000, // 6-second timeout to prevent server hang-ups
 });
 
 // These headers are sent with every request to 5sim
