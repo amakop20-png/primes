@@ -288,7 +288,7 @@ function initForm() {
             form.reset();
 
             setTimeout(() => {
-                window.location.href = token ? "dashboard.html" : "login.html";
+                window.location.href = "login.html";
             }, 1500);
 
         } catch (error) {

@@ -9,7 +9,7 @@ const CONVERSION_RATE = 1500; // 1 USD = ₦1500 (display purposes only)
 
 // ── Paystack Configuration ──
 const PAYSTACK_CONFIG = {
-    publicKey:    'pk_test_36b4ab7a4bb105c653f572f382c09bb1de905c7b',
+    publicKey:    'pk_live_0e65e56049dcbb24c8be6385634b552a119aaae5',
     minAmountNGN: 100,
     minAmountUSD: 1
 };
@@ -791,7 +791,7 @@ async function launchPaystack(rawVal) {
                 ]
             },
 
-            callback: async function(response) {
+            callback: function(response) {
                 /*
                  * Payment completed on Paystack's side.
                  * The backend webhook will credit the wallet.
@@ -804,7 +804,7 @@ async function launchPaystack(rawVal) {
                 setTimeout(async () => {
                     await loadWalletBalance();
                     await loadTransactions(1);
-                }, 3000);
+                }, 1000);
             },
 
             onClose: function() {
