@@ -385,20 +385,11 @@ header {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
-    min-height: 420px;
+    padding: 0;
 }
 
 .hero__image::before {
-  
-    position: absolute;
-    inset: 0;
-    margin: auto;
-    width: 100%;
-    height: 100%;
-    background: var(--surface-sunk);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    display: none;
 }
 
 .hero__image img {
@@ -407,8 +398,6 @@ header {
     width: 100%;
     max-width: 440px;
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lifted);
-    border: 1px solid var(--border);
 }
 
 /* ══════════════════════════════════════════
@@ -537,21 +526,19 @@ header {
 .cta-section {
     margin: 0 6vw 96px;
     max-width: 1320px;
-  
-    background: var(--ink);
     border-radius: var(--radius-lg);
     padding: 64px 8vw;
     text-align: center;
 }
 
 .cta-content h2 {
-    color: #fff;
+    color: var(--text);
     font-size: clamp(1.7rem, 3vw, 2.3rem);
     margin-bottom: 14px;
 }
 
 .cta-content p {
-    color: color-mix(in srgb, #fff 82%, transparent);
+    color: var(--muted);
     font-size: 1.05rem;
     margin-bottom: 30px;
 }
@@ -559,7 +546,7 @@ header {
 .cta-section .btn-primary a {
     background: var(--brand);
     color: #fff;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--brand) 30%, transparent);
 }
 
 .cta-section .btn-primary a:hover {
@@ -720,8 +707,8 @@ header {
 
     .hero {
         grid-template-columns: 1fr;
-        padding: 36px 16px 48px;
-        gap: 28px;
+        padding: 28px 18px 40px;
+        gap: 0;
         text-align: left;
     }
 
@@ -730,49 +717,70 @@ header {
     }
 
     .hero__title {
-        font-size: clamp(2rem, 7vw, 2.5rem);
+        font-size: clamp(1.9rem, 7vw, 2.5rem);
         line-height: 1.15;
     }
 
     .hero__subtitle {
-        margin-top: 16px;
-        font-size: 0.98rem;
-        line-height: 1.5;
+        margin-top: 14px;
+        font-size: 0.97rem;
+        line-height: 1.55;
         max-width: 100%;
+        color: var(--muted);
     }
 
     .hero__cta {
         display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        width: auto;
-        gap: 10px;
-        margin-top: 20px;
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+        margin-top: 24px;
     }
 
-    .hero__cta .btn-primary,
-    .hero__cta .btn-secondary,
-    .hero__cta .btn-large {
-        width: auto;
-        display: inline-flex;
+    /* Get Started – wide, prominent */
+    .hero__cta .btn-primary.btn-large {
+        width: 100%;
+        display: block;
     }
-
-    .hero__cta .btn-primary a,
-    .hero__cta .btn-secondary a {
-        width: auto;
+    .hero__cta .btn-primary.btn-large a {
+        display: flex;
+        width: 100%;
         justify-content: center;
-        padding: 9px 16px;
-        font-size: 0.88rem;
+        align-items: center;
+        gap: 8px;
+        padding: 13px 20px;
+        font-size: 1rem;
         border-radius: var(--radius-sm);
-        text-align: center;
+        font-weight: 700;
     }
 
+    /* Learn More – ghost/text style below */
+    .hero__cta .btn-secondary.btn-large {
+        width: 100%;
+        display: block;
+        background: none;
+    }
+    .hero__cta .btn-secondary.btn-large a {
+        display: flex;
+        width: 100%;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        font-size: 0.95rem;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--text);
+        font-weight: 600;
+    }
+
+    /* Image below the text content */
     .hero__image {
-        order: initial;
+        order: 2;
         padding: 0;
         min-height: auto;
         width: 100%;
-        margin-top: 8px;
+        margin-top: 28px;
     }
 
     .hero__image::before {
@@ -782,8 +790,7 @@ header {
     .hero__image img {
         width: 100%;
         max-width: 100%;
-        margin: 0 auto;
-        box-shadow: var(--shadow-lifted);
+        border-radius: var(--radius-md);
     }
 
     .benefits-grid {
@@ -826,6 +833,17 @@ header {
     .hero, .features, .benefits {
         padding-left: 16px;
         padding-right: 16px;
+    }
+
+    /* Keep stacked CTA layout on small phones */
+    .hero__cta {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .hero__cta .btn-primary.btn-large,
+    .hero__cta .btn-secondary.btn-large {
+        width: 100%;
     }
 
     .features-grid {
