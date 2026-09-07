@@ -177,29 +177,35 @@ async function apiRequest(endpoint, options = {}) {
    REUSABLE API ENDPOINT METHODS
 ══════════════════════════════════════════ */
 
-async function createVirtualAccount() {
+async function createVirtualAccount(currency = 'NGN') {
     return await apiRequest('/api/create-virtual-account', {
-        method: 'POST'
+        method: 'POST',
+        body: JSON.stringify({ currency })
     });
 }
 
-async function getVirtualAccount() {
-    return await apiRequest('/api/get-virtual-account', {
+async function getVirtualAccount(currency = 'NGN') {
+    const query = currency ? `?currency=${encodeURIComponent(currency)}` : '';
+    return await apiRequest(`/api/get-virtual-account${query}`, {
         method: 'GET'
     });
 }
 
-async function getWalletBalance() {
-    return await apiRequest('/api/get-wallet-balance', {
+async function getWalletBalance(currency = 'NGN') {
+    const query = currency ? `?currency=${encodeURIComponent(currency)}` : '';
+    return await apiRequest(`/api/get-wallet-balance${query}`, {
         method: 'GET'
     });
 }
 
-async function getTransactions(page = 1, limit = 20) {
+async function getTransactions(page = 1, limit = 20, currency = '') {
     const params = new URLSearchParams({
         page: String(page),
         limit: String(limit)
     });
+    if (currency) {
+        params.set('currency', currency);
+    }
     return await apiRequest(`/api/get-transactions?${params.toString()}`, {
         method: 'GET'
     });

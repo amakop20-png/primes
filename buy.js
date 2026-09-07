@@ -115,22 +115,28 @@ async function loadWalletBalanceBuyPage() {
     if (balEl) balEl.textContent = 'Loading…';
 
     try {
-        const data       = await getWalletBalance();
-        const balanceNGN = data?.wallet?.balance ?? data?.balance ?? 0;
-        const ngn        = parseFloat(balanceNGN) || 0;
         const currency   = getCurrency();
-        const displayed  = currency === 'USD' ? (ngn / CONVERSION_RATE) : ngn;
+        const data       = await getWalletBalance(currency);
+        let bal          = 0;
+        if (currency === 'USD') {
+            bal = data?.usdBalance ?? data?.wallet?.usdBalance ?? data?.balanceUSD ?? parseFloat(localStorage.getItem('_walletBalance_USD') || '0');
+        } else {
+            bal = data?.ngnBalance ?? data?.wallet?.ngnBalance ?? data?.balance ?? data?.wallet?.balance ?? parseFloat(localStorage.getItem('_walletBalance_NGN') || '0');
+        }
         const symbol     = currency === 'USD' ? '$' : '₦';
 
-        if (balEl) balEl.textContent = symbol + displayed.toLocaleString('en-NG', {
+        if (balEl) balEl.textContent = symbol + Number(bal).toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', {
             minimumFractionDigits: 2, maximumFractionDigits: 2
         });
 
-        // Store raw NGN for balance reference
-        localStorage.setItem('_walletBalance', String(ngn));
+        localStorage.setItem('_walletBalance_' + currency, String(bal));
+        if (currency === 'NGN') localStorage.setItem('_walletBalance', String(bal));
     } catch (err) {
         console.error('loadWalletBalanceBuyPage error:', err);
-        if (balEl) balEl.textContent = '—';
+        const currency = getCurrency();
+        const saved    = parseFloat(localStorage.getItem('_walletBalance_' + currency) || '0');
+        const symbol   = currency === 'USD' ? '$' : '₦';
+        if (balEl) balEl.textContent = symbol + saved.toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', { minimumFractionDigits: 2 });
     }
 
     // Service status indicator

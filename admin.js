@@ -150,17 +150,19 @@ function renderOverview() {
   const totalRev    = allOrders.reduce((s, o) => s + (parseFloat(o.amountNGN) || 0), 0);
   const todayRev    = allOrders.filter(o => isToday(o.createdAt))
                                .reduce((s, o) => s + (parseFloat(o.amountNGN) || 0), 0);
+  const totalUserWallets = allUsers.reduce((s, u) => s + (parseFloat(u.balance) || 0), 0);
 
   // Set values
-  setText('totalUsers',      allUsers.length);
-  setText('activeUsers',     activeSet.size);
-  setText('totalOrders',     allOrders.length);
-  setText('signupsToday',    signupsToday);
-  setText('newUsersThisWeek', `+${newThisWeek} this week`);
-  setText('signupsWeek',     `+${signupsWeek} this week`);
-  setText('ordersToday',     `+${ordersToday} today`);
-  setText('totalRevenue',    `₦${totalRev.toLocaleString()}`);
-  setText('revenueToday',    `+₦${todayRev.toLocaleString()} today`);
+  setText('totalUsers',        allUsers.length);
+  setText('activeUsers',       activeSet.size);
+  setText('totalOrders',       allOrders.length);
+  setText('totalUserWallets',  `₦${totalUserWallets.toLocaleString()}`);
+  setText('signupsToday',      signupsToday);
+  setText('newUsersThisWeek',  `+${newThisWeek} this week`);
+  setText('signupsWeek',       `+${signupsWeek} this week`);
+  setText('ordersToday',       `+${ordersToday} today`);
+  setText('totalRevenue',      `₦${totalRev.toLocaleString()}`);
+  setText('revenueToday',      `+₦${todayRev.toLocaleString()} today`);
 
   // Update nav badges
   setText('navUsersBadge',  allUsers.length);

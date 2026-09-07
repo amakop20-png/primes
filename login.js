@@ -187,12 +187,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 // stored shape matches what signup.js writes, but still
                 // include the computed display name login.js relies on.
                 const user = result.user || {};
+                const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || user.name || 'User';
                 const sessionData = {
                     ...user,
-                    name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username,
+                    name: displayName,
                     loggedAt: new Date().toISOString()
                 };
                 setSession(sessionData);
+
+                // Sync with admin dashboard records
+                try {
+                    const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
+                    const userEmail = (user.email || '').toLowerCase();
+                    let found = false;
+                    for (let u of users) {
+                        if ((u.email && u.email.toLowerCase() === userEmail) || (u.name && u.name === displayName)) {
+                            u.name = displayName;
+                            u.phone = user.phone || u.phone;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found && (userEmail || displayName)) {
+                        users.unshift({
+                            name: displayName,
+                            email: userEmail || `${user.username}@davessocial.com`,
+                            phone: user.phone || '—',
+                            balance: String(user.balance || 0),
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+                    localStorage.setItem('primes_users', JSON.stringify(users));
+
+                    const activity = JSON.parse(localStorage.getItem('primes_activity') || '[]');
+                    activity.unshift({
+                        type: 'login',
+                        message: `User logged in: ${displayName}`,
+                        username: displayName,
+                        timestamp: new Date().toISOString()
+                    });
+                    localStorage.setItem('primes_activity', JSON.stringify(activity.slice(0, 100)));
+                } catch (_) {}
 
                 toast.show(result.message || 'Login successful! Redirecting...', 'success');
 
