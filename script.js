@@ -928,17 +928,16 @@ async function launchPaystack(rawVal) {
                 ]
             },
 
-            callback: function(response) {
+            callback: async function(response) {
                 closeDepositModal();
-                showToast(`✅ Payment of ${symbol}${rawVal.toLocaleString()} successful!`, 'success');
                 console.info('[Paystack] Callback — Ref:', response.reference);
 
-                // 1. Immediately update the active currency wallet balance
+                // 1. Optimistic UI: immediately show the new balance (may be overwritten by server response)
                 const currentBal = parseFloat(localStorage.getItem('_walletBalance_' + curr) || '0');
                 const newBal     = currentBal + rawVal;
                 renderBalanceCards(newBal, curr);
 
-                // 2. Immediately record the transaction in the active currency transaction history
+                // 2. Immediately record the transaction locally for instant UI feedback
                 const localTxs = JSON.parse(localStorage.getItem('primes_txs_' + curr) || '[]');
                 localTxs.unshift({
                     id: 'tx-' + Date.now(),
@@ -956,7 +955,17 @@ async function launchPaystack(rawVal) {
                 const userName = session.name || session.username || 'User';
                 logAdminActivity('fund', `Wallet funded: ${symbol}${rawVal.toLocaleString()} added to ${userName} (${curr} account)`, userName);
 
-                // 4. Background polling from backend
+                // 4. CRITICAL: Call the backend recharge endpoint to credit the server-side balance
+                try {
+                    showToast(`⏳ Verifying payment of ${symbol}${rawVal.toLocaleString()}…`, 'info');
+                    await rechargeWallet(rawVal, response.reference || transactionRef, curr);
+                    showToast(`✅ Payment of ${symbol}${rawVal.toLocaleString()} verified and credited!`, 'success');
+                } catch (err) {
+                    console.error('[Paystack] Backend recharge error:', err);
+                    showToast(err.message || 'Payment received but wallet update delayed. It will sync shortly.', 'warning');
+                }
+
+                // 5. Refresh from backend to get the authoritative balance
                 const pollIntervals = [2000, 6000, 12000, 20000, 30000];
                 pollIntervals.forEach((delay) => {
                     setTimeout(async () => {
