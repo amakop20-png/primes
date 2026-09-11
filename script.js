@@ -307,7 +307,13 @@ async function loadWalletBalance(currency) {
         const savedBal = parseFloat(localStorage.getItem('_walletBalance_' + curr) || '0');
         renderBalanceCards(savedBal, curr);
 
-        if (err.status !== 404) {
+        // FIX: a 404 here means the backend has no wallet record at all for
+        // this account — that's not a "sync hiccup", it's the actual reason
+        // buying numbers fails too. The old code stayed silent on 404s,
+        // which hid this from the user entirely. Surface it clearly instead.
+        if (err.status === 404) {
+            showToast(`No ${curr} wallet found on your account yet. Buying numbers won't work until one is set up — contact support if this persists.`, 'warning');
+        } else {
             showToast(`Unable to sync ${curr} balance with server. Displaying cached balance.`, 'info');
         }
     }
@@ -327,7 +333,13 @@ async function loadVirtualAccount(currency) {
 
     try {
         const data = await getVirtualAccount(curr);
-        const acct = data?.virtualAccount || data?.account || data?.data || data;
+
+        // FIX: Paystack's actual response nests everything inside
+        // "dedicatedAccount" (see api.js normalizeVirtualAccount for the
+        // matching backend-side fix). This chain now checks that shape
+        // FIRST, so an already-normalized response (from the updated
+        // api.js) and a raw un-normalized one both resolve correctly.
+        const acct = data?.dedicatedAccount || data?.virtualAccount || data?.account || data?.data || data;
 
         if (acct && (acct.accountNumber || acct.account_number)) {
             // Save to currency-specific persistence
@@ -366,7 +378,12 @@ function getCachedVirtualAccount(currency) {
 function renderVirtualAccountDetails(container, acct, currency) {
     const isUSD = currency === 'USD';
     const accNum  = acct.accountNumber || acct.account_number || '—';
-    const bank    = acct.bankName || acct.bank_name || (isUSD ? 'JPMorgan Chase / Wire' : 'Wema Bank');
+    // FIX: bank can arrive as a nested object ({ name, id, slug }) straight
+    // from Paystack, not just a flat bankName/bank_name string — fall back
+    // to bank.name / bank.slug before the hardcoded defaults.
+    const bank    = acct.bankName || acct.bank_name
+        || (acct.bank && (acct.bank.name || acct.bank.slug))
+        || (isUSD ? 'JPMorgan Chase / Wire' : 'Wema Bank');
     const accName = acct.accountName || acct.account_name || (getSession()?.name || 'Dave Social User');
 
     container.innerHTML = `
@@ -414,7 +431,8 @@ async function handleCreateVirtualAccount() {
 
     try {
         const res = await createVirtualAccount(curr);
-        const acct = res?.virtualAccount || res?.account || res?.data || res;
+        // FIX: same dedicatedAccount-first shape as loadVirtualAccount above.
+        const acct = res?.dedicatedAccount || res?.virtualAccount || res?.account || res?.data || res;
 
         // If backend returned account details or success
         if (acct && (acct.accountNumber || acct.account_number)) {

@@ -10,6 +10,7 @@
    - finishOrder(orderId)
    - cancelOrder(orderId)
    - banOrder(orderId)
+   - createVirtualAccount(currency)
 ══════════════════════════════════════════════════════════════════════ */
 
 /* ── Module State ── */
@@ -47,9 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!requireAuth()) return;
 
     // Restore theme
-    if (localStorage.getItem('dashboardTheme') === 'dark') {
+    const isDark = localStorage.getItem('dashboardTheme') === 'dark';
+    if (isDark) {
         document.body.classList.add('dark-theme');
     }
+    updateThemeUI(isDark);
 
     // Restore currency UI
     updateCurrencyDisplay(getCurrency());
@@ -108,35 +111,43 @@ function toggleBuyCurrency() {
 
 /* ══════════════════════════════════════════
    WALLET BALANCE (buy page)
-   Uses: getWalletBalance() from api.js
+   Uses: getWalletBalance() / createVirtualAccount() from api.js
+
+   NOTE (fix): a 404 from get-wallet-balance means "Wallet not found" —
+   this user has no wallet row yet for this currency on the backend.
+   Previously that just fell through to a stale cached localStorage
+   number with no real explanation. Now: on 404 specifically, we call
+   createVirtualAccount(currency) to provision the wallet, then retry
+   the balance fetch once. Any other error (timeout, network, 5xx)
+   still falls back to the cached balance exactly as before.
 ══════════════════════════════════════════ */
 async function loadWalletBalanceBuyPage() {
     const balEl = document.getElementById('buyWalletBalance');
     if (balEl) balEl.textContent = 'Loading…';
 
+    const currency = getCurrency();
+    const symbol   = currency === 'USD' ? '$' : '₦';
+
     try {
-        const currency   = getCurrency();
-        const data       = await getWalletBalance(currency);
-        let bal          = 0;
-        if (currency === 'USD') {
-            bal = data?.usdBalance ?? data?.wallet?.usdBalance ?? data?.balanceUSD ?? parseFloat(localStorage.getItem('_walletBalance_USD') || '0');
-        } else {
-            bal = data?.ngnBalance ?? data?.wallet?.ngnBalance ?? data?.balance ?? data?.wallet?.balance ?? parseFloat(localStorage.getItem('_walletBalance_NGN') || '0');
-        }
-        const symbol     = currency === 'USD' ? '$' : '₦';
-
-        if (balEl) balEl.textContent = symbol + Number(bal).toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', {
-            minimumFractionDigits: 2, maximumFractionDigits: 2
-        });
-
-        localStorage.setItem('_walletBalance_' + currency, String(bal));
-        if (currency === 'NGN') localStorage.setItem('_walletBalance', String(bal));
+        const data = await fetchWalletBalance(currency);
+        applyWalletBalance(data, currency, symbol, balEl);
     } catch (err) {
-        console.error('loadWalletBalanceBuyPage error:', err);
-        const currency = getCurrency();
-        const saved    = parseFloat(localStorage.getItem('_walletBalance_' + currency) || '0');
-        const symbol   = currency === 'USD' ? '$' : '₦';
-        if (balEl) balEl.textContent = symbol + saved.toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', { minimumFractionDigits: 2 });
+        if (err.status === 404) {
+            try {
+                await createVirtualAccount(currency);
+                const data = await fetchWalletBalance(currency);
+                applyWalletBalance(data, currency, symbol, balEl);
+                showToast(`✅ ${currency} wallet created.`, 'success');
+            } catch (createErr) {
+                console.error('createVirtualAccount retry failed:', createErr);
+                if (balEl) balEl.textContent = symbol + '0.00';
+                showToast(`Couldn't set up your ${currency} wallet. Please contact support.`, 'error');
+            }
+        } else {
+            console.error('loadWalletBalanceBuyPage error:', err);
+            const saved = parseFloat(localStorage.getItem('_walletBalance_' + currency) || '0');
+            if (balEl) balEl.textContent = symbol + saved.toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', { minimumFractionDigits: 2 });
+        }
     }
 
     // Service status indicator
@@ -144,6 +155,31 @@ async function loadWalletBalanceBuyPage() {
     if (statusEl) {
         statusEl.innerHTML = '<span style="color:#16a34a;font-weight:700;">✅ Online</span>';
     }
+}
+
+// Thin wrapper kept separate so both the initial call and the
+// post-create retry above share the exact same call path.
+async function fetchWalletBalance(currency) {
+    return await getWalletBalance(currency);
+}
+
+// Parses the balance out of whichever shape the backend returns and
+// writes it to the DOM + localStorage cache. Extracted out of
+// loadWalletBalanceBuyPage so it isn't duplicated for the retry path.
+function applyWalletBalance(data, currency, symbol, balEl) {
+    let bal = 0;
+    if (currency === 'USD') {
+        bal = data?.usdBalance ?? data?.wallet?.usdBalance ?? data?.balanceUSD ?? 0;
+    } else {
+        bal = data?.ngnBalance ?? data?.wallet?.ngnBalance ?? data?.balance ?? data?.wallet?.balance ?? 0;
+    }
+
+    if (balEl) balEl.textContent = symbol + Number(bal).toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+
+    localStorage.setItem('_walletBalance_' + currency, String(bal));
+    if (currency === 'NGN') localStorage.setItem('_walletBalance', String(bal));
 }
 
 /* ══════════════════════════════════════════
@@ -204,10 +240,9 @@ async function loadCountries() {
         select.disabled  = false;
     } catch (err) {
         console.error('loadCountries error:', err);
-        select.innerHTML = '<option value="">⚠ Failed to load countries (Click to retry)</option>';
+        select.innerHTML = '<option value="">⚠ Failed to load countries. Refresh page to retry.</option>';
         select.disabled  = false;
         showToast('Unable to load countries. Backend may be waking up, please retry.', 'error');
-        select.onclick = () => { if (select.disabled || select.value === '') loadCountries(); };
     }
 }
 
@@ -369,7 +404,10 @@ async function handleBuyClick(country, product, btnEl) {
     }
 
     try {
-        const result = await buyActivation(country, product);
+        const currency = getCurrency();
+        const operatorEl = document.getElementById('operatorFilter');
+        const operator = operatorEl && operatorEl.value ? operatorEl.value : 'any';
+        const result = await buyActivation(country, product, currency, operator);
         const order  = result?.order || result;
 
         if (!order || (!order.id && !order._id)) {
@@ -962,16 +1000,21 @@ function saveNotifSettings() {
     showToast('🔔 Notification settings saved!', 'success');
 }
 
-function setTheme(theme) {
-    if (theme === 'dark') {
-        document.body.classList.add('dark-theme');
-        localStorage.setItem('dashboardTheme', 'dark');
-    } else {
-        document.body.classList.remove('dark-theme');
-        localStorage.setItem('dashboardTheme', 'light');
-    }
-    updateThemeUI(theme === 'dark');
+function toggleDark() {
+    document.body.classList.toggle('dark-theme');
+    const isDark = document.body.classList.contains('dark-theme');
+    localStorage.setItem('dashboardTheme', isDark ? 'dark' : 'light');
+    updateThemeUI(isDark);
     updateSettingsThemeBtns();
+}
+
+function updateThemeUI(isDark) {
+    const modeText = document.getElementById('modeText');
+    if (modeText) modeText.textContent = isDark ? 'Dark mode' : 'Light mode';
+    const modeIcon = document.querySelector('.mode-dot i');
+    if (modeIcon) {
+        modeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    }
 }
 
 function updateSettingsThemeBtns() {

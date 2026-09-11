@@ -110,14 +110,24 @@ async function apiRequest(endpoint, options = {}) {
     clearTimeout(timeoutId);
 
     let data = {};
+    let textResponse = '';
     try {
-        data = await response.json();
+        textResponse = await response.text();
+        if (textResponse) {
+            data = JSON.parse(textResponse);
+        }
     } catch (_) {
-        // Non-JSON response (e.g. 502/504 HTML page)
+        // Non-JSON response (e.g. 5sim plain text errors or 502/504 HTML page)
     }
 
     if (!response.ok) {
-        const errorMsg = data.message || data.error || data.msg || `Request failed with status ${response.status}`;
+        let errorMsg = data.message || data.error || data.msg;
+        if (!errorMsg && textResponse && !textResponse.trim().startsWith('<')) {
+            errorMsg = textResponse.trim();
+        }
+        if (!errorMsg) {
+            errorMsg = `Request failed with status ${response.status}`;
+        }
 
         // Every thrown error carries the real HTTP status code as .status,
         // not just a text message. Backend wording changes ("Wallet not
@@ -174,38 +184,67 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 /* ══════════════════════════════════════════
+   VIRTUAL ACCOUNT NORMALIZER
+   Paystack's dedicated-account response nests everything inside a
+   "dedicatedAccount" object (bank, account_name, account_number, etc.)
+   instead of putting those fields at the top level. Any code that was
+   reading data.account_number directly off the raw response would get
+   undefined. This flattens the shape once, here, so every caller of
+   getVirtualAccount() gets the same predictable fields no matter which
+   shape the backend actually sends.
+══════════════════════════════════════════ */
+function normalizeVirtualAccount(data) {
+    if (!data || typeof data !== 'object') return null;
+
+    // Some backends already return it flat — support both.
+    const src = data.dedicatedAccount || data.virtualAccount || data;
+
+    if (!src || typeof src !== 'object') return null;
+
+    return {
+        raw: data,
+        accountName: src.account_name || src.accountName || null,
+        accountNumber: src.account_number || src.accountNumber || null,
+        bankName: (src.bank && (src.bank.name || src.bank.slug)) || src.bankName || null,
+        currency: src.currency || 'NGN',
+        active: src.active !== undefined ? src.active : null,
+        assigned: src.assigned !== undefined ? src.assigned : null,
+        id: src.id || data._id || null,
+        createdAt: src.created_at || src.createdAt || null,
+        updatedAt: src.updated_at || src.updatedAt || null,
+    };
+}
+
+/* ══════════════════════════════════════════
    REUSABLE API ENDPOINT METHODS
 ══════════════════════════════════════════ */
 
 async function createVirtualAccount(currency = 'NGN') {
-    return await apiRequest('/api/create-virtual-account', {
+    const data = await apiRequest('/api/create-virtual-account', {
         method: 'POST',
         body: JSON.stringify({ currency })
     });
+    return normalizeVirtualAccount(data);
 }
 
 async function getVirtualAccount(currency = 'NGN') {
-    const query = currency ? `?currency=${encodeURIComponent(currency)}` : '';
-    return await apiRequest(`/api/get-virtual-account${query}`, {
+    const data = await apiRequest(`/api/get-virtual-account`, {
         method: 'GET'
     });
+    return normalizeVirtualAccount(data);
 }
 
 async function getWalletBalance(currency = 'NGN') {
-    const query = currency ? `?currency=${encodeURIComponent(currency)}` : '';
-    return await apiRequest(`/api/get-wallet-balance${query}`, {
+    return await apiRequest(`/api/get-wallet-balance`, {
         method: 'GET'
     });
 }
 
-async function getTransactions(page = 1, limit = 20, currency = '') {
+async function getTransactions(page = 1, limit = 20) {
     const params = new URLSearchParams({
         page: String(page),
         limit: String(limit)
     });
-    if (currency) {
-        params.set('currency', currency);
-    }
     return await apiRequest(`/api/get-transactions?${params.toString()}`, {
         method: 'GET'
     });
@@ -224,13 +263,13 @@ async function getProducts(country) {
     });
 }
 
-async function buyActivation(country, product) {
+async function buyActivation(country, product, currency = 'NGN', operator = 'any') {
     if (!country || !product) {
         throw new Error('Both country and product are required to purchase a number.');
     }
     return await apiRequest('/api/buy/activation', {
         method: 'POST',
-        body: JSON.stringify({ country, product })
+        body: JSON.stringify({ country, product, currency, operator })
     });
 }
 
@@ -315,6 +354,7 @@ window.requireAuth = requireAuth;
 window.getSession = getSession;
 window.setSession = setSession;
 window.logout = logout;
+window.normalizeVirtualAccount = normalizeVirtualAccount;
 
 window.createVirtualAccount = createVirtualAccount;
 window.getVirtualAccount = getVirtualAccount;
@@ -343,6 +383,7 @@ window.NuraAPI = {
     getSession,
     setSession,
     logout,
+    normalizeVirtualAccount,
     createVirtualAccount,
     getVirtualAccount,
     getWalletBalance,
