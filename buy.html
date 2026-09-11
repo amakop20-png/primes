@@ -773,22 +773,21 @@
     }
   </script>
 
-  <!-- Header -->
-  <header class="header">
-    <div class="pride">
-      <div class="logo">
-        <img src="nuraxq-logo.png" alt="NuraXQ" style="width:130px;height:auto;object-fit:contain;">
-      </div>
+  <header class="dash-header">
+    <div class="header-left">
       <div class="toggle-btn" id="toggle-btn">
         <i class="fa-solid fa-bars"></i>
       </div>
+      <div class="logo">
+        <img src="nuraxq-logo.png" alt="NuraXQ" style="width:130px;height:auto;object-fit:contain;">
+      </div>
     </div>
 
-    <div class="match">
+    <div class="header-right">
       <div class="currency-switch" id="currencySwitch" style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--border-light);padding:6px 12px;border-radius:20px;font-weight:700;font-size:13px;color:var(--text);border:1px solid var(--border);transition:all 0.2s;user-select:none;">
         <span id="currencySymbol">$</span> <span id="currencyName">USD</span>
       </div>
-      <div class="notification">
+      <div class="notifications">
         <i class="fa-solid fa-bell"></i>
         <span class="badge">3</span>
       </div>
@@ -815,7 +814,6 @@
           <a href="#contact"><i class="fa-solid fa-phone"></i> Contact</a>
           <a href="login.html" class="logout" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
         </div>
-      </div>
       </div>
     </div>
   </header>

@@ -22,14 +22,16 @@
  
 
 
-  <header>
-    <div class="logo-container" style="display:flex; align-items:center;">
-        <img src="nuraxq-logo.png" alt="NuraXQ" style="height: 30px;">
-    </div>
-    <div class="nav-actions" style="display:flex; align-items:center; gap: 12px;">
+  <header class="dash-header">
+    <div class="header-left">
         <div class="toggle-btn" id="toggle-btn" style="color: var(--text); font-size: 20px; cursor: pointer;">
             <i class="fa-solid fa-bars"></i>
         </div>
+        <div class="logo-container" style="display:flex; align-items:center;">
+            <img src="nuraxq-logo.png" alt="NuraXQ" style="height: 30px;">
+        </div>
+    </div>
+    <div class="header-right">
         <button type="button" class="currency-switch" id="currencySwitch" style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: var(--border-light); padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; color: var(--text); border: none;">
             <span id="currencySymbol">₦</span> <span id="currencyName">NGN</span> <i class="fa-solid fa-chevron-down" style="font-size:10px;"></i>
         </button>
