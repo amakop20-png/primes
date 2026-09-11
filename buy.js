@@ -1120,8 +1120,14 @@ async function loadNotifications() {
     list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Loading notifications...</div>';
 
     try {
-        const res = await apiRequest('/api/user/notifications', { method: 'GET' });
-        renderNotifications(res.notifications || res.data || []);
+        // Mocked because the backend endpoint does not exist yet (returns 404)
+        // const res = await apiRequest('/api/user/notifications', { method: 'GET' });
+        // renderNotifications(res.notifications || res.data || []);
+        
+        // Simulating the 404 response to avoid browser console errors:
+        const err = new Error('Not Found');
+        err.status = 404;
+        throw err;
     } catch (err) {
         if (err.status === 404) {
             list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Notification system is not fully connected to the backend yet (Endpoint missing).</div>';

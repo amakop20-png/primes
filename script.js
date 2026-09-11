@@ -981,39 +981,41 @@ async function launchPaystack(rawVal) {
                 ]
             },
 
-            callback: async function(response) {
-                closeDepositModal();
-                console.info('[Paystack] Callback — Ref:', response.reference);
+            callback: function(response) {
+                (async () => {
+                    closeDepositModal();
+                    console.info('[Paystack] Callback — Ref:', response.reference);
 
-                try {
-                    showToast(`⏳ Verifying payment of ${symbol}${rawVal.toLocaleString()}…`, 'info');
-                    
-                    // Call the backend recharge endpoint to credit the server-side balance
-                    await rechargeWallet(rawVal, response.reference || transactionRef, curr);
-                    
-                    showToast(`✅ Payment of ${symbol}${rawVal.toLocaleString()} verified and credited!`, 'success');
-                    
-                    // After verified success, load the new authoritative balance from the server
-                    await loadWalletBalance(curr);
-                    await loadTransactions(1, curr);
-                    
-                    // Log payment activity for admin console
-                    const userName = session.name || session.username || 'User';
-                    logAdminActivity('fund', `Wallet funded: ${symbol}${rawVal.toLocaleString()} added to ${userName} (${curr} account)`, userName);
+                    try {
+                        showToast(`⏳ Verifying payment of ${symbol}${rawVal.toLocaleString()}…`, 'info');
+                        
+                        // Call the backend recharge endpoint to credit the server-side balance
+                        await rechargeWallet(rawVal, response.reference || transactionRef, curr);
+                        
+                        showToast(`✅ Payment of ${symbol}${rawVal.toLocaleString()} verified and credited!`, 'success');
+                        
+                        // After verified success, load the new authoritative balance from the server
+                        await loadWalletBalance(curr);
+                        await loadTransactions(1, curr);
+                        
+                        // Log payment activity for admin console
+                        const userName = session.name || session.username || 'User';
+                        logAdminActivity('fund', `Wallet funded: ${symbol}${rawVal.toLocaleString()} added to ${userName} (${curr} account)`, userName);
 
-                } catch (err) {
-                    console.error('[Paystack] Backend recharge error:', err);
-                    showToast(err.message || 'Payment received but wallet update delayed. It will sync shortly.', 'warning');
-                    
-                    // Keep polling in case the backend webhook succeeds later
-                    const pollIntervals = [2000, 6000, 12000];
-                    pollIntervals.forEach((delay) => {
-                        setTimeout(async () => {
-                            await loadWalletBalance(curr);
-                            await loadTransactions(1, curr);
-                        }, delay);
-                    });
-                }
+                    } catch (err) {
+                        console.error('[Paystack] Backend recharge error:', err);
+                        showToast(err.message || 'Payment received but wallet update delayed. It will sync shortly.', 'warning');
+                        
+                        // Keep polling in case the backend webhook succeeds later
+                        const pollIntervals = [2000, 6000, 12000];
+                        pollIntervals.forEach((delay) => {
+                            setTimeout(async () => {
+                                await loadWalletBalance(curr);
+                                await loadTransactions(1, curr);
+                            }, delay);
+                        });
+                    }
+                })();
             },
 
             onClose: function() {
@@ -1213,8 +1215,14 @@ async function loadNotifications() {
     list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Loading notifications...</div>';
 
     try {
-        const res = await apiRequest('/api/user/notifications', { method: 'GET' });
-        renderNotifications(res.notifications || res.data || []);
+        // Mocked because the backend endpoint does not exist yet (returns 404)
+        // const res = await apiRequest('/api/user/notifications', { method: 'GET' });
+        // renderNotifications(res.notifications || res.data || []);
+        
+        // Simulating the 404 response to avoid browser console errors:
+        const err = new Error('Not Found');
+        err.status = 404;
+        throw err;
     } catch (err) {
         if (err.status === 404) {
             list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Notification system is not fully connected to the backend yet (Endpoint missing).</div>';
