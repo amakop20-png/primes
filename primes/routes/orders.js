@@ -50,10 +50,18 @@ router.post('/create', authenticateToken, async (req, res) => {
       [orderData.id.toString(), req.user.id, product, product, country, orderData.phone, amountNGN, priceUSD, orderData.status || 'RECEIVED']
     );
 
-    // 6. Log activity
+    // 6. Log activity & Notification
     await dbRun(
       "INSERT INTO activity (userId, type, message) VALUES (?, 'purchase', ?)",
       [req.user.id, `Purchased ${product} number: ${orderData.phone} (${country})`]
+    );
+    await dbRun(
+      "INSERT INTO notifications (userId, title, message, type) VALUES (?, ?, ?, 'number_purchase')",
+      [req.user.id, 'Number Purchased', `Successfully purchased ${product} number: ${orderData.phone} for $${priceUSD}.`]
+    );
+    await dbRun(
+      "INSERT INTO notifications (userId, title, message, type) VALUES (?, ?, ?, 'wallet_deduction')",
+      [req.user.id, 'Wallet Deduction', `Deducted $${priceUSD} for ${product} number.`]
     );
 
     res.json({
@@ -89,6 +97,12 @@ router.get('/check/:orderId', authenticateToken, async (req, res) => {
     // Update status in DB if changed
     if (fiveSimRes.data.status !== order.status) {
       await dbRun('UPDATE orders SET status = ? WHERE orderId = ?', [fiveSimRes.data.status, orderId]);
+      
+      if (fiveSimRes.data.sms && fiveSimRes.data.sms.length > 0) {
+        // Find newest SMS if we can, or just notify SMS received
+        const latestSms = fiveSimRes.data.sms[0];
+        await dbRun("INSERT INTO notifications (userId, title, message, type) VALUES (?, ?, ?, 'incoming_sms')", [req.user.id, 'New SMS Received', `Code: ${latestSms.code} from ${latestSms.sender}`]);
+      }
     }
 
     res.json({ success: true, data: fiveSimRes.data });
@@ -117,6 +131,9 @@ router.post('/action/:orderId', authenticateToken, async (req, res) => {
     if (action === 'cancel') {
       await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [order.amountUSD, req.user.id]);
       await dbRun("INSERT INTO activity (userId, type, message) VALUES (?, 'refund', ?)", [req.user.id, `Refunded for canceled order ${order.phone}`]);
+      await dbRun("INSERT INTO notifications (userId, title, message, type) VALUES (?, ?, ?, 'order_failed')", [req.user.id, 'Order Canceled & Refunded', `Refunded $${order.amountUSD} for canceled ${order.product} order.`]);
+    } else if (action === 'finish') {
+      await dbRun("INSERT INTO notifications (userId, title, message, type) VALUES (?, ?, ?, 'order_success')", [req.user.id, 'Order Finished', `Order ${orderId} marked as completed.`]);
     }
 
     await dbRun('UPDATE orders SET status = ? WHERE orderId = ?', [fiveSimRes.data.status || action.toUpperCase(), orderId]);

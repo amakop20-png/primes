@@ -71,6 +71,19 @@ async function initDatabase() {
       )
     `);
 
+    // Notifications table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        userId INTEGER REFERENCES users (id),
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        type TEXT NOT NULL,
+        read BOOLEAN DEFAULT FALSE,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Settings/Config table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS config (

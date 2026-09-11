@@ -61,17 +61,43 @@ function toggleDropdown() {
     const isOpen = dropdown.classList.toggle('show');
     arrow.classList.toggle('open');
     profileToggle.setAttribute('aria-expanded', isOpen.toString());
+    // close notif if open
+    const notifDrop = document.getElementById('notifDropdown');
+    if (notifDrop && notifDrop.classList.contains('show')) toggleNotifDropdown();
+}
+
+function toggleNotifDropdown() {
+    const dropdown    = document.getElementById('notifDropdown');
+    const notifToggle = document.getElementById('notifToggle');
+    if (!dropdown || !notifToggle) return;
+    const isOpen = dropdown.classList.toggle('show');
+    notifToggle.setAttribute('aria-expanded', isOpen.toString());
+    // close profile if open
+    const profDrop = document.getElementById('dropdown');
+    if (profDrop && profDrop.classList.contains('show')) toggleDropdown();
+    if (isOpen) loadNotifications();
 }
 
 document.addEventListener('click', function(e) {
     const profileToggle = document.getElementById('profileToggle');
     const dropdown      = document.getElementById('dropdown');
     const arrow         = document.getElementById('dropdownArrow');
-    if (!profileToggle || !dropdown || !arrow) return;
-    if (!profileToggle.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.classList.remove('show');
-        arrow.classList.remove('open');
-        profileToggle.setAttribute('aria-expanded', 'false');
+    const notifToggle   = document.getElementById('notifToggle');
+    const notifDropdown = document.getElementById('notifDropdown');
+
+    if (profileToggle && dropdown && arrow) {
+        if (!profileToggle.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.remove('show');
+            arrow.classList.remove('open');
+            profileToggle.setAttribute('aria-expanded', 'false');
+        }
+    }
+    
+    if (notifToggle && notifDropdown) {
+        if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+            notifDropdown.classList.remove('show');
+            notifToggle.setAttribute('aria-expanded', 'false');
+        }
     }
 });
 
@@ -80,12 +106,18 @@ document.addEventListener('keydown', function(e) {
         const dropdown      = document.getElementById('dropdown');
         const arrow         = document.getElementById('dropdownArrow');
         const profileToggle = document.getElementById('profileToggle');
+        const notifDropdown = document.getElementById('notifDropdown');
+        const notifToggle   = document.getElementById('notifToggle');
+
         if (dropdown)      dropdown.classList.remove('show');
         if (arrow)         arrow.classList.remove('open');
         if (profileToggle) profileToggle.setAttribute('aria-expanded', 'false');
+        if (notifDropdown) notifDropdown.classList.remove('show');
+        if (notifToggle)   notifToggle.setAttribute('aria-expanded', 'false');
+
         closePopup();
-        closeSettings();
-        closeDepositModal();
+        if (typeof closeSettings === 'function') closeSettings();
+        if (typeof closeDepositModal === 'function') closeDepositModal();
     }
 });
 
@@ -600,7 +632,10 @@ function renderUserInfo() {
     // Referral code from username
     if (session.username) {
         const refCodeEl = document.getElementById('displayReferralCode');
-        if (refCodeEl) refCodeEl.textContent = 'REF-' + session.username.toUpperCase();
+        if (refCodeEl) {
+            const domain = window.location.host || 'davessocial.com';
+            refCodeEl.textContent = domain + '/signup.html?ref=' + session.username;
+        }
     }
 }
 
@@ -950,47 +985,35 @@ async function launchPaystack(rawVal) {
                 closeDepositModal();
                 console.info('[Paystack] Callback — Ref:', response.reference);
 
-                // 1. Optimistic UI: immediately show the new balance (may be overwritten by server response)
-                const currentBal = parseFloat(localStorage.getItem('_walletBalance_' + curr) || '0');
-                const newBal     = currentBal + rawVal;
-                renderBalanceCards(newBal, curr);
-
-                // 2. Immediately record the transaction locally for instant UI feedback
-                const localTxs = JSON.parse(localStorage.getItem('primes_txs_' + curr) || '[]');
-                localTxs.unshift({
-                    id: 'tx-' + Date.now(),
-                    type: 'credit',
-                    amount: rawVal,
-                    currency: curr,
-                    status: 'success',
-                    reference: response.reference || transactionRef,
-                    createdAt: new Date().toISOString()
-                });
-                localStorage.setItem('primes_txs_' + curr, JSON.stringify(localTxs.slice(0, 50)));
-                loadTransactions(1, curr);
-
-                // 3. Log payment activity for admin console
-                const userName = session.name || session.username || 'User';
-                logAdminActivity('fund', `Wallet funded: ${symbol}${rawVal.toLocaleString()} added to ${userName} (${curr} account)`, userName);
-
-                // 4. CRITICAL: Call the backend recharge endpoint to credit the server-side balance
                 try {
                     showToast(`⏳ Verifying payment of ${symbol}${rawVal.toLocaleString()}…`, 'info');
+                    
+                    // Call the backend recharge endpoint to credit the server-side balance
                     await rechargeWallet(rawVal, response.reference || transactionRef, curr);
+                    
                     showToast(`✅ Payment of ${symbol}${rawVal.toLocaleString()} verified and credited!`, 'success');
+                    
+                    // After verified success, load the new authoritative balance from the server
+                    await loadWalletBalance(curr);
+                    await loadTransactions(1, curr);
+                    
+                    // Log payment activity for admin console
+                    const userName = session.name || session.username || 'User';
+                    logAdminActivity('fund', `Wallet funded: ${symbol}${rawVal.toLocaleString()} added to ${userName} (${curr} account)`, userName);
+
                 } catch (err) {
                     console.error('[Paystack] Backend recharge error:', err);
                     showToast(err.message || 'Payment received but wallet update delayed. It will sync shortly.', 'warning');
+                    
+                    // Keep polling in case the backend webhook succeeds later
+                    const pollIntervals = [2000, 6000, 12000];
+                    pollIntervals.forEach((delay) => {
+                        setTimeout(async () => {
+                            await loadWalletBalance(curr);
+                            await loadTransactions(1, curr);
+                        }, delay);
+                    });
                 }
-
-                // 5. Refresh from backend to get the authoritative balance
-                const pollIntervals = [2000, 6000, 12000, 20000, 30000];
-                pollIntervals.forEach((delay) => {
-                    setTimeout(async () => {
-                        await loadWalletBalance(curr);
-                        await loadTransactions(1, curr);
-                    }, delay);
-                });
             },
 
             onClose: function() {
@@ -1029,11 +1052,11 @@ function initReferralCopy() {
     copyBtn.addEventListener('click', () => {
         const session = getSession();
         if (!session) return;
-        const code = 'REF-' + (session.username || '').toUpperCase();
-        navigator.clipboard.writeText(code).then(() => {
-            showToast('Referral code copied!', 'success');
+        const link = window.location.origin + '/signup.html?ref=' + session.username;
+        navigator.clipboard.writeText(link).then(() => {
+            showToast('Referral link copied!', 'success');
         }).catch(() => {
-            showToast('Code: ' + code, 'info');
+            showToast('Link: ' + link, 'info');
         });
     });
 }
@@ -1174,6 +1197,69 @@ function init() {
     loadWalletBalance();
     loadVirtualAccount();
     loadTransactions(1);
+    loadNotifications().catch(e => console.log('Notif check fail:', e));
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+/* ══════════════════════════════════════════
+   NOTIFICATIONS
+══════════════════════════════════════════ */
+let unreadCount = 0;
+
+async function loadNotifications() {
+    const list = document.getElementById('notifList');
+    if (!list) return;
+    list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Loading notifications...</div>';
+
+    try {
+        const res = await apiRequest('/api/user/notifications', { method: 'GET' });
+        renderNotifications(res.notifications || res.data || []);
+    } catch (err) {
+        if (err.status === 404) {
+            list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Notification system is not fully connected to the backend yet (Endpoint missing).</div>';
+        } else {
+            list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Failed to load notifications.</div>';
+        }
+    }
+}
+
+function renderNotifications(notifs) {
+    const list = document.getElementById('notifList');
+    const badge = document.getElementById('notifBadge');
+    if (!list) return;
+    
+    if (!notifs || notifs.length === 0) {
+        list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">No new notifications.</div>';
+        if (badge) badge.style.display = 'none';
+        return;
+    }
+
+    unreadCount = notifs.filter(n => !n.read).length;
+    if (badge) {
+        badge.textContent = unreadCount;
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+
+    list.innerHTML = notifs.map(n => `
+        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${n.read ? 'transparent' : 'rgba(124, 58, 237, 0.05)'}; display:flex; gap: 12px;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${n.read ? 'transparent' : 'var(--primary)'}; margin-top: 6px;"></div>
+            <div>
+                <p style="font-size: 13px; font-weight: 700; color: var(--text); margin: 0 0 4px;">${n.title || 'Notification'}</p>
+                <p style="font-size: 12px; color: var(--muted); margin: 0 0 4px;">${n.message || ''}</p>
+                <p style="font-size: 10px; color: var(--muted); margin: 0;">${new Date(n.createdAt || Date.now()).toLocaleString()}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function markAllNotifRead() {
+    try {
+        await apiRequest('/api/user/notifications/mark-read', { method: 'POST' });
+        const badge = document.getElementById('notifBadge');
+        if (badge) badge.style.display = 'none';
+        loadNotifications();
+    } catch (err) {
+        showToast('Notification backend endpoint not found.', 'info');
+    }
+}

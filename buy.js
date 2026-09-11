@@ -1084,3 +1084,95 @@ if (typeof showToast === 'undefined') {
 /* ── Page-level cleanup on unload (stop SMS polling) ── */
 window.addEventListener('beforeunload', stopPolling);
 window.addEventListener('pagehide',    stopPolling);
+
+/* ══════════════════════════════════════════
+   NOTIFICATIONS (SHARED)
+══════════════════════════════════════════ */
+let unreadCount = 0;
+
+function toggleNotifDropdown() {
+    const dropdown    = document.getElementById('notifDropdown');
+    const notifToggle = document.getElementById('notifToggle');
+    if (!dropdown || !notifToggle) return;
+    const isOpen = dropdown.classList.toggle('show');
+    notifToggle.setAttribute('aria-expanded', isOpen.toString());
+    
+    const profDrop = document.getElementById('dropdown');
+    if (profDrop && profDrop.classList.contains('show')) toggleDropdown();
+    
+    if (isOpen) loadNotifications();
+}
+
+document.addEventListener('click', function(e) {
+    const notifToggle   = document.getElementById('notifToggle');
+    const notifDropdown = document.getElementById('notifDropdown');
+    if (notifToggle && notifDropdown) {
+        if (!notifToggle.contains(e.target) && !notifDropdown.contains(e.target)) {
+            notifDropdown.classList.remove('show');
+            notifToggle.setAttribute('aria-expanded', 'false');
+        }
+    }
+});
+
+async function loadNotifications() {
+    const list = document.getElementById('notifList');
+    if (!list) return;
+    list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Loading notifications...</div>';
+
+    try {
+        const res = await apiRequest('/api/user/notifications', { method: 'GET' });
+        renderNotifications(res.notifications || res.data || []);
+    } catch (err) {
+        if (err.status === 404) {
+            list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Notification system is not fully connected to the backend yet (Endpoint missing).</div>';
+        } else {
+            list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Failed to load notifications.</div>';
+        }
+    }
+}
+
+function renderNotifications(notifs) {
+    const list = document.getElementById('notifList');
+    const badge = document.getElementById('notifBadge');
+    if (!list) return;
+    
+    if (!notifs || notifs.length === 0) {
+        list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">No new notifications.</div>';
+        if (badge) badge.style.display = 'none';
+        return;
+    }
+
+    unreadCount = notifs.filter(n => !n.read).length;
+    if (badge) {
+        badge.textContent = unreadCount;
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+
+    list.innerHTML = notifs.map(n => `
+        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${n.read ? 'transparent' : 'rgba(124, 58, 237, 0.05)'}; display:flex; gap: 12px;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${n.read ? 'transparent' : 'var(--primary)'}; margin-top: 6px;"></div>
+            <div>
+                <p style="font-size: 13px; font-weight: 700; color: var(--text); margin: 0 0 4px;">${n.title || 'Notification'}</p>
+                <p style="font-size: 12px; color: var(--muted); margin: 0 0 4px;">${n.message || ''}</p>
+                <p style="font-size: 10px; color: var(--muted); margin: 0;">${new Date(n.createdAt || Date.now()).toLocaleString()}</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function markAllNotifRead() {
+    try {
+        await apiRequest('/api/user/notifications/mark-read', { method: 'POST' });
+        const badge = document.getElementById('notifBadge');
+        if (badge) badge.style.display = 'none';
+        loadNotifications();
+    } catch (err) {
+        if (typeof showToast === 'function') showToast('Notification backend endpoint not found.', 'info');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (getAuthToken()) {
+        loadNotifications().catch(e => console.log('Init notif check failed:', e));
+    }
+});

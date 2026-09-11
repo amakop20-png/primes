@@ -787,9 +787,20 @@
       <div class="currency-switch" id="currencySwitch" style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--border-light);padding:6px 12px;border-radius:20px;font-weight:700;font-size:13px;color:var(--text);border:1px solid var(--border);transition:all 0.2s;user-select:none;">
         <span id="currencySymbol">$</span> <span id="currencyName">USD</span>
       </div>
-      <div class="notifications">
-        <i class="fa-solid fa-bell"></i>
-        <span class="badge">3</span>
+      <div class="notifications profile-dropdown">
+        <button class="profile-toggle" onclick="toggleNotifDropdown()" id="notifToggle" type="button" aria-expanded="false" style="background:transparent; border:none; position:relative; padding: 4px; cursor: pointer;">
+            <i class="fa-solid fa-bell" style="font-size: 18px; color: var(--text);"></i>
+            <span class="badge" id="notifBadge" style="display:none; position:absolute; top:-2px; right:-2px; background:var(--primary); color:#fff; font-size:10px; font-weight:bold; width:16px; height:16px; border-radius:50%; align-items:center; justify-content:center;">0</span>
+        </button>
+        <div id="notifDropdown" class="dropdown-content" aria-label="Notifications" style="width: 300px; padding: 0;">
+            <div class="dropdown-header" style="border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <p class="dropdown-name" style="margin:0; font-size:14px; font-weight:700;">Notifications</p>
+            <button onclick="markAllNotifRead()" style="background:none; border:none; color:var(--primary); font-size:12px; font-weight:600; cursor:pointer;">Mark all as read</button>
+            </div>
+            <div id="notifList" style="max-height: 300px; overflow-y: auto;">
+                <!-- dynamically populated -->
+            </div>
+        </div>
       </div>
       <div class="profile-dropdown">
         <button class="profile-toggle" onclick="toggleDropdown()" id="profileToggle" type="button" aria-expanded="false">

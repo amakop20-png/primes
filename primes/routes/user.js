@@ -64,6 +64,7 @@ router.post('/recharge', authenticateToken, async (req, res) => {
     // Note: In production, verify the transaction with Paystack using the reference.
     await dbRun('UPDATE users SET balance = balance + ? WHERE id = ?', [amount, req.user.id]);
     await dbRun("INSERT INTO activity (userId, type, message) VALUES (?, 'recharge', ?)", [req.user.id, `Deposited $${amount} via Paystack. Ref: ${reference}`]);
+    await dbRun("INSERT INTO notifications (userId, title, message, type) VALUES (?, ?, ?, 'wallet_deposit')", [req.user.id, 'Wallet Funded', `Successfully deposited $${amount} to your wallet.`]);
 
     res.json({ success: true, message: 'Recharge successful.' });
   } catch (error) {
@@ -89,6 +90,26 @@ router.get('/activity', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Activity fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch activity logs.' });
+  }
+});
+
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    const notifications = await dbAll('SELECT * FROM notifications WHERE userId = ? ORDER BY createdAt DESC LIMIT 50', [req.user.id]);
+    res.json({ success: true, notifications });
+  } catch (error) {
+    console.error('Notifications fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications.' });
+  }
+});
+
+router.post('/notifications/mark-read', authenticateToken, async (req, res) => {
+  try {
+    await dbRun('UPDATE notifications SET read = TRUE WHERE userId = ? AND read = FALSE', [req.user.id]);
+    res.json({ success: true, message: 'Notifications marked as read.' });
+  } catch (error) {
+    console.error('Mark read error:', error);
+    res.status(500).json({ error: 'Failed to mark notifications as read.' });
   }
 });
 

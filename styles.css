@@ -1346,9 +1346,9 @@ main > p {
    ACTIVITIES SECTION
 ══════════════════════════════════════ */
 .activities {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
   margin-bottom: 28px;
 }
 
@@ -1356,12 +1356,15 @@ main > p {
   background: linear-gradient(135deg, #5C2DC8 0%, #7B35E8 55%, #9B59F5 100%);
   color: white;
   border-radius: 20px;
-  padding: 28px 32px;
-  width: 90%;
+  padding: 24px;
+  max-width: 300px;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
   transition: transform var(--transition), box-shadow var(--transition);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .activities-card::before {
@@ -1371,6 +1374,7 @@ main > p {
   background: rgba(255,255,255,0.07);
   border-radius: 50%;
   top: -60px; right: -40px;
+  pointer-events: none;
 }
 
 .activities-card::after {
@@ -1380,6 +1384,7 @@ main > p {
   background: rgba(255,255,255,0.04);
   border-radius: 50%;
   bottom: -20px; right: 80px;
+  pointer-events: none;
 }
 
 .activities-card:hover {
@@ -1397,10 +1402,10 @@ main > p {
 }
 
 .activities-card p {
-  font-size: 40px;
+  font-size: 32px;
   font-weight: 900;
   color: #fff;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   letter-spacing: -1px;
   line-height: 1;
 }
@@ -1425,12 +1430,15 @@ main > p {
 .referral-card {
   background: linear-gradient(135deg, #5C2DC8 0%, #7B35E8 55%, #9B59F5 100%);
   border-radius: var(--radius);
-  padding: 20px 16px;
+  padding: 24px;
   color: white;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-md);
   transition: transform var(--transition), box-shadow var(--transition);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .referral-card::before {
@@ -2389,10 +2397,7 @@ main > p {
 
 .danger-zone {
   margin-top: 32px; padding: 20px;
-  border: 1.5px solid #fee2e2; border-radius: 16px; background: #fff5f5;
-}
-body.dark-theme .danger-zone {
-  background: rgba(220,38,38,0.07); border-color: rgba(220,38,38,0.3);
+  border: 1.5px solid rgba(220, 38, 38, 0.2); border-radius: 16px; background: rgba(220, 38, 38, 0.05);
 }
 .danger-title {
   font-size: 13px; font-weight: 800; color: #dc2626;
@@ -2529,12 +2534,3 @@ body.dark-theme .danger-zone {
 
   .jacket { grid-template-columns: 1fr; }
 }
-/* --------------------------------------
-   REDESIGN OVERRIDES (DARK NAVY THEME)
--------------------------------------- */
-body { background: #0B0B19 !important; color: #fff !important; font-family: 'Nunito', sans-serif; margin: 0; padding: 0; }
-main.container { padding: 0 !important; max-width: 100% !important; margin: 0 auto; padding-bottom: 80px !important; }
-.dropdown-content { background: #110C24 !important; border: 1px solid #281154 !important; }
-.dropdown-content a { color: #fff !important; }
-.dropdown-content a:hover { background: #281154 !important; }
-
