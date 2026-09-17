@@ -130,23 +130,43 @@ async function loadWalletBalanceBuyPage() {
 
     try {
         const data = await fetchWalletBalance(currency);
+        console.log(`[Wallet] Response received`);
+        console.log(`[Wallet] Wallet data:`, data);
         applyWalletBalance(data, currency, symbol, balEl);
     } catch (err) {
-        if (err.status === 404) {
+        console.error(`[Wallet] API error: ${err.message}`);
+        console.error(`[Wallet] Status: ${err.status}`);
+
+        const setErrorDisplay = (msg) => {
+            if (balEl) balEl.innerHTML = `<span style="font-size: 16px; font-weight: 600; line-height: 1.2; display: block; white-space: normal;">${msg}</span>`;
+        };
+
+        // Do not convert errors into a fake 0.00 balance
+        if (err.status === 401) {
+            setErrorDisplay('Auth Error');
+            showToast('Your session has expired. Please log in again.', 'error');
+        } else if (err.status === 404) {
+            console.log(`[Buy Wallet] 404 received, attempting to provision wallet via createVirtualAccount...`);
             try {
+                // Provision the wallet for new users
                 await createVirtualAccount(currency);
-                const data = await fetchWalletBalance(currency);
-                applyWalletBalance(data, currency, symbol, balEl);
-                showToast(`✅ ${currency} wallet created.`, 'success');
-            } catch (createErr) {
-                console.error('createVirtualAccount retry failed:', createErr);
-                if (balEl) balEl.textContent = symbol + '0.00';
-                showToast(`Couldn't set up your ${currency} wallet. Please contact support.`, 'error');
+                // Retry fetching the balance once
+                const retryData = await fetchWalletBalance(currency);
+                applyWalletBalance(retryData, currency, symbol, balEl);
+            } catch (provisionErr) {
+                console.warn(`[Buy Wallet] Failed to provision wallet automatically:`, provisionErr);
+                // Fallback to 0 if provisioning also fails
+                applyWalletBalance({ balance: 0 }, currency, symbol, balEl);
             }
+        } else if (err.status >= 500) {
+            setErrorDisplay('Server error');
+            showToast('Temporary server error while loading wallet.', 'error');
+        } else if (!err.status || err.message.toLowerCase().includes('network')) {
+            setErrorDisplay('Connection error');
+            showToast('Network error while loading wallet balance.', 'error');
         } else {
-            console.error('loadWalletBalanceBuyPage error:', err);
-            const saved = parseFloat(localStorage.getItem('_walletBalance_' + currency) || '0');
-            if (balEl) balEl.textContent = symbol + saved.toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', { minimumFractionDigits: 2 });
+            setErrorDisplay('Error');
+            showToast(`Error loading balance: ${err.message}`, 'error');
         }
     }
 
@@ -167,12 +187,24 @@ async function fetchWalletBalance(currency) {
 // writes it to the DOM + localStorage cache. Extracted out of
 // loadWalletBalanceBuyPage so it isn't duplicated for the retry path.
 function applyWalletBalance(data, currency, symbol, balEl) {
-    let bal = 0;
-    if (currency === 'USD') {
-        bal = data?.usdBalance ?? data?.wallet?.usdBalance ?? data?.balanceUSD ?? 0;
-    } else {
-        bal = data?.ngnBalance ?? data?.wallet?.ngnBalance ?? data?.balance ?? data?.wallet?.balance ?? 0;
+    const backendCurrency = (data?.currency || data?.wallet?.currency || '').toUpperCase();
+    let baseUsd = parseFloat(data?.usdBalance ?? data?.wallet?.usdBalance ?? data?.balanceUSD ?? 0);
+    let baseNgn = parseFloat(data?.ngnBalance ?? data?.wallet?.ngnBalance ?? 0);
+
+    if (baseUsd === 0 && baseNgn === 0) {
+        const generic = parseFloat(data?.balance ?? data?.wallet?.balance ?? 0);
+        if (backendCurrency === 'USD') baseUsd = generic;
+        else baseNgn = generic;
     }
+
+    // Save actual balances before synthetic conversion
+    localStorage.setItem('_actual_usd_balance', String(baseUsd));
+    localStorage.setItem('_actual_ngn_balance', String(baseNgn));
+
+    if (baseUsd === 0 && baseNgn > 0) baseUsd = baseNgn / CONVERSION_RATE;
+    if (baseNgn === 0 && baseUsd > 0) baseNgn = baseUsd * CONVERSION_RATE;
+
+    let bal = currency === 'USD' ? baseUsd : baseNgn;
 
     if (balEl) balEl.textContent = symbol + Number(bal).toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', {
         minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -285,19 +317,33 @@ async function loadProducts(country) {
         allProducts = Object.entries(raw)
             .filter(([, info]) => info && typeof info === 'object')
             .map(([key, info]) => {
-                let price = 0;
+                let priceUSD = 0;
+                let priceNGN = 0;
                 let qty = 0;
                 let category = 'activation';
 
-                if (info.Price !== undefined || info.price !== undefined || info.cost !== undefined || info.rate !== undefined) {
-                    price = parseFloat(info.Price || info.price || info.rate || info.cost || 0);
+                if (info.Cost !== undefined || info.cost !== undefined || info.Price !== undefined || info.price !== undefined || info.rate !== undefined) {
+                    priceUSD = parseFloat(info.Cost || info.cost || info.Price || info.price || 0);
+                    priceNGN = parseFloat(info.Cost || info.cost || info.rate || info.Price || info.price || 0);
+                    
+                    if (priceNGN === 0 && priceUSD > 0) priceNGN = priceUSD * CONVERSION_RATE;
+                    if (priceUSD === 0 && priceNGN > 0) priceUSD = priceNGN / CONVERSION_RATE;
+
                     qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
                     category = (info.Category || info.category || 'activation').toLowerCase();
                 } else {
                     const operators = Object.values(info).filter(v => v && typeof v === 'object');
                     if (operators.length > 0) {
-                        const validPrices = operators.map(op => parseFloat(op.cost || op.price || op.rate || 0)).filter(p => p > 0);
-                        price = validPrices.length > 0 ? Math.min(...validPrices) : 0;
+                        const validUsdPrices = operators.map(op => parseFloat(op.Cost || op.cost || op.Price || op.price || 0)).filter(p => p > 0);
+                        const validNgnPrices = operators.map(op => parseFloat(op.Cost || op.cost || op.rate || op.Price || op.price || 0)).filter(p => p > 0);
+                        
+                        priceUSD = validUsdPrices.length > 0 ? Math.min(...validUsdPrices) : 0;
+                        priceNGN = validNgnPrices.length > 0 ? Math.min(...validNgnPrices) : 0;
+                        
+                        // If no explicit NGN cost/rate was found, check if they had a price field we used for USD
+                        if (priceNGN === 0 && priceUSD > 0) priceNGN = priceUSD * CONVERSION_RATE;
+                        if (priceUSD === 0 && priceNGN > 0) priceUSD = priceNGN / CONVERSION_RATE;
+
                         qty = operators.reduce((sum, op) => sum + parseInt(op.count || op.qty || op.quantity || 0, 10), 0);
                         category = (operators[0].category || 'activation').toLowerCase();
                     }
@@ -306,12 +352,14 @@ async function loadProducts(country) {
                 return {
                     key,
                     name: key.charAt(0).toUpperCase() + key.slice(1),
-                    price,
+                    price: priceNGN, // Keep for backward compatibility
+                    priceUSD,
+                    priceNGN,
                     qty,
                     category
                 };
             })
-            .filter(p => p.price >= 0);
+            .filter(p => p.priceNGN >= 0);
 
         if (allProducts.length === 0) {
             showEmptyState(cardsGrid, 'No numbers available for this country right now.');
@@ -320,8 +368,12 @@ async function loadProducts(country) {
 
         renderProductCards(allProducts);
     } catch (err) {
-        console.error('loadProducts error:', err);
-        showErrorState(cardsGrid, 'Failed to load products for this country. Please try again.');
+        console.error(`[Products Error] API returned ${err.status || 'unknown status'}:`, err);
+        if (err.status >= 500) {
+            showEmptyState(cardsGrid, `Server Error (${err.status}): ${err.message || 'The backend failed to load services for this country.'}`);
+        } else {
+            showEmptyState(cardsGrid, err.message || 'Failed to load services for this country.');
+        }
     }
 }
 
@@ -356,8 +408,8 @@ function renderProductCards(products) {
     // worse). Instead we stash the key in a data-attribute and handle
     // clicks via event delegation in attachEventListeners().
     cardsGrid.innerHTML = filtered.map(p => {
-        const displayPrice = currency === 'USD' ? (p.price / CONVERSION_RATE) : p.price;
-        const priceStr     = symbol + displayPrice.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const displayPrice = currency === 'USD' ? p.priceUSD : p.priceNGN;
+        const priceStr     = symbol + displayPrice.toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const isSelected   = selectedProduct === p.key;
         const safeKey      = escapeHTML(p.key);
 
@@ -404,10 +456,11 @@ async function handleBuyClick(country, product, btnEl) {
     }
 
     try {
-        const currency = getCurrency();
+        const purchaseCurrency = getCurrency();
+        
         const operatorEl = document.getElementById('operatorFilter');
         const operator = operatorEl && operatorEl.value ? operatorEl.value : 'any';
-        const result = await buyActivation(country, product, currency, operator);
+        const result = await buyActivation(country, product, purchaseCurrency, operator);
         const order  = result?.order || result;
 
         if (!order || (!order.id && !order._id)) {
@@ -429,8 +482,9 @@ async function handleBuyClick(country, product, btnEl) {
         // Open SMS modal and start polling
         openOrderModal(orderId, order);
     } catch (err) {
-        console.error('buyActivation error:', err);
-        showToast(err.message || 'Failed to purchase number. Check your wallet balance.', 'error');
+        console.error(`[Buy Error] API returned ${err.status || 'unknown status'}:`, err);
+        const detailedMsg = err.message || 'Failed to purchase number. Check your wallet balance.';
+        showToast(detailedMsg, 'error');
     } finally {
         isBuying = false;
         if (btnEl) {

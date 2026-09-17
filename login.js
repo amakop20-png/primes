@@ -148,8 +148,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = 'Logging in...';
+            const spinnerEl = document.getElementById('loginSpinner');
+            const btnLabel  = submitBtn.querySelector('span');
+            const originalText = btnLabel ? btnLabel.textContent : submitBtn.textContent;
+
+            if (btnLabel) btnLabel.textContent = 'Logging in...';
+            else submitBtn.textContent = 'Logging in...';
+            if (spinnerEl) spinnerEl.style.display = 'inline-block';
             submitBtn.disabled = true;
 
             try {
@@ -241,8 +246,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // message for every status code it knows about.
                 toast.show(error.message || 'Something went wrong. Please try again.', 'error');
             } finally {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled  = false;
+                if (btnLabel) btnLabel.textContent = originalText;
+                else submitBtn.textContent = originalText;
+                if (spinnerEl) spinnerEl.style.display = 'none';
+                submitBtn.disabled = false;
             }
         });
     }

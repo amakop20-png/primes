@@ -310,13 +310,32 @@
             <label class="sfield-label">Select User</label>
             <select class="sfield-input" id="fundUserSelect"></select>
           </div>
-          <div class="sfield-group" style="flex:1;min-width:140px;margin-bottom:0;">
+          <div class="sfield-group" style="flex:1;min-width:120px;margin-bottom:0;">
             <label class="sfield-label">Amount (₦)</label>
             <input class="sfield-input" type="number" id="fundAmount" placeholder="e.g. 5000">
           </div>
-          <button class="btn-primary" onclick="fundUser()" style="height:44px;margin-bottom:0;">
-            <i class="fa-solid fa-plus"></i> Add Funds
-          </button>
+          <button class="btn-primary" style="height:44px;" onclick="fundUser()">Fund User</button>
+        </div>
+      </div>
+
+      <!-- Announcements & Global Actions -->
+      <div class="two-col" style="margin-top:24px;">
+        <div class="panel">
+          <div class="panel-header"><span><i class="fa-solid fa-bullhorn"></i> Announcements</span></div>
+          <div class="panel-body">
+            <div class="sfield-group">
+              <label class="sfield-label">Message</label>
+              <textarea class="sfield-input" id="announcementMessage" rows="3" placeholder="Type your announcement here..." style="resize:vertical;"></textarea>
+            </div>
+            <button class="btn-primary" onclick="makeAnnouncement()"><i class="fa-solid fa-paper-plane"></i> Send Announcement</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span><i class="fa-solid fa-shield-halved"></i> Global Actions</span></div>
+          <div class="panel-body">
+            <p style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">Force all active users to log out. They will be required to sign in again to access their accounts.</p>
+            <button class="btn-primary" style="background: var(--amber);" onclick="logoutAllUsers()"><i class="fa-solid fa-right-from-bracket"></i> Logout All Users</button>
+          </div>
         </div>
       </div>
     </section>
@@ -335,6 +354,7 @@
   <!-- ── Toast ── -->
   <div id="adminToast" class="admin-toast"></div>
 
+  <script src="api.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>

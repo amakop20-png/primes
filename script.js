@@ -44,13 +44,6 @@ function closePopup() {
     }
 }
 
-function updateThemeUI(isDark) {
-    if (modeText) modeText.textContent = isDark ? 'Dark mode' : 'Light mode';
-    const modeIcon = document.querySelector('.mode-dot i');
-    if (modeIcon) {
-        modeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-    }
-}
 
 // ── Dropdown Toggle ──
 function toggleDropdown() {
@@ -166,12 +159,6 @@ function showToast(message, type = 'success') {
 /* ══════════════════════════════════════════
    THEME
 ══════════════════════════════════════════ */
-function toggleDark() {
-    document.body.classList.toggle('dark-theme');
-    const isDark = document.body.classList.contains('dark-theme');
-    updateThemeUI(isDark);
-    localStorage.setItem('dashboardTheme', isDark ? 'dark' : 'light');
-}
 
 function restoreTheme() {
     const isDark = localStorage.getItem('dashboardTheme') === 'dark';
@@ -318,35 +305,105 @@ async function loadWalletBalance(currency) {
     if (balPrimaryEl) balPrimaryEl.textContent = 'Loading...';
     if (popBalEl)     popBalEl.textContent     = 'Loading...';
 
+    console.log(`[Wallet] Requesting wallet balance...`);
     try {
         const data = await getWalletBalance(curr);
+        console.log(`[Wallet] Response received`);
+        console.log(`[Wallet] Wallet data:`, data);
+
         let bal = 0;
         if (data) {
+            const backendCurrency = (data.currency || data.wallet?.currency || '').toUpperCase();
+            
+            let baseUsd = parseFloat(data.usdBalance ?? data.wallet?.usdBalance ?? data.balanceUSD ?? 0);
+            let baseNgn = parseFloat(data.ngnBalance ?? data.wallet?.ngnBalance ?? 0);
+
+            // If explicit balances are missing, use the generic balance based on the backend currency
+            if (baseUsd === 0 && baseNgn === 0) {
+                const genericBalance = parseFloat(data.balance ?? data.wallet?.balance ?? 0);
+                if (backendCurrency === 'USD') {
+                    baseUsd = genericBalance;
+                } else {
+                    // Default to NGN since Nigerian users deposit in Naira primarily
+                    baseNgn = genericBalance;
+                }
+            }
+
+            // Save actual balances before synthetic conversion
+            localStorage.setItem('_actual_usd_balance', String(baseUsd));
+            localStorage.setItem('_actual_ngn_balance', String(baseNgn));
+
+            if (baseUsd === 0 && baseNgn > 0) baseUsd = baseNgn / CONVERSION_RATE;
+            if (baseNgn === 0 && baseUsd > 0) baseNgn = baseUsd * CONVERSION_RATE;
+
             if (isUSD) {
-                bal = data.usdBalance ?? data.wallet?.usdBalance ?? data.balanceUSD ?? (data.currency === 'USD' ? data.balance : null);
-                if (bal === null || bal === undefined) {
+                bal = baseUsd;
+                if (bal === 0 && !data.balance) {
                     bal = parseFloat(localStorage.getItem('_walletBalance_USD') || '0');
                 }
             } else {
-                bal = data.ngnBalance ?? data.wallet?.ngnBalance ?? data.balance ?? data.wallet?.balance ?? 0;
+                bal = baseNgn;
             }
         }
+        
+        console.log(`[Wallet] Balance: ${bal}`);
         renderBalanceCards(bal, curr);
     } catch (err) {
-        console.error('loadWalletBalance error:', err);
+        console.error(`[Wallet] API error: ${err.message}`);
+        console.error(`[Wallet] Status: ${err.status}`);
 
-        // Fallback to persisted currency balance if available
-        const savedBal = parseFloat(localStorage.getItem('_walletBalance_' + curr) || '0');
-        renderBalanceCards(savedBal, curr);
+        const setErrorDisplay = (msg) => {
+            if (balPrimaryEl) balPrimaryEl.innerHTML = `<span style="font-size: 20px; font-weight: 600; line-height: 1.2; display: block; white-space: normal;">${msg}</span>`;
+            if (popBalEl) popBalEl.textContent = 'N/A';
+        };
 
-        // FIX: a 404 here means the backend has no wallet record at all for
-        // this account — that's not a "sync hiccup", it's the actual reason
-        // buying numbers fails too. The old code stayed silent on 404s,
-        // which hid this from the user entirely. Surface it clearly instead.
-        if (err.status === 404) {
-            showToast(`No ${curr} wallet found on your account yet. Buying numbers won't work until one is set up — contact support if this persists.`, 'warning');
+        // Do not convert errors into a fake 0.00 balance
+        if (err.status === 401) {
+            setErrorDisplay('Auth Error');
+            showToast('Your session has expired. Please log in again.', 'error');
+        } else if (err.status === 404) {
+            console.log(`[Wallet] 404 received, attempting to provision wallet via createVirtualAccount...`);
+            try {
+                // Provision the wallet for new users
+                await createVirtualAccount(curr);
+                // Retry fetching the balance once
+                const retryData = await getWalletBalance(curr);
+                let bal = 0;
+                if (retryData) {
+                    const retryCurrency = (retryData.currency || retryData.wallet?.currency || '').toUpperCase();
+                    let baseUsd = parseFloat(retryData.usdBalance ?? retryData.wallet?.usdBalance ?? retryData.balanceUSD ?? 0);
+                    let baseNgn = parseFloat(retryData.ngnBalance ?? retryData.wallet?.ngnBalance ?? 0);
+
+                    if (baseUsd === 0 && baseNgn === 0) {
+                        const generic = parseFloat(retryData.balance ?? retryData.wallet?.balance ?? 0);
+                        if (retryCurrency === 'USD') baseUsd = generic;
+                        else baseNgn = generic;
+                    }
+
+                    // Save actual balances before synthetic conversion
+                    localStorage.setItem('_actual_usd_balance', String(baseUsd));
+                    localStorage.setItem('_actual_ngn_balance', String(baseNgn));
+
+                    if (baseUsd === 0 && baseNgn > 0) baseUsd = baseNgn / CONVERSION_RATE;
+                    if (baseNgn === 0 && baseUsd > 0) baseNgn = baseUsd * CONVERSION_RATE;
+
+                    bal = isUSD ? baseUsd : baseNgn;
+                }
+                renderBalanceCards(bal, curr);
+            } catch (provisionErr) {
+                console.warn(`[Wallet] Failed to provision wallet automatically:`, provisionErr);
+                // Fallback to 0 if provisioning also fails
+                renderBalanceCards(0, curr);
+            }
+        } else if (err.status >= 500) {
+            setErrorDisplay('Server error');
+            showToast('Temporary server error while loading wallet.', 'error');
+        } else if (!err.status || err.message.toLowerCase().includes('network')) {
+            setErrorDisplay('Connection error');
+            showToast('Network error while loading wallet balance.', 'error');
         } else {
-            showToast(`Unable to sync ${curr} balance with server. Displaying cached balance.`, 'info');
+            setErrorDisplay('Error loading balance');
+            showToast(`Error loading balance: ${err.message}`, 'error');
         }
     }
 }
@@ -637,6 +694,36 @@ function renderUserInfo() {
             refCodeEl.textContent = domain + '/signup.html?ref=' + session.username;
         }
     }
+    
+    // Load referral balance
+    loadReferralBalance();
+}
+
+async function loadReferralBalance() {
+    const el = document.getElementById('displayReferralBalance');
+    if (!el) return;
+    
+    try {
+        const session = getSession();
+        let refBal = session?.referralBalance || 0;
+        
+        if (typeof window.apiRequest === 'function') {
+            try {
+                const data = await window.apiRequest('/api/user/profile');
+                if (data && data.referralBalance !== undefined) {
+                    refBal = parseFloat(data.referralBalance);
+                    session.referralBalance = refBal;
+                    localStorage.setItem('primes_session', JSON.stringify(session));
+                }
+            } catch (err) {
+                console.warn('Could not fetch profile for referral balance (mocking or cached)', err);
+            }
+        }
+        
+        el.textContent = '₦' + refBal.toLocaleString('en-US', {minimumFractionDigits: 2});
+    } catch (err) {
+        el.textContent = '₦0.00';
+    }
 }
 
 /* ══════════════════════════════════════════
@@ -697,211 +784,18 @@ function initPopupEvents() {
 /* ══════════════════════════════════════════
    SETTINGS PANEL
 ══════════════════════════════════════════ */
-function openSettings() {
-    const overlay = document.getElementById('settingsOverlay');
-    if (!overlay) return;
 
-    const session = getSession() || {};
-    const nameEl  = document.getElementById('settingsDisplayName');
-    const emailEl = document.getElementById('settingsEmail');
-    const phoneEl = document.getElementById('settingsPhone');
-    if (nameEl  && session.name)  nameEl.value  = session.name;
-    if (emailEl && session.email) emailEl.value = session.email;
-    if (phoneEl && session.phone) phoneEl.value = session.phone;
 
-    const currEl = document.getElementById('settingsCurrency');
-    if (currEl) currEl.value = getCurrency();
-    const langEl = document.getElementById('settingsLanguage');
-    if (langEl) langEl.value = localStorage.getItem('preferredLanguage') || 'en';
 
-    updateSettingsThemeBtns();
 
-    const notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{}');
-    const n = (id, def) => { const el = document.getElementById(id); if (el) el.checked = notifSettings[id] !== undefined ? notifSettings[id] : def; };
-    n('notifOtp', true); n('notifOrder', true); n('notifBalance', true); n('notifPromo', false);
 
-    const newPwEl = document.getElementById('settingsNewPw');
-    if (newPwEl && !newPwEl._strengthWired) {
-        newPwEl.addEventListener('input', () => checkPasswordStrength(newPwEl.value));
-        newPwEl._strengthWired = true;
-    }
 
-    overlay.classList.add('show');
-    document.body.style.overflow = 'hidden';
 
-    document.querySelectorAll('.stab').forEach(btn => {
-        if (!btn._settingsWired) {
-            btn.addEventListener('click', () => switchSettingsTab(btn.dataset.tab));
-            btn._settingsWired = true;
-        }
-    });
 
-    const closeBtn = document.getElementById('settingsCloseBtn');
-    if (closeBtn && !closeBtn._wired) {
-        closeBtn.addEventListener('click', closeSettings);
-        closeBtn._wired = true;
-    }
 
-    if (!overlay._wired) {
-        overlay.addEventListener('click', e => { if (e.target === overlay) closeSettings(); });
-        overlay._wired = true;
-    }
-}
 
-function closeSettings() {
-    const overlay = document.getElementById('settingsOverlay');
-    if (overlay) overlay.classList.remove('show');
-    document.body.style.overflow = '';
-}
 
-function switchSettingsTab(tab) {
-    document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.stab-content').forEach(c => c.classList.remove('active'));
-    const activeBtn     = document.querySelector(`.stab[data-tab="${tab}"]`);
-    const activeContent = document.getElementById(`stab-${tab}`);
-    if (activeBtn)     activeBtn.classList.add('active');
-    if (activeContent) activeContent.classList.add('active');
-}
 
-function saveProfileSettings() {
-    const name  = document.getElementById('settingsDisplayName')?.value.trim();
-    const email = document.getElementById('settingsEmail')?.value.trim();
-    const phone = document.getElementById('settingsPhone')?.value.trim();
-
-    if (!name) { showToast('Please enter your display name.', 'error'); return; }
-
-    const session = getSession() || {};
-    session.name  = name;
-    if (email) session.email = email;
-    if (phone) session.phone = phone;
-    localStorage.setItem('primes_session', JSON.stringify(session));
-
-    document.querySelectorAll('#dashboardUsername, #Username, .dropdown-name, .username, #buyUsername, #profileName').forEach(el => {
-        el.textContent = name;
-    });
-    document.querySelectorAll('.dropdown-email').forEach(el => {
-        if (email) el.textContent = email;
-    });
-
-    showToast('✅ Profile updated successfully!', 'success');
-}
-
-function savePasswordSettings() {
-    const oldPw  = document.getElementById('settingsOldPw')?.value;
-    const newPw  = document.getElementById('settingsNewPw')?.value;
-    const confPw = document.getElementById('settingsConfirmPw')?.value;
-
-    if (!oldPw || !newPw || !confPw) { showToast('Please fill in all password fields.', 'error'); return; }
-    if (newPw.length < 8)            { showToast('New password must be at least 8 characters.', 'error'); return; }
-    if (newPw !== confPw)            { showToast('Passwords do not match.', 'error'); return; }
-
-    // NOTE: This would ideally call a backend change-password endpoint.
-    // Confirm & clear for now.
-    showToast('🔒 Password updated successfully!', 'success');
-    document.getElementById('settingsOldPw').value  = '';
-    document.getElementById('settingsNewPw').value  = '';
-    document.getElementById('settingsConfirmPw').value = '';
-    const bar = document.getElementById('pwStrengthBar');
-    if (bar) bar.style.display = 'none';
-    const txt = document.getElementById('pwStrengthText');
-    if (txt) txt.textContent = '';
-}
-
-function checkPasswordStrength(pw) {
-    const bar  = document.getElementById('pwStrengthBar');
-    const fill = document.getElementById('pwStrengthFill');
-    const text = document.getElementById('pwStrengthText');
-    if (!bar || !fill || !text) return;
-    bar.style.display = 'block';
-    let score = 0;
-    if (pw.length >= 8)          score++;
-    if (/[A-Z]/.test(pw))        score++;
-    if (/[0-9]/.test(pw))        score++;
-    if (/[^A-Za-z0-9]/.test(pw)) score++;
-    const levels = [
-        { w: '25%',  bg: '#ef4444', label: 'Weak' },
-        { w: '50%',  bg: '#f59e0b', label: 'Fair' },
-        { w: '75%',  bg: '#3b82f6', label: 'Good' },
-        { w: '100%', bg: '#10b981', label: 'Strong' },
-    ];
-    const l = levels[Math.max(0, score - 1)] || levels[0];
-    fill.style.width      = l.w;
-    fill.style.background = l.bg;
-    text.textContent      = `Password strength: ${l.label}`;
-}
-
-function savePreferences() {
-    const currency = document.getElementById('settingsCurrency')?.value;
-    const language = document.getElementById('settingsLanguage')?.value;
-    if (currency) localStorage.setItem('primes_currency', currency);
-    if (language) localStorage.setItem('preferredLanguage', language);
-
-    const sym  = document.getElementById('currencySymbol');
-    const name = document.getElementById('currencyName');
-    if (sym)  sym.textContent  = currency === 'USD' ? '$' : '₦';
-    if (name) name.textContent = currency;
-
-    showToast('✅ Preferences saved!', 'success');
-}
-
-function saveNotifSettings() {
-    const settings = {
-        notifOtp:     document.getElementById('notifOtp')?.checked,
-        notifOrder:   document.getElementById('notifOrder')?.checked,
-        notifBalance: document.getElementById('notifBalance')?.checked,
-        notifPromo:   document.getElementById('notifPromo')?.checked,
-    };
-    localStorage.setItem('notifSettings', JSON.stringify(settings));
-    showToast('🔔 Notification settings saved!', 'success');
-}
-
-function setTheme(theme) {
-    if (theme === 'dark') {
-        document.body.classList.add('dark-theme');
-        localStorage.setItem('dashboardTheme', 'dark');
-    } else {
-        document.body.classList.remove('dark-theme');
-        localStorage.setItem('dashboardTheme', 'light');
-    }
-    updateThemeUI(theme === 'dark');
-    updateSettingsThemeBtns();
-}
-
-function updateSettingsThemeBtns() {
-    const isDark   = document.body.classList.contains('dark-theme');
-    const lightBtn = document.getElementById('themeLight');
-    const darkBtn  = document.getElementById('themeDark');
-    if (lightBtn) lightBtn.classList.toggle('active', !isDark);
-    if (darkBtn)  darkBtn.classList.toggle('active',  isDark);
-}
-
-function togglePw(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    const isHidden = input.type === 'password';
-    input.type = isHidden ? 'text' : 'password';
-    btn.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
-}
-
-function previewAvatar(input) {
-    if (!input.files || !input.files[0]) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-        const img = document.getElementById('settingsAvatarImg');
-        if (img) img.src = e.target.result;
-        const headerImg = document.querySelector('.profile img');
-        if (headerImg) headerImg.src = e.target.result;
-        localStorage.setItem('userAvatar', e.target.result);
-    };
-    reader.readAsDataURL(input.files[0]);
-}
-
-function confirmDeleteAccount() {
-    if (confirm('⚠️ Are you sure you want to permanently delete your account? This action cannot be undone.')) {
-        localStorage.clear();
-        window.location.href = 'login.html';
-    }
-}
 
 /* ══════════════════════════════════════════
    PAYSTACK DEPOSIT FLOW

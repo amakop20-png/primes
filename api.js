@@ -4,6 +4,7 @@
    All dashboard and application API communication is centralized here.
 ══════════════════════════════════════════════════════════════════════ */
 
+// USING DIRECT BACKEND URL
 const API_BASE_URL = 'https://nurasms-api.onrender.com';
 const REQUEST_TIMEOUT_MS = 25000; // 25s — gives Render cold starts a chance without hanging forever
 
@@ -228,22 +229,23 @@ async function createVirtualAccount(currency = 'NGN') {
 }
 
 async function getVirtualAccount(currency = 'NGN') {
-    const data = await apiRequest(`/api/get-virtual-account`, {
+    const data = await apiRequest(`/api/get-virtual-account?currency=${encodeURIComponent(currency)}`, {
         method: 'GET'
     });
     return normalizeVirtualAccount(data);
 }
 
 async function getWalletBalance(currency = 'NGN') {
-    return await apiRequest(`/api/get-wallet-balance`, {
+    return await apiRequest(`/api/get-wallet-balance?currency=${encodeURIComponent(currency)}`, {
         method: 'GET'
     });
 }
 
-async function getTransactions(page = 1, limit = 20) {
+async function getTransactions(page = 1, limit = 20, currency = 'NGN') {
     const params = new URLSearchParams({
         page: String(page),
-        limit: String(limit)
+        limit: String(limit),
+        currency: currency
     });
     return await apiRequest(`/api/get-transactions?${params.toString()}`, {
         method: 'GET'

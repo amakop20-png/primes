@@ -820,7 +820,7 @@
               <p class="dropdown-email">precious@example.com</p>
             </div>
           </div>
-          <a href="#profile"><i class="fa-solid fa-user"></i> profile</a>
+          <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="fa-solid fa-gear"></i> Settings / Profile</a>
           <a href="buy.html"><i class="fa-solid fa-cart-shopping"></i> Buy Number</a>
           <a href="#contact"><i class="fa-solid fa-phone"></i> Contact</a>
           <a href="login.html" class="logout" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
@@ -1124,7 +1124,29 @@
 
 
   <script src="api.js"></script>
-      
+  <script src="ui-shared.js"></script>
   <script src="buy.js"></script>
+  <!-- Announcement Modal -->
+  <div id="announcementModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10000; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+    <div style="background:var(--surface); border-radius:16px; padding:2rem; width:100%; max-width:450px; margin:1rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); animation:slideUp 0.3s ease; position:relative; overflow:hidden;">
+      <div style="position:absolute; top:0; left:0; right:0; height:6px; background:linear-gradient(90deg, var(--primary), var(--accent));"></div>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:40px; height:40px; border-radius:50%; background:var(--primary-light, #e0e7ff); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+            <i class="fa-solid fa-bullhorn"></i>
+          </div>
+          <h2 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--text);">New Announcement</h2>
+        </div>
+        <button onclick="closeAnnouncementModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--muted); line-height:1; transition:color 0.2s;">&times;</button>
+      </div>
+      <div id="announcementModalContent" style="color:var(--text); font-size:1rem; line-height:1.6; margin-bottom:1.5rem; background:var(--bg); padding:1rem; border-radius:12px; border:1px solid var(--border); font-weight:500;">
+        <!-- Message here -->
+      </div>
+      <button onclick="closeAnnouncementModal()" style="width:100%; padding:0.85rem; background:var(--primary); color:#fff; border:none; border-radius:10px; font-weight:700; font-size:1rem; cursor:pointer; transition:opacity 0.2s; font-family:inherit;">
+        Got it!
+      </button>
+    </div>
+  </div>
+
 </body>
 </html>
