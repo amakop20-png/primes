@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const themeToggle = document.getElementById('themeToggle');
     if (!themeToggle) return;
     const icon = themeToggle.querySelector('i');
-    if (icon) icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    if (icon) icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
   }
 
   const savedTheme = localStorage.getItem('dashboardTheme');

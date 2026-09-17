@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel — Dave's Social</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="icon" type="image/png" href="nuraxq-logo.png">
   <link rel="stylesheet" href="admin.css">
 </head>
@@ -23,40 +23,40 @@
 
     <nav class="sidebar-nav">
       <a href="#" class="nav-link active" data-section="overview" onclick="showSection('overview',this)">
-        <i class="fa-solid fa-gauge-high"></i> Overview
+        <i class="ph ph-gauge"></i> Overview
       </a>
       <a href="#" class="nav-link" data-section="users" onclick="showSection('users',this)">
-        <i class="fa-solid fa-users"></i> Users
+        <i class="ph ph-users"></i> Users
         <span class="nav-badge" id="navUsersBadge">0</span>
       </a>
       <a href="#" class="nav-link" data-section="orders" onclick="showSection('orders',this)">
-        <i class="fa-solid fa-receipt"></i> Orders
+        <i class="ph ph-receipt"></i> Orders
         <span class="nav-badge" id="navOrdersBadge">0</span>
       </a>
       <a href="#" class="nav-link" data-section="activity" onclick="showSection('activity',this)">
-        <i class="fa-solid fa-chart-line"></i> Activity Log
+        <i class="ph ph-chart-line-up"></i> Activity Log
       </a>
       <a href="#" class="nav-link" data-section="settings" onclick="showSection('settings',this)">
-        <i class="fa-solid fa-gear"></i> Settings
+        <i class="ph ph-gear"></i> Settings
       </a>
     </nav>
 
     <div class="sidebar-footer">
       <div class="admin-profile">
-        <div class="admin-avatar"><i class="fa-solid fa-user-shield"></i></div>
+        <div class="admin-avatar"><i class="ph ph-user-shield"></i></div>
         <div>
           <div class="admin-name" id="sidebarAdminName">Admin</div>
           <div class="admin-role">Super Admin</div>
         </div>
       </div>
-      <a href="dashboard.html" class="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i></a>
+      <a href="dashboard.html" class="logout-btn"><i class="ph ph-arrow-right-from-bracket"></i></a>
     </div>
   </aside>
 
   <!-- ── Top Bar ── -->
   <div class="topbar">
     <button class="hamburger" id="hamburger" onclick="toggleSidebar()">
-      <i class="fa-solid fa-bars"></i>
+      <i class="ph ph-list"></i>
     </button>
     <div class="topbar-title" id="topbarTitle">Overview</div>
     <div class="topbar-right">
@@ -65,7 +65,7 @@
         <span id="providerStatus">Checking 5sim...</span>
       </div>
       <button class="refresh-btn" onclick="refreshAll()" title="Refresh data">
-        <i class="fa-solid fa-rotate-right" id="refreshIcon"></i>
+        <i class="ph ph-arrows-clockwise-right" id="refreshIcon"></i>
       </button>
     </div>
   </div>
@@ -85,7 +85,7 @@
       <!-- Stat Cards -->
       <div class="stat-grid">
         <div class="stat-card blue">
-          <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+          <div class="stat-icon"><i class="ph ph-users"></i></div>
           <div class="stat-body">
             <div class="stat-label">Total Users</div>
             <div class="stat-value" id="totalUsers">—</div>
@@ -93,7 +93,7 @@
           </div>
         </div>
         <div class="stat-card green">
-          <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+          <div class="stat-icon"><i class="ph ph-check-circle"></i></div>
           <div class="stat-body">
             <div class="stat-label">Active Users (7d)</div>
             <div class="stat-value" id="activeUsers">—</div>
@@ -101,7 +101,7 @@
           </div>
         </div>
         <div class="stat-card purple">
-          <div class="stat-icon"><i class="fa-solid fa-receipt"></i></div>
+          <div class="stat-icon"><i class="ph ph-receipt"></i></div>
           <div class="stat-body">
             <div class="stat-label">Total Orders</div>
             <div class="stat-value" id="totalOrders">—</div>
@@ -109,7 +109,7 @@
           </div>
         </div>
         <div class="stat-card amber">
-          <div class="stat-icon"><i class="fa-solid fa-naira-sign"></i></div>
+          <div class="stat-icon"><i class="ph ph-currency-ngn"></i></div>
           <div class="stat-body">
             <div class="stat-label">Total Revenue</div>
             <div class="stat-value" id="totalRevenue">—</div>
@@ -117,7 +117,7 @@
           </div>
         </div>
         <div class="stat-card teal">
-          <div class="stat-icon"><i class="fa-solid fa-wallet"></i></div>
+          <div class="stat-icon"><i class="ph ph-wallet"></i></div>
           <div class="stat-body">
             <div class="stat-label">Total User Wallets</div>
             <div class="stat-value" id="totalUserWallets">—</div>
@@ -125,7 +125,7 @@
           </div>
         </div>
         <div class="stat-card red">
-          <div class="stat-icon"><i class="fa-solid fa-person-circle-xmark"></i></div>
+          <div class="stat-icon"><i class="ph ph-user-minus"></i></div>
           <div class="stat-body">
             <div class="stat-label">New Signups Today</div>
             <div class="stat-value" id="signupsToday">—</div>
@@ -138,7 +138,7 @@
       <div class="two-col">
         <div class="panel">
           <div class="panel-header">
-            <span><i class="fa-solid fa-users"></i> Recent Users</span>
+            <span><i class="ph ph-users"></i> Recent Users</span>
             <button class="panel-link" onclick="showSection('users', document.querySelector('[data-section=users]'))">View all →</button>
           </div>
           <div class="panel-body">
@@ -150,7 +150,7 @@
         </div>
         <div class="panel">
           <div class="panel-header">
-            <span><i class="fa-solid fa-receipt"></i> Recent Orders</span>
+            <span><i class="ph ph-receipt"></i> Recent Orders</span>
             <button class="panel-link" onclick="showSection('orders', document.querySelector('[data-section=orders]'))">View all →</button>
           </div>
           <div class="panel-body">
@@ -169,7 +169,7 @@
         <h1>All Users</h1>
         <div class="header-actions">
           <div class="search-wrap">
-            <i class="fa-solid fa-magnifying-glass"></i>
+            <i class="ph ph-magnifying-glass"></i>
             <input type="text" id="userSearch" placeholder="Search users..." oninput="filterUsers()">
           </div>
         </div>
@@ -202,7 +202,7 @@
         <h1>All Orders</h1>
         <div class="header-actions">
           <div class="search-wrap">
-            <i class="fa-solid fa-magnifying-glass"></i>
+            <i class="ph ph-magnifying-glass"></i>
             <input type="text" id="orderSearch" placeholder="Search orders..." oninput="filterOrders()">
           </div>
           <select id="orderStatusFilter" onchange="filterOrders()" class="filter-select">
@@ -245,7 +245,7 @@
         <h1>Activity Log</h1>
         <div class="header-actions">
           <input type="date" id="activityDatePicker" onchange="renderActivityLog()">
-          <button class="btn-outline" onclick="clearActivity()"><i class="fa-solid fa-trash"></i> Clear Log</button>
+          <button class="btn-outline" onclick="clearActivity()"><i class="ph ph-trash"></i> Clear Log</button>
         </div>
       </div>
       <div class="panel">
@@ -265,7 +265,7 @@
       <div class="two-col">
         <!-- Admin Login Config -->
         <div class="panel">
-          <div class="panel-header"><span><i class="fa-solid fa-key"></i> Admin Access</span></div>
+          <div class="panel-header"><span><i class="ph ph-key"></i> Admin Access</span></div>
           <div class="panel-body">
             <div class="sfield-group">
               <label class="sfield-label">Admin Username</label>
@@ -275,12 +275,12 @@
               <label class="sfield-label">Admin Password</label>
               <input class="sfield-input" type="password" id="adminPassword" placeholder="New password">
             </div>
-            <button class="btn-primary" onclick="saveAdminCreds()"><i class="fa-solid fa-floppy-disk"></i> Save Credentials</button>
+            <button class="btn-primary" onclick="saveAdminCreds()"><i class="ph ph-floppy-disk"></i> Save Credentials</button>
           </div>
         </div>
         <!-- Platform Config -->
         <div class="panel">
-          <div class="panel-header"><span><i class="fa-solid fa-sliders"></i> Platform Config</span></div>
+          <div class="panel-header"><span><i class="ph ph-sliders-horizontal"></i> Platform Config</span></div>
           <div class="panel-body">
             <div class="sfield-group">
               <label class="sfield-label">NGN/USD Exchange Rate</label>
@@ -297,14 +297,14 @@
                 <span class="stoggle-knob"></span>
               </label>
             </div>
-            <button class="btn-primary" onclick="savePlatformConfig()"><i class="fa-solid fa-floppy-disk"></i> Save Config</button>
+            <button class="btn-primary" onclick="savePlatformConfig()"><i class="ph ph-floppy-disk"></i> Save Config</button>
           </div>
         </div>
       </div>
 
       <!-- Fund a User -->
       <div class="panel" style="margin-top:24px;">
-        <div class="panel-header"><span><i class="fa-solid fa-money-bill-transfer"></i> Fund User Wallet</span></div>
+        <div class="panel-header"><span><i class="ph ph-money"></i> Fund User Wallet</span></div>
         <div class="panel-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
           <div class="sfield-group" style="flex:1;min-width:180px;margin-bottom:0;">
             <label class="sfield-label">Select User</label>
@@ -321,20 +321,20 @@
       <!-- Announcements & Global Actions -->
       <div class="two-col" style="margin-top:24px;">
         <div class="panel">
-          <div class="panel-header"><span><i class="fa-solid fa-bullhorn"></i> Announcements</span></div>
+          <div class="panel-header"><span><i class="ph ph-megaphone"></i> Announcements</span></div>
           <div class="panel-body">
             <div class="sfield-group">
               <label class="sfield-label">Message</label>
               <textarea class="sfield-input" id="announcementMessage" rows="3" placeholder="Type your announcement here..." style="resize:vertical;"></textarea>
             </div>
-            <button class="btn-primary" onclick="makeAnnouncement()"><i class="fa-solid fa-paper-plane"></i> Send Announcement</button>
+            <button class="btn-primary" onclick="makeAnnouncement()"><i class="ph ph-paper-plane-right"></i> Send Announcement</button>
           </div>
         </div>
         <div class="panel">
-          <div class="panel-header"><span><i class="fa-solid fa-shield-halved"></i> Global Actions</span></div>
+          <div class="panel-header"><span><i class="ph ph-shield-check"></i> Global Actions</span></div>
           <div class="panel-body">
             <p style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">Force all active users to log out. They will be required to sign in again to access their accounts.</p>
-            <button class="btn-primary" style="background: var(--amber);" onclick="logoutAllUsers()"><i class="fa-solid fa-right-from-bracket"></i> Logout All Users</button>
+            <button class="btn-primary" style="background: var(--amber);" onclick="logoutAllUsers()"><i class="ph ph-sign-out"></i> Logout All Users</button>
           </div>
         </div>
       </div>
@@ -345,8 +345,8 @@
   <!-- ── User Detail Modal ── -->
   <div class="modal-overlay" id="userModal">
     <div class="modal">
-      <button class="modal-close" onclick="closeUserModal()"><i class="fa-solid fa-xmark"></i></button>
-      <h2 class="modal-title"><i class="fa-solid fa-user-circle"></i> User Detail</h2>
+      <button class="modal-close" onclick="closeUserModal()"><i class="ph ph-x"></i></button>
+      <h2 class="modal-title"><i class="ph ph-user-circle"></i> User Detail</h2>
       <div id="userModalBody" class="modal-body-grid"></div>
     </div>
   </div>

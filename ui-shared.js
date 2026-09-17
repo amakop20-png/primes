@@ -8,7 +8,7 @@ function updateThemeUI(isDark) {
     if (modeText) modeText.textContent = isDark ? 'Dark mode' : 'Light mode';
     const modeIcon = document.querySelector('.mode-dot i');
     if (modeIcon) {
-        modeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        modeIcon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
     }
 }
 
@@ -258,7 +258,7 @@ function togglePw(inputId, btn) {
     if (!input) return;
     const isHidden = input.type === 'password';
     input.type = isHidden ? 'text' : 'password';
-    btn.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    btn.querySelector('i').className = isHidden ? 'ph ph-eye-slash' : 'ph ph-eye';
 }
 
 function previewAvatar(input) {

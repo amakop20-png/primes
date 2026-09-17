@@ -490,7 +490,7 @@ function renderVirtualAccountDetails(container, acct, currency) {
                 <span style="font-weight:700;color:var(--text);">${accName}</span>
             </div>
             <button onclick="copyVirtualAccount()" style="margin-top:8px;padding:8px 14px;border-radius:10px;border:1.5px solid var(--primary,#7c3aed);background:var(--primary-light,#f5f3ff);color:var(--primary,#7c3aed);font-weight:700;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-                <i class="fa-solid fa-copy"></i> Copy Account Number
+                <i class="ph ph-copy"></i> Copy Account Number
             </button>
         </div>
         <p style="margin-top:10px;font-size:11px;color:var(--muted,#888);text-align:center;">
@@ -508,7 +508,7 @@ function showCreateVirtualAccountUI(container, currency) {
             You don't have a dedicated ${isUSD ? 'Dollar (USD)' : 'Naira (NGN)'} virtual account yet. Create one to receive instant deposits.
         </p>
         <button id="createVABtn" onclick="handleCreateVirtualAccount()" style="padding:10px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--primary,#7c3aed),var(--accent,#a855f7));color:#fff;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
-            <i class="fa-solid fa-plus"></i> Create ${currency} Virtual Account
+            <i class="ph ph-plus"></i> Create ${currency} Virtual Account
         </button>
     `;
 }
@@ -516,7 +516,7 @@ function showCreateVirtualAccountUI(container, currency) {
 async function handleCreateVirtualAccount() {
     const curr = getCurrency();
     const btn  = document.getElementById('createVABtn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Creating…'; }
 
     try {
         const res = await createVirtualAccount(curr);

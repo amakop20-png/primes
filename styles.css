@@ -2556,3 +2556,13 @@ main > p {
 
   .jacket { grid-template-columns: 1fr; }
 }
+
+/* Phosphor custom spin animation */
+.ph-spin {
+  animation: ph-spin 1s linear infinite;
+}
+@keyframes ph-spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}

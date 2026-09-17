@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
   <!-- CSS -->
   <link rel="stylesheet" href="styles.css">
@@ -47,7 +47,7 @@
       <!-- Theme Switcher -->
       <button id="themeToggle" aria-label="Toggle theme"
         style="background: none; border: none; font-size: 1.25rem; color: var(--text); cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.25s; outline: none; margin-right: 8px;">
-        <i class="fa-solid fa-moon"></i>
+        <i class="ph ph-moon"></i>
       </button>
       <button class="btn-secondary"><a href="login.html">Log In</a></button>
       <button class="btn-primary"><a href="signup.html">Sign Up</a></button>
@@ -77,13 +77,13 @@
         <button class="btn-primary btn-large" style="border: none !important; outline: none !important;">
           <a href="login.html">
             Get Started
-            <i class="fa-solid fa-arrow-right"></i>
+            <i class="ph ph-arrow-right"></i>
           </a>
         </button>
         <button class="btn-secondary btn-large" style="border: none !important; outline: none !important;">
           <a href="#features">
             Learn More
-            <i class="fa-solid fa-arrow-right"></i>
+            <i class="ph ph-arrow-right"></i>
           </a>
         </button>
       </div>
@@ -181,7 +181,7 @@
       <button class="btn-primary btn-large">
         <a href="signup.html">
           Create Your Account Now
-          <i class="fa-solid fa-arrow-right"></i>
+          <i class="ph ph-arrow-right"></i>
         </a>
       </button>
     </div>
@@ -227,9 +227,9 @@
       <div class="footer-section">
         <h4>Follow</h4>
         <div class="social-links">
-          <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-          <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
-          <a href="#" aria-label="Facebook"><i class="fab fa-facebook"></i></a>
+          <a href="#" aria-label="Twitter"><i class="ph ph-twitter-logo"></i></a>
+          <a href="#" aria-label="LinkedIn"><i class="ph ph-linkedin-logo"></i></a>
+          <a href="#" aria-label="Facebook"><i class="ph ph-facebook-logo"></i></a>
         </div>
       </div>
     </div>
@@ -292,9 +292,9 @@
     function updateLandingThemeUI(isDark) {
       if (themeIcon) {
         if (isDark) {
-          themeIcon.className = 'fa-solid fa-sun';
+          themeIcon.className = 'ph ph-sun';
         } else {
-          themeIcon.className = 'fa-solid fa-moon';
+          themeIcon.className = 'ph ph-moon';
         }
       }
     }

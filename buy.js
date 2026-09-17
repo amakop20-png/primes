@@ -777,7 +777,7 @@ function showSelectCountryPrompt() {
     if (!cardsGrid) return;
     cardsGrid.innerHTML = `
         <div class="state-box" style="grid-column:1/-1;">
-            <i class="fa-solid fa-globe"></i>
+            <i class="ph ph-globe"></i>
             <p>Select a country above to see available numbers.</p>
         </div>`;
     const resultCount = document.getElementById('resultCount');
@@ -786,13 +786,13 @@ function showSelectCountryPrompt() {
 }
 
 function showEmptyState(grid, msg) {
-    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><i class="fa-solid fa-phone-slash"></i><p>${escapeHTML(msg)}</p></div>`;
+    grid.innerHTML = `<div class="state-box" style="grid-column:1/-1;"><i class="ph ph-phone-slash"></i><p>${escapeHTML(msg)}</p></div>`;
 }
 
 function showErrorState(grid, msg) {
     grid.innerHTML = `
         <div class="state-box" style="grid-column:1/-1;">
-            <i class="fa-solid fa-exclamation-circle"></i>
+            <i class="ph ph-warning-circle"></i>
             <p>${escapeHTML(msg)}</p>
             <button id="retryLoadProductsBtn" style="margin-top:12px;padding:8px 18px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;">Retry</button>
         </div>`;
@@ -1067,7 +1067,7 @@ function updateThemeUI(isDark) {
     if (modeText) modeText.textContent = isDark ? 'Dark mode' : 'Light mode';
     const modeIcon = document.querySelector('.mode-dot i');
     if (modeIcon) {
-        modeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        modeIcon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
     }
 }
 
@@ -1084,7 +1084,7 @@ function togglePw(inputId, btn) {
     if (!input) return;
     const isHidden = input.type === 'password';
     input.type = isHidden ? 'text' : 'password';
-    btn.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    btn.querySelector('i').className = isHidden ? 'ph ph-eye-slash' : 'ph ph-eye';
 }
 
 function previewAvatar(input) {

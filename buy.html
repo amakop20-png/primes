@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="nuraxq-logo.png">
   <link rel="apple-touch-icon" href="nuraxq-logo.png">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
   <style>
     /* ── Filter Bar ── */
@@ -776,7 +776,7 @@
   <header class="dash-header">
     <div class="header-left">
       <div class="toggle-btn" id="toggle-btn">
-        <i class="fa-solid fa-bars"></i>
+        <i class="ph ph-list"></i>
       </div>
       <div class="logo">
         <img src="nuraxq-logo.png" alt="NuraXQ" style="width:130px;height:auto;object-fit:contain;">
@@ -789,7 +789,7 @@
       </div>
       <div class="notifications profile-dropdown">
         <button class="profile-toggle" onclick="toggleNotifDropdown()" id="notifToggle" type="button" aria-expanded="false" style="background:transparent; border:none; position:relative; padding: 4px; cursor: pointer;">
-            <i class="fa-solid fa-bell" style="font-size: 18px; color: var(--text);"></i>
+            <i class="ph ph-bell" style="font-size: 18px; color: var(--text);"></i>
             <span class="badge" id="notifBadge" style="display:none; position:absolute; top:-2px; right:-2px; background:var(--primary); color:#fff; font-size:10px; font-weight:bold; width:16px; height:16px; border-radius:50%; align-items:center; justify-content:center;">0</span>
         </button>
         <div id="notifDropdown" class="dropdown-content" aria-label="Notifications" style="width: 300px; padding: 0;">
@@ -804,26 +804,26 @@
       </div>
       <div class="profile-dropdown">
         <button class="profile-toggle" onclick="toggleDropdown()" id="profileToggle" type="button" aria-expanded="false">
-          <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile">
+          <i class="ph ph-user-circle" style="font-size: 1.5em; vertical-align: middle;"></i>
           <div class="profile-info">
             <span class="username" id="Username">username</span>
             <span class="user-role">Premium user</span>
           </div>
-          <i class="fa-solid fa-chevron-down dropdown-arrow" id="dropdownArrow" aria-hidden="true"></i>
+          <i class="ph ph-caret-down dropdown-arrow" id="dropdownArrow" aria-hidden="true"></i>
         </button>
 
         <div id="dropdown" class="dropdown-content" aria-label="User menu">
           <div class="dropdown-header">
-            <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="User Profile" width="40" height="40">
+            <i class="ph ph-user-circle" style="font-size: 40px; vertical-align: middle;"></i>
             <div>
               <p class="dropdown-name">username</p>
               <p class="dropdown-email">precious@example.com</p>
             </div>
           </div>
-          <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="fa-solid fa-gear"></i> Settings / Profile</a>
-          <a href="buy.html"><i class="fa-solid fa-cart-shopping"></i> Buy Number</a>
-          <a href="#contact"><i class="fa-solid fa-phone"></i> Contact</a>
-          <a href="login.html" class="logout" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+          <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
+          <a href="buy.html"><i class="ph ph-shopping-cart"></i> Buy Number</a>
+          <a href="#contact"><i class="ph ph-phone"></i> Contact</a>
+          <a href="login.html" class="logout" onclick="logout()"><i class="ph ph-sign-out"></i> Logout</a>
         </div>
       </div>
     </div>
@@ -833,27 +833,27 @@
   <aside id="aside">
     <div class="top">
       <a href="dashboard.html">
-        <span><i class="fa-solid fa-gauge-high"></i> Dashboard</span>
+        <span><i class="ph ph-gauge"></i> Dashboard</span>
       </a>
       <a href="dashboard.html?open=wallet">
-        <span><i class="fa-solid fa-wallet"></i> Wallet</span>
+        <span><i class="ph ph-wallet"></i> Wallet</span>
       </a>
       <a href="dashboard.html#recentActivity">
-        <span><i class="fa-solid fa-chart-line"></i> Activity</span>
+        <span><i class="ph ph-chart-line-up"></i> Activity</span>
       </a>
       <a href="#" id="sidebarSettingsBtn">
-        <span><i class="fa-solid fa-gear"></i> Settings</span>
+        <span><i class="ph ph-gear"></i> Settings</span>
       </a>
       <a href="buy.html" class="active">
-        <span><i class="fa-solid fa-cart-shopping"></i> Buy Number</span>
+        <span><i class="ph ph-shopping-cart"></i> Buy Number</span>
       </a>
       <div class="close" id="close-btn">
-        <i class="fa-solid fa-xmark"></i>
+        <i class="ph ph-x"></i>
       </div>
     </div>
     <div class="mode-tag" onclick="toggleDark()">
       <div class="mode-dot">
-        <i class="fa-solid fa-moon"></i>
+        <i class="ph ph-moon"></i>
       </div>
       <span id="modeText">Light mode</span>
     </div>
@@ -870,12 +870,12 @@
     <!-- Balance Bar -->
     <div id="balanceBar" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; margin-top:4px;">
       <div style="display:flex; align-items:center; gap:8px; background:var(--primary-light); border-radius:12px; padding:10px 16px; font-size:13px; font-weight:700; color:var(--primary);">
-        <i class="fa-solid fa-wallet"></i>
+        <i class="ph ph-wallet"></i>
         <span>Your Wallet: <span id="buyWalletBalance">Loading...</span></span>
         <a href="dashboard.html" style="margin-left:8px; font-size:11px; color:var(--primary); text-decoration:underline; opacity:0.8;">Add Funds</a>
       </div>
       <div id="fivesimBalanceBox" style="display:flex; align-items:center; gap:8px; background:#fef9ee; border:1px solid #fde68a; border-radius:12px; padding:10px 16px; font-size:13px; font-weight:700; color:#92400e;">
-        <i class="fa-solid fa-circle-check"></i>
+        <i class="ph ph-check-circle"></i>
         <span>Service Status: <span id="fivesimBalance">checking...</span></span>
       </div>
     </div>
@@ -915,7 +915,7 @@
     <div class="cards" id="cardsGrid">
       <!-- Initial state — replaced dynamically when country is selected -->
       <div class="state-box" style="grid-column:1/-1;">
-        <i class="fa-solid fa-globe"></i>
+        <i class="ph ph-globe"></i>
         <p>Select a country above to see available numbers.</p>
       </div>
     </div>
@@ -924,7 +924,7 @@
   <!-- SMS / Number Modal -->
   <div class="sms-modal-overlay" id="smsModalOverlay">
     <div class="sms-modal">
-      <button class="modal-close-x" id="modalCloseX"><i class="fa-solid fa-xmark"></i></button>
+      <button class="modal-close-x" id="modalCloseX"><i class="ph ph-x"></i></button>
 
       <h3>📱 Your Virtual Number</h3>
 
@@ -954,7 +954,7 @@
       </div>
 
       <div class="sms-modal-actions">
-        <button class="btn-modal-copy" id="btnCopyNumber"><i class="fa-solid fa-copy"></i> Copy Number</button>
+        <button class="btn-modal-copy" id="btnCopyNumber"><i class="ph ph-copy"></i> Copy Number</button>
         <button class="btn-modal-cancel" id="btnCancelOrder">❌ Cancel</button>
         <button class="btn-modal-ban" id="btnBanOrder">⚠️ Report Ban</button>
         <button class="btn-modal-finish" id="btnFinishOrder">✅ Done</button>
@@ -970,10 +970,10 @@
   <!-- ══ SETTINGS MODAL ══ -->
   <div class="settings-overlay" id="settingsOverlay">
     <div class="settings-modal" id="settingsModal">
-      <button class="settings-close-x" id="settingsCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+      <button class="settings-close-x" id="settingsCloseBtn"><i class="ph ph-x"></i></button>
 
       <div class="settings-header">
-        <div class="settings-header-icon"><i class="fa-solid fa-gear"></i></div>
+        <div class="settings-header-icon"><i class="ph ph-gear"></i></div>
         <div>
           <h2>Settings</h2>
           <p>Manage your account & preferences</p>
@@ -982,101 +982,101 @@
 
       <!-- Tab Nav -->
       <div class="settings-tabs">
-        <button class="stab active" data-tab="profile"><i class="fa-solid fa-user"></i> Profile</button>
-        <button class="stab" data-tab="security"><i class="fa-solid fa-lock"></i> Security</button>
-        <button class="stab" data-tab="prefs"><i class="fa-solid fa-sliders"></i> Preferences</button>
-        <button class="stab" data-tab="notifs"><i class="fa-solid fa-bell"></i> Notifications</button>
+        <button class="stab active" data-tab="profile"><i class="ph ph-user"></i> Profile</button>
+        <button class="stab" data-tab="security"><i class="ph ph-lock-key"></i> Security</button>
+        <button class="stab" data-tab="prefs"><i class="ph ph-sliders-horizontal"></i> Preferences</button>
+        <button class="stab" data-tab="notifs"><i class="ph ph-bell"></i> Notifications</button>
       </div>
 
       <!-- Tab: Profile -->
       <div class="stab-content active" id="stab-profile">
         <div class="sfield-group">
-          <label class="sfield-label"><i class="fa-solid fa-user-circle"></i> Display Name</label>
+          <label class="sfield-label"><i class="ph ph-user-circle"></i> Display Name</label>
           <input class="sfield-input" type="text" id="settingsDisplayName" placeholder="Your name">
         </div>
         <div class="sfield-group">
-          <label class="sfield-label"><i class="fa-solid fa-envelope"></i> Email Address</label>
+          <label class="sfield-label"><i class="ph ph-envelope"></i> Email Address</label>
           <input class="sfield-input" type="email" id="settingsEmail" placeholder="your@email.com">
         </div>
         <div class="sfield-group">
-          <label class="sfield-label"><i class="fa-solid fa-phone"></i> Phone Number</label>
+          <label class="sfield-label"><i class="ph ph-phone"></i> Phone Number</label>
           <input class="sfield-input" type="tel" id="settingsPhone" placeholder="+234 ...">
         </div>
         <div class="avatar-section">
           <div class="avatar-preview" id="settingsAvatarPreview">
-            <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Avatar" id="settingsAvatarImg">
+            <i class="ph ph-user-circle" id="settingsAvatarImg" style="font-size: 80px; vertical-align: middle;"></i>
           </div>
           <div>
-            <p class="sfield-label" style="margin-bottom:6px;"><i class="fa-solid fa-image"></i> Profile Photo</p>
+            <p class="sfield-label" style="margin-bottom:6px;"><i class="ph ph-image"></i> Profile Photo</p>
             <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Click to upload or drag & drop</p>
             <label class="sbtn sbtn-outline" style="cursor:pointer;">
-              <i class="fa-solid fa-upload"></i> Upload Photo
+              <i class="ph ph-upload-simple"></i> Upload Photo
               <input type="file" accept="image/*" id="settingsAvatarFile" style="display:none;" onchange="previewAvatar(this)">
             </label>
           </div>
         </div>
-        <button class="sbtn sbtn-primary" onclick="saveProfileSettings()"><i class="fa-solid fa-floppy-disk"></i> Save Profile</button>
+        <button class="sbtn sbtn-primary" onclick="saveProfileSettings()"><i class="ph ph-floppy-disk"></i> Save Profile</button>
       </div>
 
       <!-- Tab: Security -->
       <div class="stab-content" id="stab-security">
         <div class="security-info-box">
-          <i class="fa-solid fa-shield-halved"></i>
+          <i class="ph ph-shield-check"></i>
           <span>Keep your account safe. Change your password regularly.</span>
         </div>
         <div class="sfield-group">
-          <label class="sfield-label"><i class="fa-solid fa-key"></i> Current Password</label>
+          <label class="sfield-label"><i class="ph ph-key"></i> Current Password</label>
           <div class="sfield-pw-wrap">
             <input class="sfield-input" type="password" id="settingsOldPw" placeholder="Enter current password">
-            <button class="pw-toggle" onclick="togglePw('settingsOldPw', this)"><i class="fa-solid fa-eye"></i></button>
+            <button class="pw-toggle" onclick="togglePw('settingsOldPw', this)"><i class="ph ph-eye"></i></button>
           </div>
         </div>
         <div class="sfield-group">
-          <label class="sfield-label"><i class="fa-solid fa-lock"></i> New Password</label>
+          <label class="sfield-label"><i class="ph ph-lock-key"></i> New Password</label>
           <div class="sfield-pw-wrap">
             <input class="sfield-input" type="password" id="settingsNewPw" placeholder="Min 8 characters">
-            <button class="pw-toggle" onclick="togglePw('settingsNewPw', this)"><i class="fa-solid fa-eye"></i></button>
+            <button class="pw-toggle" onclick="togglePw('settingsNewPw', this)"><i class="ph ph-eye"></i></button>
           </div>
         </div>
         <div class="sfield-group">
-          <label class="sfield-label"><i class="fa-solid fa-check-double"></i> Confirm Password</label>
+          <label class="sfield-label"><i class="ph ph-checks"></i> Confirm Password</label>
           <div class="sfield-pw-wrap">
             <input class="sfield-input" type="password" id="settingsConfirmPw" placeholder="Repeat new password">
-            <button class="pw-toggle" onclick="togglePw('settingsConfirmPw', this)"><i class="fa-solid fa-eye"></i></button>
+            <button class="pw-toggle" onclick="togglePw('settingsConfirmPw', this)"><i class="ph ph-eye"></i></button>
           </div>
         </div>
         <div class="pw-strength" id="pwStrengthBar" style="display:none;">
           <div class="pw-strength-fill" id="pwStrengthFill"></div>
         </div>
         <p id="pwStrengthText" style="font-size:12px;color:var(--muted);margin:4px 0 14px;"></p>
-        <button class="sbtn sbtn-primary" onclick="savePasswordSettings()"><i class="fa-solid fa-lock"></i> Update Password</button>
+        <button class="sbtn sbtn-primary" onclick="savePasswordSettings()"><i class="ph ph-lock-key"></i> Update Password</button>
       </div>
 
       <!-- Tab: Preferences -->
       <div class="stab-content" id="stab-prefs">
         <div class="sfield-group">
-          <label class="sfield-label"><i class="fa-solid fa-coins"></i> Default Currency</label>
+          <label class="sfield-label"><i class="ph ph-coins"></i> Default Currency</label>
           <select class="sfield-input" id="settingsCurrency">
             <option value="NGN">🇳🇬 Nigerian Naira (₦ NGN)</option>
             <option value="USD">🇺🇸 US Dollar ($ USD)</option>
           </select>
         </div>
         <div class="sfield-group">
-          <label class="sfield-label"><i class="fa-solid fa-moon"></i> Theme</label>
+          <label class="sfield-label"><i class="ph ph-moon"></i> Theme</label>
           <div class="theme-toggle-row">
-            <button class="theme-btn" id="themeLight" onclick="setTheme('light')"><i class="fa-solid fa-sun"></i> Light</button>
-            <button class="theme-btn" id="themeDark" onclick="setTheme('dark')"><i class="fa-solid fa-moon"></i> Dark</button>
+            <button class="theme-btn" id="themeLight" onclick="setTheme('light')"><i class="ph ph-sun"></i> Light</button>
+            <button class="theme-btn" id="themeDark" onclick="setTheme('dark')"><i class="ph ph-moon"></i> Dark</button>
           </div>
         </div>
         <div class="sfield-group">
-          <label class="sfield-label"><i class="fa-solid fa-language"></i> Language</label>
+          <label class="sfield-label"><i class="ph ph-translate"></i> Language</label>
           <select class="sfield-input" id="settingsLanguage">
             <option value="en">🇬🇧 English</option>
             <option value="fr">🇫🇷 French</option>
             <option value="es">🇪🇸 Spanish</option>
           </select>
         </div>
-        <button class="sbtn sbtn-primary" onclick="savePreferences()"><i class="fa-solid fa-floppy-disk"></i> Save Preferences</button>
+        <button class="sbtn sbtn-primary" onclick="savePreferences()"><i class="ph ph-floppy-disk"></i> Save Preferences</button>
       </div>
 
       <!-- Tab: Notifications -->
@@ -1110,11 +1110,11 @@
           </div>
           <label class="stoggle"><input type="checkbox" id="notifPromo"><span class="stoggle-knob"></span></label>
         </div>
-        <button class="sbtn sbtn-primary" onclick="saveNotifSettings()"><i class="fa-solid fa-floppy-disk"></i> Save Notifications</button>
+        <button class="sbtn sbtn-primary" onclick="saveNotifSettings()"><i class="ph ph-floppy-disk"></i> Save Notifications</button>
 
         <div class="danger-zone">
-          <p class="danger-title"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</p>
-          <button class="sbtn sbtn-danger" onclick="confirmDeleteAccount()"><i class="fa-solid fa-trash"></i> Delete My Account</button>
+          <p class="danger-title"><i class="ph ph-warning"></i> Danger Zone</p>
+          <button class="sbtn sbtn-danger" onclick="confirmDeleteAccount()"><i class="ph ph-trash"></i> Delete My Account</button>
         </div>
       </div>
 
@@ -1133,7 +1133,7 @@
       <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="width:40px; height:40px; border-radius:50%; background:var(--primary-light, #e0e7ff); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
-            <i class="fa-solid fa-bullhorn"></i>
+            <i class="ph ph-megaphone"></i>
           </div>
           <h2 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--text);">New Announcement</h2>
         </div>
