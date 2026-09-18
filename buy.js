@@ -460,7 +460,11 @@ async function handleBuyClick(country, product, btnEl) {
         
         const operatorEl = document.getElementById('operatorFilter');
         const operator = operatorEl && operatorEl.value ? operatorEl.value : 'any';
-        const result = await buyActivation(country, product, purchaseCurrency, operator);
+        
+        const productData = allProducts.find(p => p.key === product);
+        const price = purchaseCurrency === 'USD' ? productData.priceUSD : productData.priceNGN;
+        
+        const result = await buyActivation(country, product, purchaseCurrency, operator, price);
         const order  = result?.order || result;
 
         if (!order || (!order.id && !order._id)) {

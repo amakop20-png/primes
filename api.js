@@ -265,13 +265,13 @@ async function getProducts(country) {
     });
 }
 
-async function buyActivation(country, product, currency = 'NGN', operator = 'any') {
+async function buyActivation(country, product, currency = 'NGN', operator = 'any', price = 0) {
     if (!country || !product) {
         throw new Error('Both country and product are required to purchase a number.');
     }
     return await apiRequest('/api/buy/activation', {
         method: 'POST',
-        body: JSON.stringify({ country, product, service: product, currency, operator, network: operator })
+        body: JSON.stringify({ country, product, service: product, currency, operator, network: operator, price })
     });
 }
 
