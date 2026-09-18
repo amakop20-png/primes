@@ -805,10 +805,6 @@
       <div class="profile-dropdown">
         <button class="profile-toggle" onclick="toggleDropdown()" id="profileToggle" type="button" aria-expanded="false">
           <i class="ph ph-user-circle" style="font-size: 1.5em; vertical-align: middle;"></i>
-          <div class="profile-info">
-            <span class="username" id="Username">username</span>
-            <span class="user-role">Premium user</span>
-          </div>
           <i class="ph ph-caret-down dropdown-arrow" id="dropdownArrow" aria-hidden="true"></i>
         </button>
 
@@ -990,30 +986,13 @@
 
       <!-- Tab: Profile -->
       <div class="stab-content active" id="stab-profile">
-        <div class="sfield-group">
-          <label class="sfield-label"><i class="ph ph-user-circle"></i> Display Name</label>
-          <input class="sfield-input" type="text" id="settingsDisplayName" placeholder="Your name">
-        </div>
-        <div class="sfield-group">
-          <label class="sfield-label"><i class="ph ph-envelope"></i> Email Address</label>
-          <input class="sfield-input" type="email" id="settingsEmail" placeholder="your@email.com">
-        </div>
-        <div class="sfield-group">
-          <label class="sfield-label"><i class="ph ph-phone"></i> Phone Number</label>
-          <input class="sfield-input" type="tel" id="settingsPhone" placeholder="+234 ...">
-        </div>
-        <div class="avatar-section">
-          <div class="avatar-preview" id="settingsAvatarPreview">
-            <i class="ph ph-user-circle" id="settingsAvatarImg" style="font-size: 80px; vertical-align: middle;"></i>
-          </div>
-          <div>
-            <p class="sfield-label" style="margin-bottom:6px;"><i class="ph ph-image"></i> Profile Photo</p>
-            <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Click to upload or drag & drop</p>
-            <label class="sbtn sbtn-outline" style="cursor:pointer;">
-              <i class="ph ph-upload-simple"></i> Upload Photo
-              <input type="file" accept="image/*" id="settingsAvatarFile" style="display:none;" onchange="previewAvatar(this)">
-            </label>
-          </div>
+        <div>
+          <p class="sfield-label" style="margin-bottom:6px;"><i class="ph ph-image"></i> Profile Photo</p>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Click to upload or drag & drop</p>
+          <label class="sbtn sbtn-outline" style="cursor:pointer;">
+            <i class="ph ph-upload-simple"></i> Upload Photo
+            <input type="file" accept="image/*" id="settingsAvatarFile" style="display:none;" onchange="previewAvatar(this)">
+          </label>
         </div>
         <button class="sbtn sbtn-primary" onclick="saveProfileSettings()"><i class="ph ph-floppy-disk"></i> Save Profile</button>
       </div>
