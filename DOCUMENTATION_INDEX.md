@@ -207,7 +207,6 @@ primes/
 ├── Configuration Files
 ├── package.json ✅ Complete
 ├── netlify.toml ✅ Complete
-├── vercel.json ✅ Complete
 │
 └── Backend Directory
     └── primes/
