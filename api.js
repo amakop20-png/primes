@@ -271,7 +271,7 @@ async function buyActivation(country, product, currency = 'NGN', operator = 'any
     }
     return await apiRequest('/api/buy/activation', {
         method: 'POST',
-        body: JSON.stringify({ country, product, currency, operator })
+        body: JSON.stringify({ country, product, service: product, currency, operator, network: operator })
     });
 }
 
