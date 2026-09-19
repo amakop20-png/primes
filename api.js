@@ -6,7 +6,7 @@
 
 // USING DIRECT BACKEND URL
 const API_BASE_URL = 'https://nurasms-api.onrender.com';
-const REQUEST_TIMEOUT_MS = 60000; // 60s ceiling for Render cold starts
+const REQUEST_TIMEOUT_MS = 25000; // 25s ceiling as specified in project requirements
 
 /* ══════════════════════════════════════════
    AUTHENTICATION & STORAGE HELPERS
@@ -115,21 +115,17 @@ async function apiRequest(endpoint, options = {}) {
     } catch (networkErr) {
         clearTimeout(timeoutId);
 
-        let errMsg = 'Network error. Please check your connection.';
-        if (typeof navigator !== 'undefined' && !navigator.onLine) {
-            errMsg = 'Internet disconnected (ERR_INTERNET_DISCONNECTED). Please check your internet connection.';
-        } else if (networkErr.name === 'AbortError') {
-            errMsg = `The server took too long to respond (> ${REQUEST_TIMEOUT_MS / 1000}s). It may be waking up on Render.`;
-        } else if (networkErr.message && networkErr.message.includes('Failed to fetch')) {
-            errMsg = `Unable to reach the server at ${API_BASE_URL}. Please check your connection or CORS configuration.`;
-        } else if (networkErr.message) {
-            errMsg = networkErr.message;
+        let errMsg = 'Network error. Unable to connect to the server. Please check your connection and try again.';
+        if (networkErr.name === 'AbortError') {
+            errMsg = `The server took too long to respond (> ${REQUEST_TIMEOUT_MS / 1000}s). Please check your connection and try again.`;
         }
 
         const err = new Error(errMsg);
         err.status = 0;
         err.endpoint = endpoint;
         err.method = method;
+        err.isNetworkError = true;
+        err.originalError = networkErr;
         console.error(`[API Error] 0 ${method} ${endpoint}:`, errMsg);
         throw err;
     }
@@ -153,8 +149,38 @@ async function apiRequest(endpoint, options = {}) {
         if (!errorMsg && textResponse && !textResponse.trim().startsWith('<')) {
             errorMsg = textResponse.trim();
         }
+
+        // Standard fallback messages per HTTP status code if backend didn't supply one
         if (!errorMsg) {
-            errorMsg = `Request failed with status ${response.status}`;
+            switch (response.status) {
+                case 400:
+                    errorMsg = 'Bad request. Please verify your submitted information.';
+                    break;
+                case 401:
+                    errorMsg = 'Your session has expired. Please log in again.';
+                    break;
+                case 403:
+                    errorMsg = 'You do not have permission to perform this action.';
+                    break;
+                case 404:
+                    errorMsg = 'The requested resource was not found.';
+                    break;
+                case 409:
+                    errorMsg = 'A conflict occurred. Please try again.';
+                    break;
+                case 422:
+                    errorMsg = 'Validation failed. Please verify your submitted information.';
+                    break;
+                case 429:
+                    errorMsg = 'Too many requests. Please wait a moment and try again.';
+                    break;
+                case 500:
+                default:
+                    errorMsg = response.status >= 500
+                        ? 'Server error. Please try again later.'
+                        : `Request failed with status ${response.status}`;
+                    break;
+            }
         }
 
         const throwWithStatus = (message) => {
@@ -162,6 +188,7 @@ async function apiRequest(endpoint, options = {}) {
             err.status = response.status;
             err.endpoint = endpoint;
             err.method = method;
+            err.data = data;
             console.error(`[API Error] ${response.status} ${method} ${endpoint}: ${message}`);
             throw err;
         };
@@ -176,7 +203,7 @@ async function apiRequest(endpoint, options = {}) {
                     window.location.href = 'login.html';
                 }, 600);
             }
-            throwWithStatus(data.message || data.error || 'Your session has expired. Please log in again.');
+            throwWithStatus(errorMsg);
         }
 
         // For all non-200 responses, preserve the real status and message

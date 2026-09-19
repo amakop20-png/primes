@@ -406,6 +406,7 @@ function renderProductCards(products) {
             </div>
             <div class="card-price">${priceStr}</div>
             <button
+                type="button"
                 class="btn btn-buy"
                 data-product-key="${safeKey}"
             >
@@ -484,19 +485,36 @@ async function handleBuyClick(country, product, btnEl) {
         }
     } catch (balErr) {
         console.warn('[Purchase] Could not pre-verify balance:', balErr.message);
+        if (balErr.status === 0 || balErr.isNetworkError) {
+            isBuying = false;
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.textContent = '🛒 Buy Now';
+            }
+            console.error("[PURCHASE] Network/backend error:", balErr);
+            console.error("[PURCHASE] Error status:", balErr?.status || 0);
+            console.error("[PURCHASE] Error message:", balErr?.message);
+            showToast(balErr.message || 'Network error. Unable to connect to the server. Please check your connection and try again.', 'error');
+            return;
+        }
     }
 
-    console.log(`[Purchase] Request sent: country=${country}, product=${product}`);
+    console.log("[PURCHASE] API URL:", `${API_BASE_URL}/api/buy/activation`);
+    console.log("[PURCHASE] Payload:", {
+        country,
+        product
+    });
+    console.log("[PURCHASE] Has auth token:", !!getAuthToken());
 
     try {
-        const result = await buyActivation(country, product);
-        console.log('[Purchase] Response received:', result);
+        const response = await buyActivation(country, product);
+        console.log("[PURCHASE] Backend response:", response);
 
         // Normalize order from result
-        const order = result?.order || result;
+        const order = response?.order || response;
 
         if (!order || (!order.id && !order._id && !order.orderId)) {
-            throw new Error(result?.message || 'Server did not return a valid order ID.');
+            throw new Error(response?.message || 'Server did not return a valid order ID.');
         }
 
         // Dynamically capture the real Order ID from API response
@@ -520,9 +538,11 @@ async function handleBuyClick(country, product, btnEl) {
 
         // Open SMS modal and start Step 4 polling
         openOrderModal(orderId, order);
-    } catch (err) {
-        console.error(`[Purchase] Purchase failed (${err.status || 0}):`, err.message);
-        showToast(err.message || 'Failed to purchase number.', 'error');
+    } catch (error) {
+        console.error("[PURCHASE] Network/backend error:", error);
+        console.error("[PURCHASE] Error status:", error?.status);
+        console.error("[PURCHASE] Error message:", error?.message);
+        showToast(error.message || 'Failed to purchase number.', 'error');
         try {
             await loadWalletBalanceBuyPage();
         } catch (_) {}
@@ -988,6 +1008,7 @@ function attachEventListeners() {
         cardsGrid.addEventListener('click', (e) => {
             const buyBtn = e.target.closest('.btn-buy');
             if (buyBtn) {
+                e.preventDefault();
                 e.stopPropagation();
                 const key = buyBtn.dataset.productKey;
                 handleBuyClick(selectedCountry, key, buyBtn);
