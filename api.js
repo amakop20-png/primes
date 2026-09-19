@@ -329,16 +329,20 @@ async function getProducts(country) {
     });
 }
 
-async function buyActivation(country, product) {
+async function buyActivation(country, product, currency = null) {
     if (!country || !product) {
         throw new Error('Both country and product are required to purchase a number.');
     }
+    const payload = {
+        country: String(country).toLowerCase().trim(),
+        product: String(product).toLowerCase().trim()
+    };
+    if (currency) {
+        payload.currency = String(currency).toUpperCase().trim();
+    }
     return await apiRequest('/api/buy/activation', {
         method: 'POST',
-        body: JSON.stringify({
-            country: String(country).toLowerCase().trim(),
-            product: String(product).toLowerCase().trim()
-        })
+        body: JSON.stringify(payload)
     });
 }
 

@@ -502,12 +502,13 @@ async function handleBuyClick(country, product, btnEl) {
     console.log("[PURCHASE] API URL:", `${API_BASE_URL}/api/buy/activation`);
     console.log("[PURCHASE] Payload:", {
         country,
-        product
+        product,
+        currency: activeCurrency
     });
     console.log("[PURCHASE] Has auth token:", !!getAuthToken());
 
     try {
-        const response = await buyActivation(country, product);
+        const response = await buyActivation(country, product, activeCurrency);
         console.log("[PURCHASE] Backend response:", response);
 
         // Normalize order from result
@@ -542,7 +543,12 @@ async function handleBuyClick(country, product, btnEl) {
         console.error("[PURCHASE] Network/backend error:", error);
         console.error("[PURCHASE] Error status:", error?.status);
         console.error("[PURCHASE] Error message:", error?.message);
-        showToast(error.message || 'Failed to purchase number.', 'error');
+
+        let displayError = error.message || 'Failed to purchase number.';
+        if (displayError.toLowerCase().includes('insufficient')) {
+            displayError = `Insufficient balance: Provider price for available numbers in this service exceeds current balance (${sym}${currentBal}). Please fund your wallet or choose another service.`;
+        }
+        showToast(displayError, 'error');
         try {
             await loadWalletBalanceBuyPage();
         } catch (_) {}
