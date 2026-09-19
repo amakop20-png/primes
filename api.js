@@ -1,9 +1,9 @@
-/* ══════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+═══════════════════════════
    api.js — NuraSMS Centralized API Client & Integration Layer
    Base URL: https://nurasms-api.onrender.com
    All dashboard and application API communication is centralized here.
-══════════════════════════════════════════════════════════════════════ */
-
+══════════════════
 // USING DIRECT BACKEND URL
 const API_BASE_URL = 'https://nurasms-api.onrender.com';
 const REQUEST_TIMEOUT_MS = 25000; // 25s ceiling as specified in project requirements
