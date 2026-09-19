@@ -175,7 +175,13 @@ async function apiRequest(endpoint, options = {}) {
         }
 
         if (response.status >= 500) {
-            throwWithStatus(data.message || data.error || 'Server error. Please try again later.');
+            let msg = data.message || data.error || '';
+            if (typeof msg === 'string' && (msg.includes('undefined') || msg.includes('Cast to number') || msg.includes('Wallet not found'))) {
+                msg = 'Insufficient or uninitialized wallet balance. Please fund your wallet to continue.';
+            } else if (!msg) {
+                msg = 'Server error. Please try again later.';
+            }
+            throwWithStatus(msg);
         }
 
         throwWithStatus(errorMsg);
@@ -223,29 +229,31 @@ function normalizeVirtualAccount(data) {
 async function createVirtualAccount(currency = 'NGN') {
     const data = await apiRequest('/api/create-virtual-account', {
         method: 'POST',
-        body: JSON.stringify({ currency })
+        body: JSON.stringify({ currency: currency || 'NGN' })
     });
     return normalizeVirtualAccount(data);
 }
 
 async function getVirtualAccount(currency = 'NGN') {
-    const data = await apiRequest(`/api/get-virtual-account?currency=${encodeURIComponent(currency)}`, {
+    const curr = currency || 'NGN';
+    const data = await apiRequest(`/api/get-virtual-account?currency=${encodeURIComponent(curr)}`, {
         method: 'GET'
     });
     return normalizeVirtualAccount(data);
 }
 
 async function getWalletBalance(currency = 'NGN') {
-    return await apiRequest(`/api/get-wallet-balance?currency=${encodeURIComponent(currency)}`, {
+    const curr = currency || 'NGN';
+    return await apiRequest(`/api/get-wallet-balance?currency=${encodeURIComponent(curr)}`, {
         method: 'GET'
     });
 }
 
 async function getTransactions(page = 1, limit = 20, currency = 'NGN') {
     const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-        currency: currency
+        page: String(page || 1),
+        limit: String(limit || 20),
+        currency: currency || 'NGN'
     });
     return await apiRequest(`/api/get-transactions?${params.toString()}`, {
         method: 'GET'

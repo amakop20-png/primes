@@ -188,11 +188,11 @@ async function fetchWalletBalance(currency) {
 // loadWalletBalanceBuyPage so it isn't duplicated for the retry path.
 function applyWalletBalance(data, currency, symbol, balEl) {
     const backendCurrency = (data?.currency || data?.wallet?.currency || '').toUpperCase();
-    let baseUsd = parseFloat(data?.usdBalance ?? data?.wallet?.usdBalance ?? data?.balanceUSD ?? 0);
-    let baseNgn = parseFloat(data?.ngnBalance ?? data?.wallet?.ngnBalance ?? 0);
+    let baseUsd = parseFloat(data?.usdBalance ?? data?.wallet?.usdBalance ?? data?.balanceUSD ?? 0) || 0;
+    let baseNgn = parseFloat(data?.ngnBalance ?? data?.wallet?.ngnBalance ?? 0) || 0;
 
     if (baseUsd === 0 && baseNgn === 0) {
-        const generic = parseFloat(data?.balance ?? data?.wallet?.balance ?? 0);
+        const generic = parseFloat(data?.balance ?? data?.wallet?.balance ?? 0) || 0;
         if (backendCurrency === 'USD') baseUsd = generic;
         else baseNgn = generic;
     }
@@ -205,6 +205,7 @@ function applyWalletBalance(data, currency, symbol, balEl) {
     if (baseNgn === 0 && baseUsd > 0) baseNgn = baseUsd * CONVERSION_RATE;
 
     let bal = currency === 'USD' ? baseUsd : baseNgn;
+    bal = Number.isFinite(bal) ? bal : 0;
 
     if (balEl) balEl.textContent = symbol + Number(bal).toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', {
         minimumFractionDigits: 2, maximumFractionDigits: 2
@@ -490,7 +491,10 @@ async function handleBuyClick(country, product, btnEl) {
         openOrderModal(orderId, order);
     } catch (err) {
         console.error(`[PURCHASE] Purchase failed:`, err);
-        const detailedMsg = err.message || 'Failed to purchase number. Check your wallet balance.';
+        let detailedMsg = err.message || 'Failed to purchase number. Check your wallet balance.';
+        if (typeof detailedMsg === 'string' && (detailedMsg.includes('undefined') || detailedMsg.includes('Cast to number') || detailedMsg.includes('Wallet not found'))) {
+            detailedMsg = 'Insufficient or uninitialized wallet balance. Please fund your wallet to continue.';
+        }
         showToast(detailedMsg, 'error');
     } finally {
         isBuying = false;
