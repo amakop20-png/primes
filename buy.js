@@ -233,7 +233,10 @@ async function loadCountries() {
     select.disabled  = true;
 
     try {
+        console.log('[STEP 1] Request: GET /api/countries');
         const data = await getCountries();
+        console.log('[STEP 1] Status: 200');
+        console.log('[STEP 1] Response:', data);
 
         const countries = data?.countries || data;
 
@@ -306,7 +309,10 @@ async function loadProducts(country) {
     if (resultCount) resultCount.textContent = 'Loading products…';
 
     try {
+        console.log(`[STEP 2] Request: GET /api/products/${country}`);
         const data = await getProducts(country);
+        console.log('[STEP 2] Status: 200');
+        console.log('[STEP 2] Response:', data);
 
         const raw = data?.products || data;
 
@@ -456,11 +462,14 @@ async function handleBuyClick(country, product, btnEl) {
         btnEl.textContent = '⏳ Purchasing…';
     }
 
-    console.log(`[PURCHASE] Purchase request sent: country=${country}, product=${product}`);
+    console.log(`[STEP 3] Request: POST /api/buy/activation`, { country, product });
+    console.log(`[PURCHASE] Request sent: country=${country}, product=${product}`);
 
     try {
         const result = await buyActivation(country, product);
-        console.log('[PURCHASE] API response:', result);
+        console.log('[STEP 3] Status: 200');
+        console.log('[STEP 3] Response:', result);
+        console.log('[PURCHASE] Response received:', result);
 
         // Normalize order from result
         const order = result?.order || result;
@@ -473,6 +482,10 @@ async function handleBuyClick(country, product, btnEl) {
         const orderId = order.id || order._id || order.orderId;
         const phone = order.phone || order.number || '—';
 
+        console.log(`[PURCHASE] Order ID: ${orderId}`);
+        console.log(`[PURCHASE] Activation ID: ${orderId}`);
+        console.log(`[PURCHASE] Status: ${order.status || 'PENDING'}`);
+        console.log(`[PURCHASE] Number: ${phone}`);
         console.log(`[ORDER] Order ID: ${orderId}`);
         console.log(`[ORDER] Number received: ${phone}`);
         console.log(`[ORDER] Initial status: ${order.status || 'PENDING'}`);
@@ -531,13 +544,17 @@ async function openOrderModal(orderId, initialOrder = null) {
     } else {
         setModalLoading(orderId);
         try {
+            console.log(`[STEP 4] Request: GET /api/order/${orderId}`);
             console.log(`[ORDER] Checking status... (GET /api/order/${orderId})`);
             const res = await getOrder(orderId);
+            console.log('[STEP 4] Status: 200');
+            console.log('[STEP 4] Response:', res);
             order = res?.order || res;
             console.log(`[ORDER] Status response:`, order);
             currentOrderData = order;
             updateOrderUI(order);
         } catch (err) {
+            console.error(`[STEP 4] Error fetching order ${orderId}:`, err);
             console.error(`[ORDER] Error fetching order ${orderId}:`, err);
             setModalError(`Could not load order details (#${orderId}): ${err.message}`);
             return;
@@ -690,8 +707,11 @@ function startPolling(orderId) {
         pollCount++;
 
         try {
+            console.log(`[STEP 4] Request: GET /api/order/${orderId}`);
             console.log(`[ORDER] Checking status... (Poll #${pollCount} for Order ID: ${orderId})`);
             const res = await getOrder(orderId);
+            console.log('[STEP 4] Status: 200');
+            console.log('[STEP 4] Response:', res);
             const order = res?.order || res;
 
             if (!order) {
@@ -776,12 +796,13 @@ async function handleFinishOrder() {
     if (btn) { btn.disabled = true; btn.textContent = 'Finishing…'; }
 
     const targetOrderId = currentOrderId;
-    console.log(`[Order Flow] Step 5: Finishing Order ID: ${targetOrderId}...`);
+    console.log(`[STEP 5] Request: POST /api/order/${targetOrderId}/finish`);
 
     try {
-        await finishOrder(targetOrderId);
+        const res = await finishOrder(targetOrderId);
+        console.log('[STEP 5] Status: 200');
+        console.log('[STEP 5] Response:', res);
         stopPolling();
-        console.log(`[Order Flow] Step 5: Order ID ${targetOrderId} finished successfully.`);
         showToast('✅ Order finished and marked complete!', 'success');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -789,7 +810,7 @@ async function handleFinishOrder() {
         closeSmsModal();
         await loadWalletBalanceBuyPage();
     } catch (err) {
-        console.error(`[Order Flow] finishOrder error for Order ID ${targetOrderId}:`, err);
+        console.error(`[STEP 5] finishOrder error for Order ID ${targetOrderId}:`, err);
         showToast(err.message || 'Failed to finish order.', 'error');
         if (btn) { btn.disabled = false; btn.textContent = '✅ Done'; }
     } finally {
@@ -806,12 +827,13 @@ async function handleCancelOrder() {
     if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
 
     const targetOrderId = currentOrderId;
-    console.log(`[Order Flow] Step 6: Cancelling Order ID: ${targetOrderId}...`);
+    console.log(`[STEP 6] Request: POST /api/order/${targetOrderId}/cancel`);
 
     try {
-        await cancelOrder(targetOrderId);
+        const res = await cancelOrder(targetOrderId);
+        console.log('[STEP 6] Status: 200');
+        console.log('[STEP 6] Response:', res);
         stopPolling();
-        console.log(`[Order Flow] Step 6: Order ID ${targetOrderId} cancelled successfully.`);
         showToast('✅ Order cancelled successfully.', 'success');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -819,7 +841,7 @@ async function handleCancelOrder() {
         closeSmsModal();
         await loadWalletBalanceBuyPage();
     } catch (err) {
-        console.error(`[Order Flow] cancelOrder error for Order ID ${targetOrderId}:`, err);
+        console.error(`[STEP 6] cancelOrder error for Order ID ${targetOrderId}:`, err);
         showToast(err.message || 'Failed to cancel order.', 'error');
         if (btn) { btn.disabled = false; btn.textContent = '❌ Cancel'; }
     } finally {
@@ -836,12 +858,13 @@ async function handleBanOrder() {
     if (btn) { btn.disabled = true; btn.textContent = 'Reporting…'; }
 
     const targetOrderId = currentOrderId;
-    console.log(`[Order Flow] Step 7: Banning/Reporting Order ID: ${targetOrderId}...`);
+    console.log(`[STEP 7] Request: POST /api/order/${targetOrderId}/ban`);
 
     try {
-        await banOrder(targetOrderId);
+        const res = await banOrder(targetOrderId);
+        console.log('[STEP 7] Status: 200');
+        console.log('[STEP 7] Response:', res);
         stopPolling();
-        console.log(`[Order Flow] Step 7: Order ID ${targetOrderId} reported as banned.`);
         showToast('⚠️ Number reported as banned.', 'success');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -849,7 +872,7 @@ async function handleBanOrder() {
         closeSmsModal();
         await loadWalletBalanceBuyPage();
     } catch (err) {
-        console.error(`[Order Flow] banOrder error for Order ID ${targetOrderId}:`, err);
+        console.error(`[STEP 7] banOrder error for Order ID ${targetOrderId}:`, err);
         showToast(err.message || 'Failed to report ban.', 'error');
         if (btn) { btn.disabled = false; btn.textContent = '⚠️ Report Ban'; }
     } finally {
