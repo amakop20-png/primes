@@ -265,13 +265,16 @@ async function getProducts(country) {
     });
 }
 
-async function buyActivation(country, product, currency = 'NGN', operator = 'any', price = 0) {
+async function buyActivation(country, product) {
     if (!country || !product) {
         throw new Error('Both country and product are required to purchase a number.');
     }
     return await apiRequest('/api/buy/activation', {
         method: 'POST',
-        body: JSON.stringify({ country, product, service: product, currency, operator, network: operator, price })
+        body: JSON.stringify({
+            country: String(country).toLowerCase().trim(),
+            product: String(product).toLowerCase().trim()
+        })
     });
 }
 
@@ -335,15 +338,6 @@ async function resetPassword(token, newPassword) {
     });
 }
 
-async function rechargeWallet(amount, reference, currency = 'NGN') {
-    if (!amount || amount <= 0) throw new Error('Invalid recharge amount.');
-    if (!reference) throw new Error('Payment reference is required.');
-    return await apiRequest('/api/user/recharge', {
-        method: 'POST',
-        body: JSON.stringify({ amount, reference, currency })
-    });
-}
-
 /* ══════════════════════════════════════════
    EXPORT TO GLOBAL NAMESPACE
 ══════════════════════════════════════════ */
@@ -373,7 +367,6 @@ window.loginUser = loginUser;
 window.signupUser = signupUser;
 window.forgotPassword = forgotPassword;
 window.resetPassword = resetPassword;
-window.rechargeWallet = rechargeWallet;
 
 window.NuraAPI = {
     BASE_URL: API_BASE_URL,
@@ -400,6 +393,5 @@ window.NuraAPI = {
     loginUser,
     signupUser,
     forgotPassword,
-    resetPassword,
-    rechargeWallet
+    resetPassword
 };

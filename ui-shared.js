@@ -165,14 +165,6 @@ function saveProfileSettings() {
     if (phone) session.phone = phone;
     localStorage.setItem('primes_session', JSON.stringify(session));
 
-    // Optional: Call backend to update profile if the API exists
-    if (window.apiRequest && typeof window.apiRequest === 'function') {
-        window.apiRequest('/api/user/profile', {
-            method: 'PUT',
-            body: JSON.stringify({ name, email, phone })
-        }).catch(err => console.log('Profile update API not implemented or failed', err));
-    }
-
     updateProfileUI();
     if (typeof showToast === 'function') showToast('✅ Profile updated successfully!', 'success');
 }
@@ -304,33 +296,17 @@ window.addEventListener('storage', (e) => {
 async function checkForAnnouncements() {
     let announcementPayload = null;
 
-    try {
-        // 1. Try to fetch from the live backend first
-        if (typeof apiRequest !== 'undefined') {
-            const res = await apiRequest('/api/announcements', { method: 'GET' });
-            if (res && res.message) {
-                announcementPayload = res;
-            } else if (res && res.data && res.data.message) {
-                announcementPayload = res.data;
-            }
-        }
-    } catch (err) {
-        // Silent catch: endpoint probably doesn't exist yet
-    }
-
-    // 2. Fall back to local storage if API didn't return an announcement
-    if (!announcementPayload) {
-        const raw = localStorage.getItem('global_announcement');
-        if (raw) {
-            try {
-                announcementPayload = JSON.parse(raw);
-            } catch (e) {
-                announcementPayload = { message: raw, id: raw }; // Fallback for old string format
-            }
+    // Check local storage for administrative global announcements
+    const raw = localStorage.getItem('global_announcement');
+    if (raw) {
+        try {
+            announcementPayload = JSON.parse(raw);
+        } catch (e) {
+            announcementPayload = { message: raw, id: raw }; // Fallback for old string format
         }
     }
 
-    // 3. Display the announcement if it hasn't been seen yet
+    // Display the announcement if it hasn't been seen yet
     if (announcementPayload && announcementPayload.message) {
         const lastSeenId = localStorage.getItem('last_seen_announcement_id');
         if (String(announcementPayload.id) !== lastSeenId) {

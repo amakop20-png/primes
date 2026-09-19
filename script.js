@@ -705,22 +705,8 @@ async function loadReferralBalance() {
     
     try {
         const session = getSession();
-        let refBal = session?.referralBalance || 0;
-        
-        if (typeof window.apiRequest === 'function') {
-            try {
-                const data = await window.apiRequest('/api/user/profile');
-                if (data && data.referralBalance !== undefined) {
-                    refBal = parseFloat(data.referralBalance);
-                    session.referralBalance = refBal;
-                    localStorage.setItem('primes_session', JSON.stringify(session));
-                }
-            } catch (err) {
-                console.warn('Could not fetch profile for referral balance (mocking or cached)', err);
-            }
-        }
-        
-        el.textContent = '₦' + refBal.toLocaleString('en-US', {minimumFractionDigits: 2});
+        const refBal = session?.referralBalance || 0;
+        el.textContent = '₦' + Number(refBal).toLocaleString('en-US', {minimumFractionDigits: 2});
     } catch (err) {
         el.textContent = '₦0.00';
     }
@@ -1156,12 +1142,7 @@ function renderNotifications(notifs) {
 }
 
 async function markAllNotifRead() {
-    try {
-        await apiRequest('/api/user/notifications/mark-read', { method: 'POST' });
-        const badge = document.getElementById('notifBadge');
-        if (badge) badge.style.display = 'none';
-        loadNotifications();
-    } catch (err) {
-        showToast('Notification backend endpoint not found.', 'info');
-    }
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.style.display = 'none';
+    loadNotifications();
 }

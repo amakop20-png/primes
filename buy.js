@@ -455,18 +455,11 @@ async function handleBuyClick(country, product, btnEl) {
         btnEl.textContent = '⏳ Purchasing…';
     }
 
+    console.log(`[PURCHASE] Purchase request sent: country=${country}, product=${product}`);
+
     try {
-        const purchaseCurrency = getCurrency();
-        
-        const operatorEl = document.getElementById('operatorFilter');
-        const operator = operatorEl && operatorEl.value ? operatorEl.value : 'any';
-        
-        const productData = allProducts.find(p => p.key === product);
-        const price = purchaseCurrency === 'USD' ? productData?.priceUSD : productData?.priceNGN;
-        
-        console.log(`[Order Flow] Step 3: Initiating purchase for Country: "${country}", Product: "${product}", Currency: "${purchaseCurrency}"`);
-        const result = await buyActivation(country, product, purchaseCurrency, operator, price);
-        console.log(`[Order Flow] Step 3: Purchase API response received:`, result);
+        const result = await buyActivation(country, product);
+        console.log('[PURCHASE] API response:', result);
 
         // Normalize order from result
         const order = result?.order || result;
@@ -475,9 +468,13 @@ async function handleBuyClick(country, product, btnEl) {
             throw new Error(result?.message || 'Server did not return a valid order ID.');
         }
 
-        // Dynamically capture Order ID
+        // Dynamically capture the real Order ID from API response
         const orderId = order.id || order._id || order.orderId;
-        console.log(`[Order Flow] Step 3: Captured Order ID: ${orderId}, Phone Number: ${order.phone || order.number || 'N/A'}, Status: ${order.status || 'PENDING'}`);
+        const phone = order.phone || order.number || '—';
+
+        console.log(`[ORDER] Order ID: ${orderId}`);
+        console.log(`[ORDER] Number received: ${phone}`);
+        console.log(`[ORDER] Initial status: ${order.status || 'PENDING'}`);
 
         // Save real backend order ID
         currentOrderId   = orderId;
@@ -489,10 +486,10 @@ async function handleBuyClick(country, product, btnEl) {
         // Refresh wallet balance from backend
         await loadWalletBalanceBuyPage();
 
-        // Open SMS modal and start polling Step 4
+        // Open SMS modal and start Step 4 polling
         openOrderModal(orderId, order);
     } catch (err) {
-        console.error(`[Order Flow] Purchase failed (status ${err.status || 'unknown'}):`, err);
+        console.error(`[PURCHASE] Purchase failed:`, err);
         const detailedMsg = err.message || 'Failed to purchase number. Check your wallet balance.';
         showToast(detailedMsg, 'error');
     } finally {
@@ -510,12 +507,12 @@ async function handleBuyClick(country, product, btnEl) {
 ══════════════════════════════════════════ */
 async function openOrderModal(orderId, initialOrder = null) {
     if (!orderId) {
-        console.error('[Order Flow] Cannot open order modal: missing Order ID.');
+        console.error('[ORDER] Cannot open order modal: missing Order ID.');
         return;
     }
 
     currentOrderId = orderId;
-    console.log(`[Order Flow] Step 4: Opening Order Modal for Order ID: ${orderId}`);
+    console.log(`[ORDER] Opening Order Modal for Order ID: ${orderId}`);
 
     const overlay = document.getElementById('smsModalOverlay');
     if (!overlay) return;
@@ -530,14 +527,14 @@ async function openOrderModal(orderId, initialOrder = null) {
     } else {
         setModalLoading(orderId);
         try {
-            console.log(`[Order Flow] Step 4: Calling order-status endpoint GET /api/order/${orderId}...`);
+            console.log(`[ORDER] Checking status... (GET /api/order/${orderId})`);
             const res = await getOrder(orderId);
             order = res?.order || res;
-            console.log(`[Order Flow] Step 4: Order status response for Order ID ${orderId}:`, order);
+            console.log(`[ORDER] Status response:`, order);
             currentOrderData = order;
             updateOrderUI(order);
         } catch (err) {
-            console.error(`[Order Flow] Step 4: Error fetching order ${orderId}:`, err);
+            console.error(`[ORDER] Error fetching order ${orderId}:`, err);
             setModalError(`Could not load order details (#${orderId}): ${err.message}`);
             return;
         }
@@ -659,7 +656,7 @@ function startPolling(orderId) {
     stopPolling(); // Ensure no duplicate intervals exist
 
     if (!orderId) {
-        console.warn('[Order Polling] Cannot start polling: No Order ID provided.');
+        console.warn('[ORDER] Cannot start polling: No Order ID provided.');
         return;
     }
 
@@ -668,14 +665,14 @@ function startPolling(orderId) {
     isPollRequestInProgress = false;
     let pollCount = 0;
 
-    console.log(`[Order Polling] Started polling for Order ID: ${orderId} (Interval: ${POLL_INTERVAL_MS / 1000}s)`);
+    console.log(`[ORDER] Starting polling for Order ID: ${orderId} (Interval: ${POLL_INTERVAL_MS / 1000}s)`);
 
     const executePoll = async () => {
         if (isPollRequestInProgress) return; // Prevent overlapping requests
 
         // Check overall timeout ceiling
         if (Date.now() - pollStartTime > MAX_POLL_DURATION_MS) {
-            console.warn(`[Order Polling] Max poll timeout reached for Order ID: ${orderId}`);
+            console.warn(`[ORDER] Max poll timeout reached for Order ID: ${orderId}`);
             stopPolling();
             if (currentOrderData) {
                 currentOrderData.status = 'TIMEOUT';
@@ -689,12 +686,12 @@ function startPolling(orderId) {
         pollCount++;
 
         try {
-            console.log(`[Order Polling] Requesting GET /api/order/${orderId} (Poll #${pollCount})...`);
+            console.log(`[ORDER] Checking status... (Poll #${pollCount} for Order ID: ${orderId})`);
             const res = await getOrder(orderId);
             const order = res?.order || res;
 
             if (!order) {
-                console.warn(`[Order Polling] Empty order response for Order ID: ${orderId}`);
+                console.warn(`[ORDER] Empty order response for Order ID: ${orderId}`);
                 return;
             }
 
@@ -702,7 +699,7 @@ function startPolling(orderId) {
             currentOrderData = order;
 
             const status = String(order.status || '').toUpperCase();
-            console.log(`[Order Polling] Order ID: ${orderId} -> Current Status: ${status}`);
+            console.log(`[ORDER] Status response: ${status}`, order);
 
             // Check if order expiration time has passed
             const expiresAt = order.expires || order.expiresAt;
@@ -710,7 +707,7 @@ function startPolling(orderId) {
                 order.status = 'EXPIRED';
                 updateOrderUI(order);
                 stopPolling();
-                console.log(`[Order Polling] Order ID: ${orderId} has expired.`);
+                console.log(`[ORDER] Order ID: ${orderId} has expired.`);
                 showToast('⏰ This number expired without receiving an SMS.', 'warning');
                 return;
             }
@@ -719,22 +716,23 @@ function startPolling(orderId) {
 
             if (status === 'RECEIVED') {
                 stopPolling();
-                console.log(`[Order Polling] Order ID: ${orderId} received SMS! Verification code ready.`);
+                console.log(`[ORDER] Order completed! SMS / OTP received.`);
+                console.log(`[ORDER] Number received: ${order.phone || '—'}`);
                 showToast('📨 SMS received! Your verification code is ready.', 'success');
             } else if (status === 'FINISHED' || status === 'CANCELED' || status === 'BANNED' || status === 'EXPIRED') {
                 stopPolling();
-                console.log(`[Order Polling] Order ID: ${orderId} reached terminal state: ${status}`);
+                console.log(`[ORDER] Polling stopped. Terminal status: ${status}`);
             }
         } catch (err) {
             pollErrorCount++;
-            console.error(`[Order Polling] Error polling Order ID ${orderId} (Error count: ${pollErrorCount}/${MAX_CONSECUTIVE_POLL_ERRORS}):`, err.message);
+            console.error(`[ORDER] Error checking status for Order ID ${orderId} (${pollErrorCount}/${MAX_CONSECUTIVE_POLL_ERRORS}):`, err.message);
 
             if (err.status === 404 || err.status === 401) {
                 stopPolling();
                 setModalError(err.message || 'Order not found or unauthorized.');
             } else if (pollErrorCount >= MAX_CONSECUTIVE_POLL_ERRORS) {
                 stopPolling();
-                console.warn(`[Order Polling] Stopped polling Order ID ${orderId} after ${MAX_CONSECUTIVE_POLL_ERRORS} consecutive failures.`);
+                console.warn(`[ORDER] Stopped polling Order ID ${orderId} after ${MAX_CONSECUTIVE_POLL_ERRORS} consecutive failures.`);
                 showToast('Temporary network or server issue while checking order status.', 'error');
             }
         } finally {
@@ -1322,14 +1320,9 @@ function renderNotifications(notifs) {
 }
 
 async function markAllNotifRead() {
-    try {
-        await apiRequest('/api/user/notifications/mark-read', { method: 'POST' });
-        const badge = document.getElementById('notifBadge');
-        if (badge) badge.style.display = 'none';
-        loadNotifications();
-    } catch (err) {
-        if (typeof showToast === 'function') showToast('Notification backend endpoint not found.', 'info');
-    }
+    const badge = document.getElementById('notifBadge');
+    if (badge) badge.style.display = 'none';
+    loadNotifications();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

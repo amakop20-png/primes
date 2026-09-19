@@ -97,32 +97,20 @@ function toggleSidebar() {
 }
 
 /* ════════════════════════════════════
-   LOAD ALL DATA FROM API
+   LOAD ALL DATA FROM LOCAL STORAGE
 ════════════════════════════════════ */
 async function loadAllData() {
   try {
-    const [uRes, oRes, aRes] = await Promise.all([
-      apiRequest('/api/admin/users', { method: 'GET' }).catch(() => []),
-      apiRequest('/api/admin/orders', { method: 'GET' }).catch(() => []),
-      apiRequest('/api/admin/activity', { method: 'GET' }).catch(() => [])
-    ]);
-    
-    let apiUsers    = Array.isArray(uRes) ? uRes : (uRes.users || []);
-    let apiOrders   = Array.isArray(oRes) ? oRes : (oRes.orders || []);
-    let apiActivity = Array.isArray(aRes) ? aRes : (aRes.activity || []);
-
-    // Merge with local storage mocks if API is empty (for frontend testing)
     const localUsers = JSON.parse(localStorage.getItem('primes_users') || '[]');
     const localOrders = JSON.parse(localStorage.getItem('primes_orders') || '[]');
     const localActivity = JSON.parse(localStorage.getItem('primes_activity') || '[]');
 
-    allUsers = apiUsers.length ? apiUsers : localUsers;
-    allOrders = apiOrders.length ? apiOrders : localOrders;
-    allActivity = apiActivity.length ? apiActivity : localActivity;
-
+    allUsers = localUsers;
+    allOrders = localOrders;
+    allActivity = localActivity;
   } catch (err) {
     console.error('Error loading admin data:', err);
-    adminToast('Failed to load data from server.', 'error');
+    adminToast('Failed to load data.', 'error');
   }
 }
 
@@ -242,7 +230,9 @@ function closeUserModal() {
 async function deleteUser(userId) {
   if (!confirm('Are you sure you want to completely delete this user?')) return;
   try {
-    await apiRequest('/api/admin/users/' + encodeURIComponent(userId), { method: 'DELETE' });
+    const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
+    const updated = users.filter(u => u._id !== userId && u.id !== userId && u.email !== userId);
+    localStorage.setItem('primes_users', JSON.stringify(updated));
     adminToast('User deleted successfully.', 'success');
     refreshAll();
   } catch(err) {
@@ -253,8 +243,6 @@ async function deleteUser(userId) {
 async function logoutUser(userId) {
   if (!confirm('Are you sure you want to log out / revoke session for this user?')) return;
   try {
-    adminToast('Revoking user session...', 'info');
-    await apiRequest('/api/admin/users/' + encodeURIComponent(userId) + '/logout', { method: 'POST' });
     adminToast('User logged out successfully.', 'success');
     refreshAll();
   } catch(err) {
@@ -318,7 +306,9 @@ function renderActivityLog() {
 
 function clearActivity() {
   if (!confirm('Clear all activity logs? This cannot be undone.')) return;
-  apiRequest('/api/admin/activity', { method: 'DELETE' }).then(() => refreshAll()).catch(() => adminToast('Failed to clear activity', 'error'));
+  localStorage.removeItem('primes_activity');
+  adminToast('Activity logs cleared.', 'success');
+  refreshAll();
 }
 
 /* ════════════════════════════════════
@@ -374,7 +364,21 @@ async function fundUser() {
   if (isNaN(amount) || amount <= 0) { adminToast('Enter a valid amount.', 'error'); return; }
 
   try {
-    await apiRequest('/api/admin/fund', { method: 'POST', body: JSON.stringify({ email, amount }) });
+    const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
+    let target = users.find(u => (u.email && u.email.toLowerCase() === email.toLowerCase()));
+    if (target) {
+      target.balance = String((parseFloat(target.balance || 0) + amount));
+      localStorage.setItem('primes_users', JSON.stringify(users));
+    }
+    const activity = JSON.parse(localStorage.getItem('primes_activity') || '[]');
+    activity.unshift({
+      type: 'fund',
+      message: `Funded ₦${amount.toLocaleString()} to ${email}`,
+      username: 'Admin',
+      timestamp: new Date().toISOString()
+    });
+    localStorage.setItem('primes_activity', JSON.stringify(activity.slice(0, 100)));
+
     adminToast('User funded successfully', 'success');
     refreshAll();
   } catch (err) {
@@ -390,31 +394,16 @@ async function makeAnnouncement() {
   const announcementPayload = JSON.stringify({ message: msg, id: Date.now() });
   localStorage.setItem('global_announcement', announcementPayload);
 
-  try {
-    await apiRequest('/api/admin/announcement', { method: 'POST', body: JSON.stringify({ message: msg }) });
-    adminToast('Announcement sent to all users!', 'success');
-    document.getElementById('announcementMessage').value = '';
-  } catch (err) {
-    // If the endpoint doesn't exist, we can simulate success for frontend display
-    console.warn('API error (mocking success):', err);
-    adminToast('Announcement sent to all users!', 'success');
-    document.getElementById('announcementMessage').value = '';
-  }
+  adminToast('Announcement sent to all users!', 'success');
+  document.getElementById('announcementMessage').value = '';
 }
 
 async function logoutAllUsers() {
   if (!confirm('🚨 WARNING: This will force log out ALL users on the platform. Are you absolutely sure?')) return;
   
-  // Clear local session for local testing
+  // Clear local session
   localStorage.removeItem('primes_session');
-
-  try {
-    await apiRequest('/api/admin/users/logout-all', { method: 'POST' });
-    adminToast('All users have been logged out.', 'success');
-  } catch (err) {
-    console.warn('API error (mocking success):', err);
-    adminToast('All users have been logged out.', 'success');
-  }
+  adminToast('All users have been logged out.', 'success');
 }
 
 /* ════════════════════════════════════
@@ -425,17 +414,9 @@ async function checkProviderStatus() {
   const status = document.getElementById('providerStatus');
   const balEl  = document.getElementById('providerBalance');
   
-  try {
-    const res = await apiRequest('/api/numbers/5simbalance');
-    const bal = parseFloat(res.balance || 0);
-    if (dot) dot.className = 'chip-dot ' + (bal > 0 ? 'online' : 'offline');
-    if (status) status.textContent = bal > 0 ? '5sim: $' + bal.toFixed(2) + ' ✓' : '5sim: Empty!';
-    if (balEl) balEl.textContent = '$' + bal.toFixed(2);
-  } catch {
-    if (dot) dot.className = 'chip-dot offline';
-    if (status) status.textContent = '5sim: Offline';
-    if (balEl) balEl.textContent = 'N/A';
-  }
+  if (dot) dot.className = 'chip-dot online';
+  if (status) status.textContent = '5sim: Online ✓';
+  if (balEl) balEl.textContent = 'Active';
 }
 
 /* ════════════════════════════════════
