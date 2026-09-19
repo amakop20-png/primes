@@ -462,16 +462,22 @@ async function handleBuyClick(country, product, btnEl) {
         const operator = operatorEl && operatorEl.value ? operatorEl.value : 'any';
         
         const productData = allProducts.find(p => p.key === product);
-        const price = purchaseCurrency === 'USD' ? productData.priceUSD : productData.priceNGN;
+        const price = purchaseCurrency === 'USD' ? productData?.priceUSD : productData?.priceNGN;
         
+        console.log(`[Order Flow] Step 3: Initiating purchase for Country: "${country}", Product: "${product}", Currency: "${purchaseCurrency}"`);
         const result = await buyActivation(country, product, purchaseCurrency, operator, price);
-        const order  = result?.order || result;
+        console.log(`[Order Flow] Step 3: Purchase API response received:`, result);
 
-        if (!order || (!order.id && !order._id)) {
-            throw new Error('Server did not return a valid order.');
+        // Normalize order from result
+        const order = result?.order || result;
+
+        if (!order || (!order.id && !order._id && !order.orderId)) {
+            throw new Error(result?.message || 'Server did not return a valid order ID.');
         }
 
-        const orderId = order.id || order._id;
+        // Dynamically capture Order ID
+        const orderId = order.id || order._id || order.orderId;
+        console.log(`[Order Flow] Step 3: Captured Order ID: ${orderId}, Phone Number: ${order.phone || order.number || 'N/A'}, Status: ${order.status || 'PENDING'}`);
 
         // Save real backend order ID
         currentOrderId   = orderId;
@@ -483,10 +489,10 @@ async function handleBuyClick(country, product, btnEl) {
         // Refresh wallet balance from backend
         await loadWalletBalanceBuyPage();
 
-        // Open SMS modal and start polling
+        // Open SMS modal and start polling Step 4
         openOrderModal(orderId, order);
     } catch (err) {
-        console.error(`[Buy Error] API returned ${err.status || 'unknown status'}:`, err);
+        console.error(`[Order Flow] Purchase failed (status ${err.status || 'unknown'}):`, err);
         const detailedMsg = err.message || 'Failed to purchase number. Check your wallet balance.';
         showToast(detailedMsg, 'error');
     } finally {
@@ -499,11 +505,17 @@ async function handleBuyClick(country, product, btnEl) {
 }
 
 /* ══════════════════════════════════════════
-   ORDER MODAL & DETAILS
+   ORDER MODAL & DETAILS (Step 4 - Check Order)
    Uses: getOrder(orderId) from api.js
 ══════════════════════════════════════════ */
 async function openOrderModal(orderId, initialOrder = null) {
+    if (!orderId) {
+        console.error('[Order Flow] Cannot open order modal: missing Order ID.');
+        return;
+    }
+
     currentOrderId = orderId;
+    console.log(`[Order Flow] Step 4: Opening Order Modal for Order ID: ${orderId}`);
 
     const overlay = document.getElementById('smsModalOverlay');
     if (!overlay) return;
@@ -511,31 +523,39 @@ async function openOrderModal(orderId, initialOrder = null) {
     overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
 
-    setModalLoading();
-
     let order = initialOrder;
-    if (!order) {
+    if (order) {
+        currentOrderData = order;
+        updateOrderUI(order);
+    } else {
+        setModalLoading(orderId);
         try {
+            console.log(`[Order Flow] Step 4: Calling order-status endpoint GET /api/order/${orderId}...`);
             const res = await getOrder(orderId);
             order = res?.order || res;
+            console.log(`[Order Flow] Step 4: Order status response for Order ID ${orderId}:`, order);
+            currentOrderData = order;
+            updateOrderUI(order);
         } catch (err) {
-            console.error('fetchOrder error:', err);
-            setModalError('Could not load order details: ' + err.message);
+            console.error(`[Order Flow] Step 4: Error fetching order ${orderId}:`, err);
+            setModalError(`Could not load order details (#${orderId}): ${err.message}`);
             return;
         }
     }
 
-    currentOrderData = order;
-    updateOrderUI(order);
-
-    if (order.status === 'PENDING') {
+    const currentStatus = String(order?.status || 'PENDING').toUpperCase();
+    if (currentStatus === 'PENDING') {
         startPolling(orderId);
+    } else {
+        stopPolling();
     }
 }
 
-function setModalLoading() {
+function setModalLoading(orderId) {
     const phoneEl = document.getElementById('modalPhone');
     if (phoneEl) phoneEl.textContent = 'Loading…';
+    const orderIdEl = document.getElementById('modalOrderId');
+    if (orderIdEl) orderIdEl.textContent = orderId ? `#${orderId}` : '—';
     const statusText = document.getElementById('statusText');
     if (statusText) statusText.textContent = 'Fetching order status…';
     const otpBox = document.getElementById('smsOtpBox');
@@ -550,11 +570,15 @@ function setModalError(msg) {
 function updateOrderUI(order) {
     if (!order) return;
 
+    // Display purchased number
+    const phone = order.phone || order.number || order.phone_number || '—';
     const phoneEl = document.getElementById('modalPhone');
-    if (phoneEl) phoneEl.textContent = order.phone || order.number || '—';
+    if (phoneEl) phoneEl.textContent = phone;
 
+    // Display dynamic Order ID
+    const orderId = order.id || order._id || order.orderId || currentOrderId || '—';
     const orderIdEl = document.getElementById('modalOrderId');
-    if (orderIdEl) orderIdEl.textContent = '#' + (order.id || order._id || '—');
+    if (orderIdEl) orderIdEl.textContent = '#' + orderId;
 
     const expiresEl = document.getElementById('modalExpires');
     if (expiresEl) {
@@ -571,6 +595,7 @@ function updateOrderUI(order) {
         CANCELED: { dot: '',         text: '❌ Order Cancelled',                           color: '#ef4444' },
         BANNED:   { dot: '',         text: '⚠️ Number Reported & Banned',                  color: '#ef4444' },
         EXPIRED:  { dot: '',         text: '⏰ Number Expired (No SMS Received)',           color: '#888888' },
+        TIMEOUT:  { dot: '',         text: '⏰ Polling Timeout (Order pending)',            color: '#888888' },
     };
 
     const currentStatus = String(order.status || 'PENDING').toUpperCase();
@@ -586,9 +611,10 @@ function updateOrderUI(order) {
     const otpCode     = document.getElementById('otpCode');
     const otpFullText = document.getElementById('otpFullText');
 
-    if (currentStatus === 'RECEIVED' && Array.isArray(order.sms) && order.sms.length > 0) {
-        const sms = order.sms[0];
-        const otp = sms.code || extractOTP(sms.text);
+    const smsList = Array.isArray(order.sms) ? order.sms : (order.sms ? [order.sms] : []);
+    if (currentStatus === 'RECEIVED' && smsList.length > 0) {
+        const sms = smsList[0] || {};
+        const otp = sms.code || order.code || extractOTP(sms.text || order.text || '');
         if (otpBox) otpBox.classList.add('show');
         if (otpCode) otpCode.textContent = otp || '—';
         if (otpFullText) {
@@ -606,7 +632,7 @@ function updateOrderUI(order) {
 
     const isPending  = currentStatus === 'PENDING';
     const isReceived = currentStatus === 'RECEIVED';
-    const isFinal    = currentStatus === 'FINISHED' || currentStatus === 'CANCELED' || currentStatus === 'BANNED' || currentStatus === 'EXPIRED';
+    const isFinal    = currentStatus === 'FINISHED' || currentStatus === 'CANCELED' || currentStatus === 'BANNED' || currentStatus === 'EXPIRED' || currentStatus === 'TIMEOUT';
 
     if (cancelBtn) cancelBtn.disabled = !isPending && !isReceived;
     if (banBtn)    banBtn.disabled    = isFinal;
@@ -620,31 +646,71 @@ function extractOTP(text) {
 }
 
 /* ══════════════════════════════════════════
-   SMS POLLING
+   SMS / ORDER POLLING (Step 4)
    Uses: getOrder(orderId) from api.js
 ══════════════════════════════════════════ */
+let pollStartTime = 0;
+let pollErrorCount = 0;
+let isPollRequestInProgress = false;
+const MAX_POLL_DURATION_MS = 15 * 60 * 1000; // 15 minutes ceiling
+const MAX_CONSECUTIVE_POLL_ERRORS = 5;
+
 function startPolling(orderId) {
     stopPolling(); // Ensure no duplicate intervals exist
 
-    pollInterval = setInterval(async () => {
-        try {
-            const res   = await getOrder(orderId);
-            const order = res?.order || res;
-            if (!order) return;
+    if (!orderId) {
+        console.warn('[Order Polling] Cannot start polling: No Order ID provided.');
+        return;
+    }
 
+    pollStartTime = Date.now();
+    pollErrorCount = 0;
+    isPollRequestInProgress = false;
+    let pollCount = 0;
+
+    console.log(`[Order Polling] Started polling for Order ID: ${orderId} (Interval: ${POLL_INTERVAL_MS / 1000}s)`);
+
+    const executePoll = async () => {
+        if (isPollRequestInProgress) return; // Prevent overlapping requests
+
+        // Check overall timeout ceiling
+        if (Date.now() - pollStartTime > MAX_POLL_DURATION_MS) {
+            console.warn(`[Order Polling] Max poll timeout reached for Order ID: ${orderId}`);
+            stopPolling();
+            if (currentOrderData) {
+                currentOrderData.status = 'TIMEOUT';
+                updateOrderUI(currentOrderData);
+            }
+            showToast('⏰ Polling timed out. You can manually refresh or check later.', 'warning');
+            return;
+        }
+
+        isPollRequestInProgress = true;
+        pollCount++;
+
+        try {
+            console.log(`[Order Polling] Requesting GET /api/order/${orderId} (Poll #${pollCount})...`);
+            const res = await getOrder(orderId);
+            const order = res?.order || res;
+
+            if (!order) {
+                console.warn(`[Order Polling] Empty order response for Order ID: ${orderId}`);
+                return;
+            }
+
+            pollErrorCount = 0; // Reset consecutive errors
             currentOrderData = order;
 
             const status = String(order.status || '').toUpperCase();
+            console.log(`[Order Polling] Order ID: ${orderId} -> Current Status: ${status}`);
 
-            // Stop polling once the number's own expiry time has passed,
-            // even if the backend never flips the status away from
-            // PENDING. Without this, a number that never receives an SMS
-            // gets polled every 5s forever.
+            // Check if order expiration time has passed
             const expiresAt = order.expires || order.expiresAt;
             if (status === 'PENDING' && expiresAt && new Date(expiresAt).getTime() < Date.now()) {
                 order.status = 'EXPIRED';
                 updateOrderUI(order);
                 stopPolling();
+                console.log(`[Order Polling] Order ID: ${orderId} has expired.`);
                 showToast('⏰ This number expired without receiving an SMS.', 'warning');
                 return;
             }
@@ -653,14 +719,32 @@ function startPolling(orderId) {
 
             if (status === 'RECEIVED') {
                 stopPolling();
+                console.log(`[Order Polling] Order ID: ${orderId} received SMS! Verification code ready.`);
                 showToast('📨 SMS received! Your verification code is ready.', 'success');
-            } else if (status === 'FINISHED' || status === 'CANCELED' || status === 'BANNED') {
+            } else if (status === 'FINISHED' || status === 'CANCELED' || status === 'BANNED' || status === 'EXPIRED') {
                 stopPolling();
+                console.log(`[Order Polling] Order ID: ${orderId} reached terminal state: ${status}`);
             }
         } catch (err) {
-            console.error('[SMS Polling error]:', err);
+            pollErrorCount++;
+            console.error(`[Order Polling] Error polling Order ID ${orderId} (Error count: ${pollErrorCount}/${MAX_CONSECUTIVE_POLL_ERRORS}):`, err.message);
+
+            if (err.status === 404 || err.status === 401) {
+                stopPolling();
+                setModalError(err.message || 'Order not found or unauthorized.');
+            } else if (pollErrorCount >= MAX_CONSECUTIVE_POLL_ERRORS) {
+                stopPolling();
+                console.warn(`[Order Polling] Stopped polling Order ID ${orderId} after ${MAX_CONSECUTIVE_POLL_ERRORS} consecutive failures.`);
+                showToast('Temporary network or server issue while checking order status.', 'error');
+            }
+        } finally {
+            isPollRequestInProgress = false;
         }
-    }, POLL_INTERVAL_MS);
+    };
+
+    // Execute immediately, then periodically
+    executePoll();
+    pollInterval = setInterval(executePoll, POLL_INTERVAL_MS);
 }
 
 function stopPolling() {
@@ -668,6 +752,7 @@ function stopPolling() {
         clearInterval(pollInterval);
         pollInterval = null;
     }
+    isPollRequestInProgress = false;
 }
 
 function closeSmsModal() {
@@ -678,7 +763,7 @@ function closeSmsModal() {
 }
 
 /* ══════════════════════════════════════════
-   ORDER ACTIONS
+   ORDER ACTIONS (Finish, Cancel, Ban)
    Uses: finishOrder, cancelOrder, banOrder from api.js
 ══════════════════════════════════════════ */
 async function handleFinishOrder() {
@@ -688,9 +773,13 @@ async function handleFinishOrder() {
     isActionBusy = true;
     if (btn) { btn.disabled = true; btn.textContent = 'Finishing…'; }
 
+    const targetOrderId = currentOrderId;
+    console.log(`[Order Flow] Step 5: Finishing Order ID: ${targetOrderId}...`);
+
     try {
-        await finishOrder(currentOrderId);
+        await finishOrder(targetOrderId);
         stopPolling();
+        console.log(`[Order Flow] Step 5: Order ID ${targetOrderId} finished successfully.`);
         showToast('✅ Order finished and marked complete!', 'success');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -698,7 +787,7 @@ async function handleFinishOrder() {
         closeSmsModal();
         await loadWalletBalanceBuyPage();
     } catch (err) {
-        console.error('finishOrder error:', err);
+        console.error(`[Order Flow] finishOrder error for Order ID ${targetOrderId}:`, err);
         showToast(err.message || 'Failed to finish order.', 'error');
         if (btn) { btn.disabled = false; btn.textContent = '✅ Done'; }
     } finally {
@@ -714,9 +803,13 @@ async function handleCancelOrder() {
     isActionBusy = true;
     if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
 
+    const targetOrderId = currentOrderId;
+    console.log(`[Order Flow] Step 6: Cancelling Order ID: ${targetOrderId}...`);
+
     try {
-        await cancelOrder(currentOrderId);
+        await cancelOrder(targetOrderId);
         stopPolling();
+        console.log(`[Order Flow] Step 6: Order ID ${targetOrderId} cancelled successfully.`);
         showToast('✅ Order cancelled successfully.', 'success');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -724,7 +817,7 @@ async function handleCancelOrder() {
         closeSmsModal();
         await loadWalletBalanceBuyPage();
     } catch (err) {
-        console.error('cancelOrder error:', err);
+        console.error(`[Order Flow] cancelOrder error for Order ID ${targetOrderId}:`, err);
         showToast(err.message || 'Failed to cancel order.', 'error');
         if (btn) { btn.disabled = false; btn.textContent = '❌ Cancel'; }
     } finally {
@@ -740,9 +833,13 @@ async function handleBanOrder() {
     isActionBusy = true;
     if (btn) { btn.disabled = true; btn.textContent = 'Reporting…'; }
 
+    const targetOrderId = currentOrderId;
+    console.log(`[Order Flow] Step 7: Banning/Reporting Order ID: ${targetOrderId}...`);
+
     try {
-        await banOrder(currentOrderId);
+        await banOrder(targetOrderId);
         stopPolling();
+        console.log(`[Order Flow] Step 7: Order ID ${targetOrderId} reported as banned.`);
         showToast('⚠️ Number reported as banned.', 'success');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -750,7 +847,7 @@ async function handleBanOrder() {
         closeSmsModal();
         await loadWalletBalanceBuyPage();
     } catch (err) {
-        console.error('banOrder error:', err);
+        console.error(`[Order Flow] banOrder error for Order ID ${targetOrderId}:`, err);
         showToast(err.message || 'Failed to report ban.', 'error');
         if (btn) { btn.disabled = false; btn.textContent = '⚠️ Report Ban'; }
     } finally {
