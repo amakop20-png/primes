@@ -110,7 +110,9 @@
   <!-- Main Content -->
   <main class="container">
 
-    <div class="dashboard-title-container">
+    <div class="dashboard-title-container">9rem;">Enter the amount you want to deposit. Minimum: <strong id="depositMinLabel">₦100</strong></p>
+      <div style="position:relative; margin-bottom:1.2rem;">
+        <span id="depositSymbol" style="position:absolute; l
         <h1>Dashboard</h1>
         <p>Manage your wallet and account activities.</p>
     </div>
@@ -310,9 +312,7 @@
         <h2 style="margin:0; font-size:1.3rem; font-weight:700; color:var(--text);">💳 Add Funds</h2>
         <button id="depositModalClose" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--muted); line-height:1;">&times;</button>
       </div>
-      <p style="margin:0 0 1rem; color:var(--muted); font-size:0.9rem;">Enter the amount you want to deposit. Minimum: <strong id="depositMinLabel">₦100</strong></p>
-      <div style="position:relative; margin-bottom:1.2rem;">
-        <span id="depositSymbol" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:1.1rem; font-weight:700; color:var(--primary);">₦</span>
+      <p style="margin:0 0 1rem; color:var(--muted); font-size:0.eft:14px; top:50%; transform:translateY(-50%); font-size:1.1rem; font-weight:700; color:var(--primary);">₦</span>
         <input
           id="depositAmountInput"
           type="number"
