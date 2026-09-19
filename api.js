@@ -1,5 +1,5 @@
 /* ======================================================================
-   api.js — NuraSMS Centralized API Client & Integration Layer
+   api.js - NuraSMS Centralized API Client & Integration Layer
    Base URL: https://nurasms-api.onrender.com
    All dashboard and application API communication is centralized here.
 ====================================================================== */
@@ -8,9 +8,9 @@
 const API_BASE_URL = 'https://nurasms-api.onrender.com';
 const REQUEST_TIMEOUT_MS = 25000; // 25s ceiling as specified in project requirements
 
-/* ══════════════════════════════════════════
+/* ==========================================
    AUTHENTICATION & STORAGE HELPERS
-══════════════════════════════════════════ */
+========================================== */
 
 function getAuthToken() {
     let token = localStorage.getItem('primes_token');
@@ -77,9 +77,9 @@ function logout() {
     window.location.href = 'login.html';
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    CENTRALIZED FETCH WRAPPER
-══════════════════════════════════════════ */
+========================================== */
 
 async function apiRequest(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
@@ -213,11 +213,11 @@ async function apiRequest(endpoint, options = {}) {
     return data;
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    WALLET BALANCE NORMALIZER
    Extracts real balance directly from backend response without synthetic
    cross-currency conversion. NGN and USD remain strictly separate.
-══════════════════════════════════════════ */
+========================================== */
 function normalizeWalletBalance(data, currency = 'NGN') {
     if (!data || typeof data !== 'object') return 0;
     const isUSD = String(currency).toUpperCase() === 'USD';
@@ -246,7 +246,7 @@ function normalizeWalletBalance(data, currency = 'NGN') {
     }
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    VIRTUAL ACCOUNT NORMALIZER
    Paystack's dedicated-account response nests everything inside a
    "dedicatedAccount" object (bank, account_name, account_number, etc.)
@@ -255,11 +255,11 @@ function normalizeWalletBalance(data, currency = 'NGN') {
    undefined. This flattens the shape once, here, so every caller of
    getVirtualAccount() gets the same predictable fields no matter which
    shape the backend actually sends.
-══════════════════════════════════════════ */
+========================================== */
 function normalizeVirtualAccount(data) {
     if (!data || typeof data !== 'object') return null;
 
-    // Some backends already return it flat — support both.
+    // Some backends already return it flat - support both.
     const src = data.dedicatedAccount || data.virtualAccount || data;
 
     if (!src || typeof src !== 'object') return null;
@@ -278,9 +278,9 @@ function normalizeVirtualAccount(data) {
     };
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    REUSABLE API ENDPOINT METHODS
-══════════════════════════════════════════ */
+========================================== */
 
 async function createVirtualAccount(currency = 'NGN') {
     const data = await apiRequest('/api/create-virtual-account', {
@@ -402,9 +402,9 @@ async function resetPassword(token, newPassword) {
     });
 }
 
-/* ══════════════════════════════════════════
+/* ==========================================
    EXPORT TO GLOBAL NAMESPACE
-══════════════════════════════════════════ */
+========================================== */
 window.API_BASE_URL = API_BASE_URL;
 window.apiRequest = apiRequest;
 window.getAuthToken = getAuthToken;
