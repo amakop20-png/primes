@@ -6,32 +6,46 @@
 
 // USING DIRECT BACKEND URL
 const API_BASE_URL = 'https://nurasms-api.onrender.com';
-const REQUEST_TIMEOUT_MS = 25000; // 25s — gives Render cold starts a chance without hanging forever
+const REQUEST_TIMEOUT_MS = 60000; // 60s ceiling for Render cold starts
 
 /* ══════════════════════════════════════════
    AUTHENTICATION & STORAGE HELPERS
 ══════════════════════════════════════════ */
 
 function getAuthToken() {
-    return localStorage.getItem('primes_token') ||
-           localStorage.getItem('token') ||
-           localStorage.getItem('accessToken') ||
-           null;
+    let token = localStorage.getItem('primes_token');
+    if (!token) {
+        // One-time fallback and migration from legacy token keys
+        token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+        if (token) {
+            localStorage.setItem('primes_token', token);
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('token');
+        }
+    }
+    return token || null;
 }
 
 function setAuthToken(token) {
     if (token) {
         localStorage.setItem('primes_token', token);
+        // Clear conflicting legacy keys
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('token');
     }
 }
 
 function clearAuth() {
     localStorage.removeItem('primes_token');
-    localStorage.removeItem('token');
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('token');
     localStorage.removeItem('primes_session');
     localStorage.removeItem('currentOrderId');
     localStorage.removeItem('_walletBalance');
+    localStorage.removeItem('_walletBalance_NGN');
+    localStorage.removeItem('_walletBalance_USD');
+    localStorage.removeItem('_actual_usd_balance');
+    localStorage.removeItem('_actual_ngn_balance');
 }
 
 function requireAuth() {
@@ -68,7 +82,8 @@ function logout() {
 ══════════════════════════════════════════ */
 
 async function apiRequest(endpoint, options = {}) {
-    const token = getAuthToken();
+    const method = (options.method || 'GET').toUpperCase();
+    const token  = getAuthToken();
     const headers = {};
 
     if (options.body && typeof options.body === 'string') {
@@ -83,13 +98,13 @@ async function apiRequest(endpoint, options = {}) {
         Object.assign(headers, options.headers);
     }
 
-    const fetchOptions = { ...options };
+    const fetchOptions = { ...options, method };
     delete fetchOptions.suppressAuthRedirect;
     fetchOptions.headers = headers;
 
-    // fetch() has no built-in timeout — without this, a sleeping Render
-    // free-tier backend just hangs the request indefinitely with no
-    // feedback to the user. AbortController gives us a hard ceiling.
+    // Log request without exposing sensitive tokens
+    console.log(`[API Request] ${method} ${endpoint}`);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     fetchOptions.signal = controller.signal;
@@ -100,15 +115,27 @@ async function apiRequest(endpoint, options = {}) {
     } catch (networkErr) {
         clearTimeout(timeoutId);
 
-        if (networkErr.name === 'AbortError') {
-            console.error(`[API Timeout] ${options.method || 'GET'} ${endpoint}: exceeded ${REQUEST_TIMEOUT_MS}ms`);
-            throw new Error('The server is taking too long to respond. It may be waking up — please try again in a moment.');
+        let errMsg = 'Network error. Please check your connection.';
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            errMsg = 'Internet disconnected (ERR_INTERNET_DISCONNECTED). Please check your internet connection.';
+        } else if (networkErr.name === 'AbortError') {
+            errMsg = `The server took too long to respond (> ${REQUEST_TIMEOUT_MS / 1000}s). It may be waking up on Render.`;
+        } else if (networkErr.message && networkErr.message.includes('Failed to fetch')) {
+            errMsg = `Unable to reach the server at ${API_BASE_URL}. Please check your connection or CORS configuration.`;
+        } else if (networkErr.message) {
+            errMsg = networkErr.message;
         }
 
-        console.error(`[API Network Error] ${options.method || 'GET'} ${endpoint}:`, networkErr);
-        throw new Error('Network error. Please check your internet connection.');
+        const err = new Error(errMsg);
+        err.status = 0;
+        err.endpoint = endpoint;
+        err.method = method;
+        console.error(`[API Error] 0 ${method} ${endpoint}:`, errMsg);
+        throw err;
     }
     clearTimeout(timeoutId);
+
+    console.log(`[API Response] ${response.status} ${method} ${endpoint}`);
 
     let data = {};
     let textResponse = '';
@@ -118,7 +145,7 @@ async function apiRequest(endpoint, options = {}) {
             data = JSON.parse(textResponse);
         }
     } catch (_) {
-        // Non-JSON response (e.g. 5sim plain text errors or 502/504 HTML page)
+        // Non-JSON response
     }
 
     if (!response.ok) {
@@ -130,19 +157,21 @@ async function apiRequest(endpoint, options = {}) {
             errorMsg = `Request failed with status ${response.status}`;
         }
 
-        // Every thrown error carries the real HTTP status code as .status,
-        // not just a text message. Backend wording changes ("Wallet not
-        // found" vs "No assigned VDA" vs anything else) — calling code
-        // should never have to guess the status by pattern-matching text.
         const throwWithStatus = (message) => {
             const err = new Error(message);
             err.status = response.status;
+            err.endpoint = endpoint;
+            err.method = method;
+            console.error(`[API Error] ${response.status} ${method} ${endpoint}: ${message}`);
             throw err;
         };
 
         if (response.status === 401) {
             if (!options.suppressAuthRedirect) {
                 clearAuth();
+                try {
+                    sessionStorage.setItem('auth_message', 'Your session has expired. Please log in again.');
+                } catch (_) {}
                 setTimeout(() => {
                     window.location.href = 'login.html';
                 }, 600);
@@ -150,44 +179,44 @@ async function apiRequest(endpoint, options = {}) {
             throwWithStatus(data.message || data.error || 'Your session has expired. Please log in again.');
         }
 
-        if (response.status === 400) {
-            throwWithStatus(errorMsg);
-        }
-
-        if (response.status === 403) {
-            throwWithStatus(data.message || data.error || 'You do not have permission to perform this action.');
-        }
-
-        if (response.status === 404) {
-            throwWithStatus(data.message || data.error || 'The requested resource was not found.');
-        }
-
-        if (response.status === 409) {
-            throwWithStatus(data.message || data.error || 'This resource already exists or conflict occurred.');
-        }
-
-        if (response.status === 422) {
-            throwWithStatus(data.message || data.error || 'Validation error. Please verify your submitted information.');
-        }
-
-        if (response.status === 429) {
-            throwWithStatus('Too many requests. Please wait a moment and try again.');
-        }
-
-        if (response.status >= 500) {
-            let msg = data.message || data.error || '';
-            if (typeof msg === 'string' && (msg.includes('undefined') || msg.includes('Cast to number') || msg.includes('Wallet not found'))) {
-                msg = 'Insufficient or uninitialized wallet balance. Please fund your wallet to continue.';
-            } else if (!msg) {
-                msg = 'Server error. Please try again later.';
-            }
-            throwWithStatus(msg);
-        }
-
+        // For all non-200 responses, preserve the real status and message
         throwWithStatus(errorMsg);
     }
 
     return data;
+}
+
+/* ══════════════════════════════════════════
+   WALLET BALANCE NORMALIZER
+   Extracts real balance directly from backend response without synthetic
+   cross-currency conversion. NGN and USD remain strictly separate.
+══════════════════════════════════════════ */
+function normalizeWalletBalance(data, currency = 'NGN') {
+    if (!data || typeof data !== 'object') return 0;
+    const isUSD = String(currency).toUpperCase() === 'USD';
+
+    if (isUSD) {
+        if (data.usdBalance !== undefined) return parseFloat(data.usdBalance) || 0;
+        if (data.wallet?.usdBalance !== undefined) return parseFloat(data.wallet.usdBalance) || 0;
+        if (data.balanceUSD !== undefined) return parseFloat(data.balanceUSD) || 0;
+        if ((data.currency || data.wallet?.currency || '').toUpperCase() === 'USD') {
+            return parseFloat(data.balance ?? data.wallet?.balance ?? 0) || 0;
+        }
+        if (data.balance !== undefined && data.usdBalance === undefined && data.ngnBalance === undefined) {
+            return parseFloat(data.balance) || 0;
+        }
+        return 0;
+    } else {
+        if (data.ngnBalance !== undefined) return parseFloat(data.ngnBalance) || 0;
+        if (data.wallet?.ngnBalance !== undefined) return parseFloat(data.wallet.ngnBalance) || 0;
+        if ((data.currency || data.wallet?.currency || '').toUpperCase() === 'NGN') {
+            return parseFloat(data.balance ?? data.wallet?.balance ?? 0) || 0;
+        }
+        if (data.balance !== undefined && data.usdBalance === undefined && data.ngnBalance === undefined) {
+            return parseFloat(data.balance) || 0;
+        }
+        return 0;
+    }
 }
 
 /* ══════════════════════════════════════════
@@ -359,6 +388,7 @@ window.getSession = getSession;
 window.setSession = setSession;
 window.logout = logout;
 window.normalizeVirtualAccount = normalizeVirtualAccount;
+window.normalizeWalletBalance = normalizeWalletBalance;
 
 window.createVirtualAccount = createVirtualAccount;
 window.getVirtualAccount = getVirtualAccount;
@@ -387,6 +417,7 @@ window.NuraAPI = {
     setSession,
     logout,
     normalizeVirtualAccount,
+    normalizeWalletBalance,
     createVirtualAccount,
     getVirtualAccount,
     getWalletBalance,

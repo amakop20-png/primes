@@ -305,104 +305,37 @@ async function loadWalletBalance(currency) {
     if (balPrimaryEl) balPrimaryEl.textContent = 'Loading...';
     if (popBalEl)     popBalEl.textContent     = 'Loading...';
 
-    console.log(`[Wallet] Requesting wallet balance...`);
+    console.log(`[Wallet] Requesting ${curr} wallet balance...`);
     try {
         const data = await getWalletBalance(curr);
-        console.log(`[Wallet] Response received`);
-        console.log(`[Wallet] Wallet data:`, data);
+        console.log(`[Wallet] ${curr} Response received:`, data);
 
-        let bal = 0;
-        if (data) {
-            const backendCurrency = (data.currency || data.wallet?.currency || '').toUpperCase();
-            
-            let baseUsd = parseFloat(data.usdBalance ?? data.wallet?.usdBalance ?? data.balanceUSD ?? 0);
-            let baseNgn = parseFloat(data.ngnBalance ?? data.wallet?.ngnBalance ?? 0);
-
-            // If explicit balances are missing, use the generic balance based on the backend currency
-            if (baseUsd === 0 && baseNgn === 0) {
-                const genericBalance = parseFloat(data.balance ?? data.wallet?.balance ?? 0);
-                if (backendCurrency === 'USD') {
-                    baseUsd = genericBalance;
-                } else {
-                    // Default to NGN since Nigerian users deposit in Naira primarily
-                    baseNgn = genericBalance;
-                }
-            }
-
-            // Save actual balances before synthetic conversion
-            localStorage.setItem('_actual_usd_balance', String(baseUsd));
-            localStorage.setItem('_actual_ngn_balance', String(baseNgn));
-
-            if (baseUsd === 0 && baseNgn > 0) baseUsd = baseNgn / CONVERSION_RATE;
-            if (baseNgn === 0 && baseUsd > 0) baseNgn = baseUsd * CONVERSION_RATE;
-
-            if (isUSD) {
-                bal = baseUsd;
-                if (bal === 0 && !data.balance) {
-                    bal = parseFloat(localStorage.getItem('_walletBalance_USD') || '0');
-                }
-            } else {
-                bal = baseNgn;
-            }
-        }
-        
-        console.log(`[Wallet] Balance: ${bal}`);
+        const bal = normalizeWalletBalance(data, curr);
+        console.log(`[Wallet] Normalized ${curr} Balance: ${bal}`);
         renderBalanceCards(bal, curr);
     } catch (err) {
-        console.error(`[Wallet] API error: ${err.message}`);
-        console.error(`[Wallet] Status: ${err.status}`);
+        console.error(`[Wallet] API error (${err.status || 0}): ${err.message}`);
 
         const setErrorDisplay = (msg) => {
             if (balPrimaryEl) balPrimaryEl.innerHTML = `<span style="font-size: 20px; font-weight: 600; line-height: 1.2; display: block; white-space: normal;">${msg}</span>`;
             if (popBalEl) popBalEl.textContent = 'N/A';
         };
 
-        // Do not convert errors into a fake 0.00 balance
         if (err.status === 401) {
             setErrorDisplay('Auth Error');
             showToast('Your session has expired. Please log in again.', 'error');
         } else if (err.status === 404) {
-            console.log(`[Wallet] 404 received, attempting to provision wallet via createVirtualAccount...`);
-            try {
-                // Provision the wallet for new users
-                await createVirtualAccount(curr);
-                // Retry fetching the balance once
-                const retryData = await getWalletBalance(curr);
-                let bal = 0;
-                if (retryData) {
-                    const retryCurrency = (retryData.currency || retryData.wallet?.currency || '').toUpperCase();
-                    let baseUsd = parseFloat(retryData.usdBalance ?? retryData.wallet?.usdBalance ?? retryData.balanceUSD ?? 0);
-                    let baseNgn = parseFloat(retryData.ngnBalance ?? retryData.wallet?.ngnBalance ?? 0);
-
-                    if (baseUsd === 0 && baseNgn === 0) {
-                        const generic = parseFloat(retryData.balance ?? retryData.wallet?.balance ?? 0);
-                        if (retryCurrency === 'USD') baseUsd = generic;
-                        else baseNgn = generic;
-                    }
-
-                    // Save actual balances before synthetic conversion
-                    localStorage.setItem('_actual_usd_balance', String(baseUsd));
-                    localStorage.setItem('_actual_ngn_balance', String(baseNgn));
-
-                    if (baseUsd === 0 && baseNgn > 0) baseUsd = baseNgn / CONVERSION_RATE;
-                    if (baseNgn === 0 && baseUsd > 0) baseNgn = baseUsd * CONVERSION_RATE;
-
-                    bal = isUSD ? baseUsd : baseNgn;
-                }
-                renderBalanceCards(bal, curr);
-            } catch (provisionErr) {
-                console.warn(`[Wallet] Failed to provision wallet automatically:`, provisionErr);
-                // Fallback to 0 if provisioning also fails
-                renderBalanceCards(0, curr);
-            }
+            console.log(`[Wallet] 404 received for ${curr} wallet.`);
+            setErrorDisplay('No Wallet');
+            renderBalanceCards(0, curr);
         } else if (err.status >= 500) {
             setErrorDisplay('Server error');
-            showToast('Temporary server error while loading wallet.', 'error');
-        } else if (!err.status || err.message.toLowerCase().includes('network')) {
+            showToast(`Server error: ${err.message}`, 'error');
+        } else if (!err.status || err.message.toLowerCase().includes('network') || err.message.toLowerCase().includes('failed to fetch')) {
             setErrorDisplay('Connection error');
             showToast('Network error while loading wallet balance.', 'error');
         } else {
-            setErrorDisplay('Error loading balance');
+            setErrorDisplay('Error');
             showToast(`Error loading balance: ${err.message}`, 'error');
         }
     }
@@ -602,17 +535,6 @@ async function loadTransactions(page = 1, currency) {
             txs = txs.filter(t => !t.currency || t.currency.toUpperCase() === curr.toUpperCase());
         }
 
-        // Merge with local persistent transactions for this currency
-        const localTxs = JSON.parse(localStorage.getItem('primes_txs_' + curr) || '[]');
-        if (localTxs.length > 0) {
-            const seenRefs = new Set(txs.map(t => t.reference || t.id));
-            localTxs.forEach(lt => {
-                if (!seenRefs.has(lt.reference || lt.id)) {
-                    txs.unshift(lt);
-                }
-            });
-        }
-
         if (!txs || txs.length === 0) {
             listEl.innerHTML = `<li style="text-align:center;padding:24px;color:var(--muted,#888);font-size:14px;">No ${curr} transactions recorded yet.</li>`;
         } else {
@@ -650,24 +572,7 @@ async function loadTransactions(page = 1, currency) {
 
     } catch (err) {
         console.error('loadTransactions error:', err);
-        const localTxs = JSON.parse(localStorage.getItem('primes_txs_' + curr) || '[]');
-        if (localTxs.length > 0) {
-            listEl.innerHTML = localTxs.map(tx => {
-                const amount   = parseFloat(tx.amount) || 0;
-                const isCredit = (tx.type && tx.type.toLowerCase() === 'credit') || amount > 0;
-                const amtStr   = (isCredit ? '+' : '-') + symbol + Math.abs(amount).toLocaleString(isUSD ? 'en-US' : 'en-NG', { minimumFractionDigits: 2 });
-                return `
-                <li style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border,#e5e7eb);gap:8px;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-weight:700;font-size:13px;color:var(--text);">${(tx.type || 'Deposit').toUpperCase()} <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:#d1fae5;color:#065f46;font-weight:700;">SUCCESS</span></div>
-                        <div style="font-size:11px;color:var(--muted,#888);margin-top:4px;">${tx.reference ? 'Ref: <strong>' + tx.reference + '</strong> · ' : ''}${tx.createdAt ? new Date(tx.createdAt).toLocaleString() : '—'}</div>
-                    </div>
-                    <div style="font-weight:800;font-size:14px;color:#10b981;flex-shrink:0;">${amtStr}</div>
-                </li>`;
-            }).join('');
-        } else {
-            listEl.innerHTML = `<li style="text-align:center;padding:24px;color:var(--muted,#888);font-size:14px;">No ${curr} transactions recorded yet.</li>`;
-        }
+        listEl.innerHTML = `<li style="text-align:center;padding:24px;color:var(--muted,#888);font-size:14px;">No ${curr} transactions recorded yet.</li>`;
     }
 }
 

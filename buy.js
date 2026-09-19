@@ -130,38 +130,25 @@ async function loadWalletBalanceBuyPage() {
 
     try {
         const data = await fetchWalletBalance(currency);
-        console.log(`[WALLET] Response received`);
-        console.log(`[WALLET] FULL RESPONSE:\n` + JSON.stringify(data, null, 2));
+        console.log(`[Wallet] ${currency} balance response received:`, data);
         applyWalletBalance(data, currency, symbol, balEl);
     } catch (err) {
-        console.error(`[Wallet] API error: ${err.message}`);
-        console.error(`[Wallet] Status: ${err.status}`);
+        console.error(`[Wallet] API error (${err.status || 0}): ${err.message}`);
 
         const setErrorDisplay = (msg) => {
             if (balEl) balEl.innerHTML = `<span style="font-size: 16px; font-weight: 600; line-height: 1.2; display: block; white-space: normal;">${msg}</span>`;
         };
 
-        // Do not convert errors into a fake 0.00 balance
         if (err.status === 401) {
             setErrorDisplay('Auth Error');
             showToast('Your session has expired. Please log in again.', 'error');
         } else if (err.status === 404) {
-            console.log(`[Buy Wallet] 404 received, attempting to provision wallet via createVirtualAccount...`);
-            try {
-                // Provision the wallet for new users
-                await createVirtualAccount(currency);
-                // Retry fetching the balance once
-                const retryData = await fetchWalletBalance(currency);
-                applyWalletBalance(retryData, currency, symbol, balEl);
-            } catch (provisionErr) {
-                console.warn(`[Buy Wallet] Failed to provision wallet automatically:`, provisionErr);
-                // Fallback to 0 if provisioning also fails
-                applyWalletBalance({ balance: 0 }, currency, symbol, balEl);
-            }
+            console.log(`[Buy Wallet] 404: No ${currency} wallet found.`);
+            applyWalletBalance({ balance: 0 }, currency, symbol, balEl);
         } else if (err.status >= 500) {
             setErrorDisplay('Server error');
-            showToast('Temporary server error while loading wallet.', 'error');
-        } else if (!err.status || err.message.toLowerCase().includes('network')) {
+            showToast(`Server error: ${err.message}`, 'error');
+        } else if (!err.status || err.message.toLowerCase().includes('network') || err.message.toLowerCase().includes('failed to fetch')) {
             setErrorDisplay('Connection error');
             showToast('Network error while loading wallet balance.', 'error');
         } else {
@@ -184,35 +171,19 @@ async function fetchWalletBalance(currency) {
 }
 
 // Parses the balance out of whichever shape the backend returns and
-// writes it to the DOM + localStorage cache. Extracted out of
-// loadWalletBalanceBuyPage so it isn't duplicated for the retry path.
+// writes it to the DOM + localStorage cache without cross-currency synthesis.
 function applyWalletBalance(data, currency, symbol, balEl) {
-    const backendCurrency = (data?.currency || data?.wallet?.currency || '').toUpperCase();
-    let baseUsd = parseFloat(data?.usdBalance ?? data?.wallet?.usdBalance ?? data?.balanceUSD ?? 0) || 0;
-    let baseNgn = parseFloat(data?.ngnBalance ?? data?.wallet?.ngnBalance ?? 0) || 0;
+    const bal = normalizeWalletBalance(data, currency);
 
-    if (baseUsd === 0 && baseNgn === 0) {
-        const generic = parseFloat(data?.balance ?? data?.wallet?.balance ?? 0) || 0;
-        if (backendCurrency === 'USD') baseUsd = generic;
-        else baseNgn = generic;
+    if (balEl) {
+        balEl.textContent = symbol + Number(bal).toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', {
+            minimumFractionDigits: 2, maximumFractionDigits: 2
+        });
     }
-
-    // Save actual balances before synthetic conversion
-    localStorage.setItem('_actual_usd_balance', String(baseUsd));
-    localStorage.setItem('_actual_ngn_balance', String(baseNgn));
-
-    if (baseUsd === 0 && baseNgn > 0) baseUsd = baseNgn / CONVERSION_RATE;
-    if (baseNgn === 0 && baseUsd > 0) baseNgn = baseUsd * CONVERSION_RATE;
-
-    let bal = currency === 'USD' ? baseUsd : baseNgn;
-    bal = Number.isFinite(bal) ? bal : 0;
-
-    if (balEl) balEl.textContent = symbol + Number(bal).toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', {
-        minimumFractionDigits: 2, maximumFractionDigits: 2
-    });
 
     localStorage.setItem('_walletBalance_' + currency, String(bal));
     if (currency === 'NGN') localStorage.setItem('_walletBalance', String(bal));
+    return bal;
 }
 
 /* ══════════════════════════════════════════
@@ -493,14 +464,33 @@ async function handleBuyClick(country, product, btnEl) {
         walletBalance: currentBal
     }, null, 2));
 
-    console.log(`[STEP 3] Request: POST /api/buy/activation`, { country, product });
-    console.log(`[PURCHASE] Request sent: country=${country}, product=${product}`);
+    const sym = activeCurrency === 'USD' ? '$' : '₦';
+    const requiredPrice = activeCurrency === 'USD' ? originalUSD : finalNGN;
+
+    console.log(`[Purchase] Pre-verifying backend wallet balance for ${activeCurrency}...`);
+    try {
+        const walletRes = await fetchWalletBalance(activeCurrency);
+        const serverBal = normalizeWalletBalance(walletRes, activeCurrency);
+        console.log(`[Wallet] Server balance: ${sym}${serverBal}, Required: ${sym}${requiredPrice}`);
+
+        if (serverBal < requiredPrice) {
+            isBuying = false;
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.textContent = '🛒 Buy Now';
+            }
+            showToast(`Insufficient balance: Required ${sym}${requiredPrice.toLocaleString()}, available balance is ${sym}${serverBal.toLocaleString()}. Please fund your wallet.`, 'error');
+            return;
+        }
+    } catch (balErr) {
+        console.warn('[Purchase] Could not pre-verify balance:', balErr.message);
+    }
+
+    console.log(`[Purchase] Request sent: country=${country}, product=${product}`);
 
     try {
         const result = await buyActivation(country, product);
-        console.log('[STEP 3] Status: 200');
-        console.log('[STEP 3] Response:', result);
-        console.log('[PURCHASE] Response received:', result);
+        console.log('[Purchase] Response received:', result);
 
         // Normalize order from result
         const order = result?.order || result;
@@ -513,13 +503,10 @@ async function handleBuyClick(country, product, btnEl) {
         const orderId = order.id || order._id || order.orderId;
         const phone = order.phone || order.number || '—';
 
-        console.log(`[PURCHASE] Order ID: ${orderId}`);
-        console.log(`[PURCHASE] Activation ID: ${orderId}`);
-        console.log(`[PURCHASE] Status: ${order.status || 'PENDING'}`);
-        console.log(`[PURCHASE] Number: ${phone}`);
-        console.log(`[ORDER] Order ID: ${orderId}`);
-        console.log(`[ORDER] Number received: ${phone}`);
-        console.log(`[ORDER] Initial status: ${order.status || 'PENDING'}`);
+        console.log(`[Purchase] Order ID: ${orderId}`);
+        console.log(`[Purchase] Activation ID: ${orderId}`);
+        console.log(`[Purchase] Status: ${order.status || 'PENDING'}`);
+        console.log(`[Purchase] Number: ${phone}`);
 
         // Save real backend order ID
         currentOrderId   = orderId;
@@ -528,18 +515,14 @@ async function handleBuyClick(country, product, btnEl) {
 
         showToast('✅ Number purchased successfully! Opening order…', 'success');
 
-        // Refresh wallet balance from backend
+        // Authoritative wallet refresh after purchase
         await loadWalletBalanceBuyPage();
 
         // Open SMS modal and start Step 4 polling
         openOrderModal(orderId, order);
     } catch (err) {
-        console.error(`[PURCHASE] Purchase failed:`, err);
-        let detailedMsg = err.message || 'Failed to purchase number. Check your wallet balance.';
-        if (typeof detailedMsg === 'string' && (detailedMsg.includes('undefined') || detailedMsg.includes('Cast to number') || detailedMsg.includes('Wallet not found'))) {
-            detailedMsg = 'Insufficient or uninitialized wallet balance. Please fund your wallet to continue.';
-        }
-        showToast(detailedMsg, 'error');
+        console.error(`[Purchase] Purchase failed (${err.status || 0}):`, err.message);
+        showToast(err.message || 'Failed to purchase number.', 'error');
         try {
             await loadWalletBalanceBuyPage();
         } catch (_) {}

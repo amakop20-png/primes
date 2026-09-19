@@ -113,6 +113,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     toast = new SimpleToast();
 
+    // Check for session expired toast notification
+    const authMsg = sessionStorage.getItem('auth_message');
+    if (authMsg) {
+        sessionStorage.removeItem('auth_message');
+        setTimeout(() => toast.show(authMsg, 'warning'), 150);
+    }
+
     // Redirect already-logged-in users straight to the dashboard
     if (getAuthToken()) {
         window.location.href = 'dashboard.html';
