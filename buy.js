@@ -329,25 +329,30 @@ async function loadProducts(country) {
                 let qty = 0;
                 let category = 'activation';
 
-                if (info.Cost !== undefined || info.cost !== undefined || info.Price !== undefined || info.price !== undefined || info.rate !== undefined) {
-                    priceUSD = parseFloat(info.Cost || info.cost || info.Price || info.price || 0);
-                    priceNGN = parseFloat(info.Cost || info.cost || info.rate || info.Price || info.price || 0);
-                    
-                    if (priceNGN === 0 && priceUSD > 0) priceNGN = priceUSD * CONVERSION_RATE;
-                    if (priceUSD === 0 && priceNGN > 0) priceUSD = priceNGN / CONVERSION_RATE;
-
+                if (info.cost !== undefined && info.Price !== undefined) {
+                    priceUSD = parseFloat(info.Price) || 0;
+                    priceNGN = parseFloat(info.cost) || 0;
+                    qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
+                    category = (info.Category || info.category || 'activation').toLowerCase();
+                } else if (info.cost !== undefined || info.rate !== undefined) {
+                    priceNGN = parseFloat(info.cost || info.rate || 0);
+                    priceUSD = priceNGN / CONVERSION_RATE;
+                    qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
+                    category = (info.Category || info.category || 'activation').toLowerCase();
+                } else if (info.Price !== undefined || info.price !== undefined || info.Cost !== undefined) {
+                    priceUSD = parseFloat(info.Price || info.price || info.Cost || 0);
+                    priceNGN = priceUSD * CONVERSION_RATE;
                     qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
                     category = (info.Category || info.category || 'activation').toLowerCase();
                 } else {
                     const operators = Object.values(info).filter(v => v && typeof v === 'object');
                     if (operators.length > 0) {
-                        const validUsdPrices = operators.map(op => parseFloat(op.Cost || op.cost || op.Price || op.price || 0)).filter(p => p > 0);
-                        const validNgnPrices = operators.map(op => parseFloat(op.Cost || op.cost || op.rate || op.Price || op.price || 0)).filter(p => p > 0);
+                        const validUsdPrices = operators.map(op => parseFloat(op.Price || op.price || 0)).filter(p => p > 0);
+                        const validNgnPrices = operators.map(op => parseFloat(op.cost || op.rate || op.Cost || 0)).filter(p => p > 0);
                         
                         priceUSD = validUsdPrices.length > 0 ? Math.min(...validUsdPrices) : 0;
                         priceNGN = validNgnPrices.length > 0 ? Math.min(...validNgnPrices) : 0;
                         
-                        // If no explicit NGN cost/rate was found, check if they had a price field we used for USD
                         if (priceNGN === 0 && priceUSD > 0) priceNGN = priceUSD * CONVERSION_RATE;
                         if (priceUSD === 0 && priceNGN > 0) priceUSD = priceNGN / CONVERSION_RATE;
 
@@ -359,7 +364,7 @@ async function loadProducts(country) {
                 return {
                     key,
                     name: key.charAt(0).toUpperCase() + key.slice(1),
-                    price: priceNGN, // Keep for backward compatibility
+                    price: priceNGN,
                     priceUSD,
                     priceNGN,
                     qty,
@@ -461,6 +466,16 @@ async function handleBuyClick(country, product, btnEl) {
         btnEl.disabled = true;
         btnEl.textContent = '⏳ Purchasing…';
     }
+
+    const activeCurrency = getCurrency();
+    const currentBal = localStorage.getItem('_walletBalance_' + activeCurrency) || localStorage.getItem('_walletBalance') || '0';
+    const prodObj = allProducts.find(p => p.key === product);
+
+    console.log(`[WALLET] Balance: ${currentBal}`);
+    console.log(`[WALLET] Currency: ${activeCurrency}`);
+    console.log(`[PRODUCT] Price: $${prodObj?.priceUSD || 0}`);
+    console.log(`[PRODUCT] Currency: USD`);
+    console.log(`[CONVERSION] Converted price: ₦${prodObj?.priceNGN || 0}`);
 
     console.log(`[STEP 3] Request: POST /api/buy/activation`, { country, product });
     console.log(`[PURCHASE] Request sent: country=${country}, product=${product}`);
