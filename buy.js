@@ -509,6 +509,9 @@ async function handleBuyClick(country, product, btnEl) {
             detailedMsg = 'Insufficient or uninitialized wallet balance. Please fund your wallet to continue.';
         }
         showToast(detailedMsg, 'error');
+        try {
+            await loadWalletBalanceBuyPage();
+        } catch (_) {}
     } finally {
         isBuying = false;
         if (btnEl) {
