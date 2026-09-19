@@ -1,9 +1,9 @@
-/* ═══════════════════════════════════════════════════════════════════════════════════════════════ */
-═══════════════════════════
+/* ======================================================================
    api.js — NuraSMS Centralized API Client & Integration Layer
    Base URL: https://nurasms-api.onrender.com
    All dashboard and application API communication is centralized here.
-══════════════════
+====================================================================== */
+
 // USING DIRECT BACKEND URL
 const API_BASE_URL = 'https://nurasms-api.onrender.com';
 const REQUEST_TIMEOUT_MS = 25000; // 25s ceiling as specified in project requirements
@@ -429,13 +429,16 @@ window.finishOrder = finishOrder;
 window.cancelOrder = cancelOrder;
 window.banOrder = banOrder;
 window.loginUser = loginUser;
+window.login = loginUser;
 window.signupUser = signupUser;
+window.signup = signupUser;
 window.forgotPassword = forgotPassword;
 window.resetPassword = resetPassword;
 
 window.NuraAPI = {
     BASE_URL: API_BASE_URL,
     request: apiRequest,
+    apiRequest,
     getAuthToken,
     setAuthToken,
     clearAuth,
@@ -456,7 +459,9 @@ window.NuraAPI = {
     finishOrder,
     cancelOrder,
     banOrder,
+    login: loginUser,
     loginUser,
+    signup: signupUser,
     signupUser,
     forgotPassword,
     resetPassword
