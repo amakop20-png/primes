@@ -130,8 +130,8 @@ async function loadWalletBalanceBuyPage() {
 
     try {
         const data = await fetchWalletBalance(currency);
-        console.log(`[Wallet] Response received`);
-        console.log(`[Wallet] Wallet data:`, data);
+        console.log(`[WALLET] Response received`);
+        console.log(`[WALLET] FULL RESPONSE:\n` + JSON.stringify(data, null, 2));
         applyWalletBalance(data, currency, symbol, balEl);
     } catch (err) {
         console.error(`[Wallet] API error: ${err.message}`);
@@ -312,7 +312,7 @@ async function loadProducts(country) {
         console.log(`[STEP 2] Request: GET /api/products/${country}`);
         const data = await getProducts(country);
         console.log('[STEP 2] Status: 200');
-        console.log('[STEP 2] Response:', data);
+        console.log('[STEP 2] FULL PRODUCT RESPONSE:\n' + JSON.stringify(data, null, 2));
 
         const raw = data?.products || data;
 
@@ -470,12 +470,28 @@ async function handleBuyClick(country, product, btnEl) {
     const activeCurrency = getCurrency();
     const currentBal = localStorage.getItem('_walletBalance_' + activeCurrency) || localStorage.getItem('_walletBalance') || '0';
     const prodObj = allProducts.find(p => p.key === product);
+    const originalUSD = prodObj?.priceUSD || 0;
+    const finalNGN = prodObj?.priceNGN || 0;
+    const effectiveRate = originalUSD > 0 ? (finalNGN / originalUSD).toFixed(2) : '1500';
 
     console.log(`[WALLET] Balance: ${currentBal}`);
     console.log(`[WALLET] Currency: ${activeCurrency}`);
-    console.log(`[PRODUCT] Price: $${prodObj?.priceUSD || 0}`);
+    console.log(`[PRODUCT] Product ID: ${product}`);
+    console.log(`[PRODUCT] Price: $${originalUSD}`);
     console.log(`[PRODUCT] Currency: USD`);
-    console.log(`[CONVERSION] Converted price: ₦${prodObj?.priceNGN || 0}`);
+    console.log(`[CONVERSION] Original price: $${originalUSD}`);
+    console.log(`[CONVERSION] Original currency: USD`);
+    console.log(`[CONVERSION] Wallet currency: ${activeCurrency}`);
+    console.log(`[CONVERSION] Exchange rate: ~${effectiveRate} NGN/USD`);
+    console.log(`[CONVERSION] Final price: ₦${finalNGN}`);
+
+    console.log(`[PURCHASE DEBUG] Payload that would be sent:\n` + JSON.stringify({
+        country: country,
+        product: product,
+        price: activeCurrency === 'USD' ? originalUSD : finalNGN,
+        currency: activeCurrency,
+        walletBalance: currentBal
+    }, null, 2));
 
     console.log(`[STEP 3] Request: POST /api/buy/activation`, { country, product });
     console.log(`[PURCHASE] Request sent: country=${country}, product=${product}`);
