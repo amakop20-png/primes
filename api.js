@@ -145,7 +145,7 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     if (!response.ok) {
-        let errorMsg = data.message || data.error || data.msg;
+        let errorMsg = data.details || data.upstreamError || (typeof data.error === 'object' ? data.error?.message : data.error) || data.message || data.msg;
         if (!errorMsg && textResponse && !textResponse.trim().startsWith('<')) {
             errorMsg = textResponse.trim();
         }
@@ -217,29 +217,37 @@ async function apiRequest(endpoint, options = {}) {
    WALLET BALANCE NORMALIZER
    Extracts real balance directly from backend response without synthetic
    cross-currency conversion. NGN and USD remain strictly separate.
+   Authoritative backend wallet balance is preserved.
 ========================================== */
 function normalizeWalletBalance(data, currency = 'NGN') {
     if (!data || typeof data !== 'object') return 0;
     const isUSD = String(currency).toUpperCase() === 'USD';
 
+    // Unnest if backend encapsulates in wallet or data object
+    const src = (data.wallet && typeof data.wallet === 'object') ? data.wallet : ((data.data && typeof data.data === 'object') ? data.data : data);
+
     if (isUSD) {
+        if (src.usdBalance !== undefined) return parseFloat(src.usdBalance) || 0;
         if (data.usdBalance !== undefined) return parseFloat(data.usdBalance) || 0;
-        if (data.wallet?.usdBalance !== undefined) return parseFloat(data.wallet.usdBalance) || 0;
+        if (src.balanceUSD !== undefined) return parseFloat(src.balanceUSD) || 0;
         if (data.balanceUSD !== undefined) return parseFloat(data.balanceUSD) || 0;
-        if ((data.currency || data.wallet?.currency || '').toUpperCase() === 'USD') {
-            return parseFloat(data.balance ?? data.wallet?.balance ?? 0) || 0;
+        if ((src.currency || data.currency || '').toUpperCase() === 'USD') {
+            return parseFloat(src.balance ?? data.balance ?? 0) || 0;
         }
-        if (data.balance !== undefined && data.usdBalance === undefined && data.ngnBalance === undefined) {
-            return parseFloat(data.balance) || 0;
+        if (src.balance !== undefined && src.usdBalance === undefined && src.ngnBalance === undefined) {
+            return parseFloat(src.balance) || 0;
         }
         return 0;
     } else {
+        if (src.ngnBalance !== undefined) return parseFloat(src.ngnBalance) || 0;
         if (data.ngnBalance !== undefined) return parseFloat(data.ngnBalance) || 0;
-        if (data.wallet?.ngnBalance !== undefined) return parseFloat(data.wallet.ngnBalance) || 0;
-        if ((data.currency || data.wallet?.currency || '').toUpperCase() === 'NGN') {
-            return parseFloat(data.balance ?? data.wallet?.balance ?? 0) || 0;
+        if ((src.currency || data.currency || '').toUpperCase() === 'NGN') {
+            return parseFloat(src.balance ?? data.balance ?? 0) || 0;
         }
-        if (data.balance !== undefined && data.usdBalance === undefined && data.ngnBalance === undefined) {
+        if (src.balance !== undefined && src.usdBalance === undefined && src.ngnBalance === undefined) {
+            return parseFloat(src.balance) || 0;
+        }
+        if (data.balance !== undefined) {
             return parseFloat(data.balance) || 0;
         }
         return 0;

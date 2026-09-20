@@ -297,24 +297,24 @@ async function loadProducts(country) {
             .map(([key, info]) => {
                 let priceUSD = 0;
                 let priceNGN = 0;
-                let qty = 0;
-                let category = 'activation';
+                let qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
+                let category = (info.Category || info.category || 'activation').toLowerCase();
+                const isNativeNGN = String(info.currency || '').toUpperCase() === 'NGN';
 
-                if (info.cost !== undefined && info.Price !== undefined) {
-                    priceUSD = parseFloat(info.Price) || 0;
+                // Requirement 9 & 10: If NuraSMS returns currency: "NGN", use the authoritative cost directly.
+                // Do NOT convert an already-NGN product price through USD (e.g. AliExpress cost = ₦28, not $0.03 -> ₦41).
+                if (isNativeNGN && (info.cost !== undefined || info.Cost !== undefined)) {
+                    priceNGN = parseFloat(info.cost !== undefined ? info.cost : info.Cost) || 0;
+                    priceUSD = info.Price !== undefined ? parseFloat(info.Price) : (priceNGN / CONVERSION_RATE);
+                } else if (info.cost !== undefined && info.Price !== undefined) {
                     priceNGN = parseFloat(info.cost) || 0;
-                    qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
-                    category = (info.Category || info.category || 'activation').toLowerCase();
+                    priceUSD = parseFloat(info.Price) || 0;
                 } else if (info.cost !== undefined || info.rate !== undefined) {
                     priceNGN = parseFloat(info.cost || info.rate || 0);
                     priceUSD = priceNGN / CONVERSION_RATE;
-                    qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
-                    category = (info.Category || info.category || 'activation').toLowerCase();
                 } else if (info.Price !== undefined || info.price !== undefined || info.Cost !== undefined) {
                     priceUSD = parseFloat(info.Price || info.price || info.Cost || 0);
                     priceNGN = priceUSD * CONVERSION_RATE;
-                    qty = parseInt(info.Qty || info.count || info.qty || info.quantity || 0, 10);
-                    category = (info.Category || info.category || 'activation').toLowerCase();
                 } else {
                     const operators = Object.values(info).filter(v => v && typeof v === 'object');
                     if (operators.length > 0) {
@@ -338,6 +338,7 @@ async function loadProducts(country) {
                     price: priceNGN,
                     priceUSD,
                     priceNGN,
+                    isNativeNGN,
                     qty,
                     category
                 };
@@ -440,65 +441,72 @@ async function handleBuyClick(country, product, btnEl) {
     }
 
     const activeCurrency = getCurrency();
-    const currentBal = localStorage.getItem('_walletBalance_' + activeCurrency) || localStorage.getItem('_walletBalance') || '0';
-    const prodObj = allProducts.find(p => p.key === product);
-    const originalUSD = prodObj?.priceUSD || 0;
-    const finalNGN = prodObj?.priceNGN || 0;
-    const effectiveRate = originalUSD > 0 ? (finalNGN / originalUSD).toFixed(2) : '1500';
-
-    console.log(`[WALLET] Balance: ${currentBal}`);
-    console.log(`[WALLET] Currency: ${activeCurrency}`);
-    console.log(`[PRODUCT] Product ID: ${product}`);
-    console.log(`[PRODUCT] Price: $${originalUSD}`);
-    console.log(`[PRODUCT] Currency: USD`);
-    console.log(`[CONVERSION] Original price: $${originalUSD}`);
-    console.log(`[CONVERSION] Original currency: USD`);
-    console.log(`[CONVERSION] Wallet currency: ${activeCurrency}`);
-    console.log(`[CONVERSION] Exchange rate: ~${effectiveRate} NGN/USD`);
-    console.log(`[CONVERSION] Final price: ₦${finalNGN}`);
-
-    console.log(`[PURCHASE DEBUG] Payload that would be sent:\n` + JSON.stringify({
-        country: country,
-        product: product,
-        price: activeCurrency === 'USD' ? originalUSD : finalNGN,
-        currency: activeCurrency,
-        walletBalance: currentBal
-    }, null, 2));
-
     const sym = activeCurrency === 'USD' ? '$' : '₦';
-    const requiredPrice = activeCurrency === 'USD' ? originalUSD : finalNGN;
 
-    console.log(`[Purchase] Pre-verifying backend wallet balance for ${activeCurrency}...`);
-    try {
-        const walletRes = await fetchWalletBalance(activeCurrency);
-        const serverBal = normalizeWalletBalance(walletRes, activeCurrency);
-        console.log(`[Wallet] Server balance: ${sym}${serverBal}, Required: ${sym}${requiredPrice}`);
+    // ── 1. Authoritative Product Pricing (Requirement 4, 9, 10) ──
+    const prodObj = allProducts.find(p => p.key === product);
+    const isNativeNGN = prodObj?.isNativeNGN || false;
 
-        if (serverBal < requiredPrice) {
-            isBuying = false;
-            if (btnEl) {
-                btnEl.disabled = false;
-                btnEl.textContent = '🛒 Buy Now';
-            }
-            showToast(`Insufficient balance: Required ${sym}${requiredPrice.toLocaleString()}, available balance is ${sym}${serverBal.toLocaleString()}. Please fund your wallet.`, 'error');
-            return;
+    // Explicitly separate values (Requirement 4)
+    let productPrice = 0;
+    let convertedProductPrice = null;
+
+    if (activeCurrency === 'USD') {
+        productPrice = prodObj?.priceUSD || 0;
+        if (isNativeNGN) {
+            convertedProductPrice = productPrice;
         }
-    } catch (balErr) {
-        console.warn('[Purchase] Could not pre-verify balance:', balErr.message);
-        if (balErr.status === 0 || balErr.isNetworkError) {
-            isBuying = false;
-            if (btnEl) {
-                btnEl.disabled = false;
-                btnEl.textContent = '🛒 Buy Now';
-            }
-            console.error("[PURCHASE] Network/backend error:", balErr);
-            console.error("[PURCHASE] Error status:", balErr?.status || 0);
-            console.error("[PURCHASE] Error message:", balErr?.message);
-            showToast(balErr.message || 'Network error. Unable to connect to the server. Please check your connection and try again.', 'error');
-            return;
-        }
+    } else {
+        // NGN currency: use authoritative NuraSMS cost directly without converting through USD!
+        productPrice = prodObj?.priceNGN || 0;
     }
 
+    console.log(`[PRODUCT] Product ID: ${product}`);
+    console.log(`[PRODUCT] Native Currency: ${isNativeNGN ? 'NGN' : 'USD'}`);
+    console.log(`[PRODUCT] Authoritative Product Price: ${sym}${productPrice}`);
+    if (convertedProductPrice !== null) {
+        console.log(`[PRODUCT] Converted Product Price: $${convertedProductPrice}`);
+    }
+
+    // ── 2. Authoritative Backend Wallet Balance (Requirement 5, 7, 11, 12) ──
+    // Never trust localStorage as authoritative wallet balance!
+    let walletBalance = 0;
+    try {
+        console.log(`[Purchase] Querying authoritative backend wallet balance for ${activeCurrency}...`);
+        const walletRes = await fetchWalletBalance(activeCurrency);
+        walletBalance = normalizeWalletBalance(walletRes, activeCurrency);
+        console.log(`[WALLET] Authoritative Backend Wallet Balance: ${sym}${walletBalance}`);
+
+        // Update UI with true backend balance
+        const buyBalEl = document.getElementById('buyWalletBalance');
+        if (buyBalEl) {
+            buyBalEl.textContent = sym + Number(walletBalance).toLocaleString(activeCurrency === 'USD' ? 'en-US' : 'en-NG', {
+                minimumFractionDigits: 2, maximumFractionDigits: 2
+            });
+        }
+    } catch (balErr) {
+        console.error('[Purchase] Could not fetch authoritative balance:', balErr.message);
+        isBuying = false;
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = '🛒 Buy Now';
+        }
+        showToast(balErr.message || 'Unable to connect to server to verify wallet balance.', 'error');
+        return;
+    }
+
+    // ── 3. Purchase validation: actual backend wallet balance >= authoritative product cost (Requirement 11) ──
+    if (walletBalance < productPrice) {
+        isBuying = false;
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = '🛒 Buy Now';
+        }
+        showToast(`Insufficient balance: Required ${sym}${productPrice.toLocaleString()}, available balance is ${sym}${walletBalance.toLocaleString()}. Please fund your wallet.`, 'error');
+        return;
+    }
+
+    console.log(`[PURCHASE DEBUG] Validation passed: balance (${sym}${walletBalance}) >= price (${sym}${productPrice})`);
     console.log("[PURCHASE] API URL:", `${API_BASE_URL}/api/buy/activation`);
     console.log("[PURCHASE] Payload:", {
         country,
@@ -511,16 +519,16 @@ async function handleBuyClick(country, product, btnEl) {
         const response = await buyActivation(country, product, activeCurrency);
         console.log("[PURCHASE] Backend response:", response);
 
-        // Normalize order from result
-        const order = response?.order || response;
+        // Normalize order from result (Requirement 17)
+        const order = response?.order || response?.data || response;
 
-        if (!order || (!order.id && !order._id && !order.orderId)) {
-            throw new Error(response?.message || 'Server did not return a valid order ID.');
+        if (!order || (!order.id && !order._id && !order.orderId && !order.activationId)) {
+            throw new Error(response?.message || 'Server did not return a valid activation or order ID.');
         }
 
-        // Dynamically capture the real Order ID from API response
-        const orderId = order.id || order._id || order.orderId;
-        const phone = order.phone || order.number || '—';
+        // Dynamically capture the real Order ID and Phone from API response
+        const orderId = order.id || order._id || order.orderId || order.activationId;
+        const phone = order.phone || order.phoneNumber || order.number || '—';
 
         console.log(`[Purchase] Order ID: ${orderId}`);
         console.log(`[Purchase] Activation ID: ${orderId}`);
@@ -534,7 +542,7 @@ async function handleBuyClick(country, product, btnEl) {
 
         showToast('✅ Number purchased successfully! Opening order…', 'success');
 
-        // Authoritative wallet refresh after purchase
+        // Authoritative wallet refresh after purchase (Requirement 13)
         await loadWalletBalanceBuyPage();
 
         // Open SMS modal and start Step 4 polling
@@ -544,11 +552,16 @@ async function handleBuyClick(country, product, btnEl) {
         console.error("[PURCHASE] Error status:", error?.status);
         console.error("[PURCHASE] Error message:", error?.message);
 
+        // Requirement 16: Return clear upstream error instead of generic message
         let displayError = error.message || 'Failed to purchase number.';
-        if (displayError.toLowerCase().includes('insufficient')) {
-            displayError = `Insufficient balance: Provider price for available numbers in this service exceeds current balance (${sym}${currentBal}). Please fund your wallet or choose another service.`;
+        if (displayError.includes('400') || displayError.toLowerCase().includes('status code 400')) {
+            displayError = 'NuraSMS upstream provider error (Code 400): This service is currently unavailable or out of stock from the provider. Your wallet was not charged.';
+        } else if (displayError.toLowerCase().includes('insufficient')) {
+            displayError = `Insufficient balance: Provider price for available numbers in this service exceeds current balance (${sym}${walletBalance}). Please fund your wallet.`;
         }
         showToast(displayError, 'error');
+
+        // Refresh authoritative balance after failed purchase to guarantee no incorrect deductions (Requirement 14, 15)
         try {
             await loadWalletBalanceBuyPage();
         } catch (_) {}
