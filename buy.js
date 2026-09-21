@@ -929,6 +929,32 @@ function closeSmsModal() {
     document.body.style.overflow = '';
 }
 
+async function refreshInbox() {
+    if (!currentOrderId) return;
+    const btn = document.getElementById('btnRefreshInbox');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Refreshing…';
+    }
+    try {
+        const res = await getOrder(currentOrderId);
+        const order = res?.order || res?.data || res;
+        if (order) {
+            currentOrderData = order;
+            updateOrderUI(order);
+            showToast('Inbox refreshed', 'info');
+        }
+    } catch (err) {
+        showToast(err.message || 'Failed to refresh inbox.', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '🔄 Refresh Inbox';
+        }
+    }
+}
+window.refreshInbox = refreshInbox;
+
 /* ══════════════════════════════════════════
    ORDER ACTIONS (Finish, Cancel, Ban)
    Uses: finishOrder, cancelOrder, banOrder from api.js
