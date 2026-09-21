@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel — Dave's Social</title>
+  <title>Admin Panel — Nura SQ</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <link rel="icon" type="image/png" href="nuraxq-logo.png">
@@ -11,12 +11,56 @@
 </head>
 <body>
 
+  <!-- ── Dedicated Admin Authentication Gate ── -->
+  <div class="admin-gate-overlay" id="adminGateOverlay">
+    <div class="admin-gate-card">
+      <div class="admin-gate-logo">
+        <img src="nuraxq-logo.png" alt="Nura SQ">
+      </div>
+      <span class="admin-gate-badge"><i class="ph ph-shield-check"></i> Administrator Access</span>
+      <h2 class="admin-gate-title">Nura SQ Admin Console</h2>
+      <p class="admin-gate-desc">Restricted administrative access. Enter your credentials to manage the platform.</p>
+      
+      <div id="adminGateError" class="admin-gate-error">
+        <i class="ph ph-warning-circle"></i> <span id="adminGateErrorMsg">Invalid username or password.</span>
+      </div>
+
+      <form id="adminGateForm" onsubmit="handleAdminGateLogin(event)">
+        <div class="sfield-group">
+          <label class="sfield-label" for="adminGateUser">Admin Username</label>
+          <input type="text" id="adminGateUser" class="sfield-input" placeholder="admin" required autocomplete="username" value="admin">
+        </div>
+
+        <div class="sfield-group">
+          <label class="sfield-label" for="adminGatePass">Admin Password</label>
+          <div style="position:relative;display:flex;align-items:center;">
+            <input type="password" id="adminGatePass" class="sfield-input" placeholder="Enter admin password" required autocomplete="current-password" style="width:100%;padding-right:40px;">
+            <button type="button" onclick="toggleGatePassword()" style="position:absolute;right:10px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">
+              <i class="ph ph-eye" id="adminGatePassEye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary" id="adminGateSubmitBtn" style="width:100%;justify-content:center;height:44px;margin-top:12px;">
+          <i class="ph ph-sign-in"></i> Sign In to Admin Console
+        </button>
+      </form>
+
+      <div class="admin-gate-footer">
+        <a href="index.html"><i class="ph ph-arrow-left"></i> Public Website</a>
+        <span style="color:var(--muted);font-size:11px;">Nura SQ v2.4 Admin</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Sidebar ── -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="brand-icon"><img src="nuraxq-logo.png" alt="NuraXQ" style="width:330px;height:auto;object-fit:contain;"></div>
+      <div class="brand-logo-wrap">
+        <img src="nuraxq-logo.png" alt="Nura SQ" class="admin-sidebar-logo">
+      </div>
       <div>
-        <div class="brand-name">Dave's Social</div>
+        <div class="brand-name">Nura SQ</div>
         <div class="brand-sub">Admin Console</div>
       </div>
     </div>
@@ -33,8 +77,12 @@
         <i class="ph ph-receipt"></i> Orders
         <span class="nav-badge" id="navOrdersBadge">0</span>
       </a>
+      <a href="#" class="nav-link" data-section="transactions" onclick="showSection('transactions',this)">
+        <i class="ph ph-arrows-left-right"></i> Transactions
+        <span class="nav-badge" id="navTxBadge">0</span>
+      </a>
       <a href="#" class="nav-link" data-section="activity" onclick="showSection('activity',this)">
-        <i class="ph ph-chart-line-up"></i> Activity Log
+        <i class="ph ph-clock-counter-clockwise"></i> Activity Log
       </a>
       <a href="#" class="nav-link" data-section="settings" onclick="showSection('settings',this)">
         <i class="ph ph-gear"></i> Settings
@@ -42,43 +90,50 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="admin-profile">
-        <div class="admin-avatar"><i class="ph ph-user-shield"></i></div>
-        <div>
-          <div class="admin-name" id="sidebarAdminName">Admin</div>
-          <div class="admin-role">Super Admin</div>
+      <div class="admin-profile" style="display:flex;align-items:center;gap:10px;">
+        <div class="admin-avatar"><i class="ph ph-shield-check"></i></div>
+        <div style="overflow:hidden;">
+          <div class="admin-name" id="sidebarAdminName" style="white-space:nowrap;text-overflow:ellipsis;overflow:hidden;max-width:130px;">Admin</div>
+          <div class="admin-role" id="sidebarAdminRole">Super Admin</div>
         </div>
       </div>
-      <a href="dashboard.html" class="logout-btn"><i class="ph ph-arrow-right-from-bracket"></i></a>
+      <button type="button" class="logout-btn" onclick="adminLogout()" title="Log out of Admin">
+        <i class="ph ph-sign-out"></i>
+      </button>
     </div>
   </aside>
 
   <!-- ── Top Bar ── -->
-  <div class="topbar">
-    <button class="hamburger" id="hamburger" onclick="toggleSidebar()">
+  <header class="topbar">
+    <button class="hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
       <i class="ph ph-list"></i>
     </button>
-    <div class="topbar-title" id="topbarTitle">Overview</div>
+    <div class="topbar-title" id="topbarTitle">Dashboard Overview</div>
+
     <div class="topbar-right">
-      <div class="provider-chip" id="providerChip">
+      <div class="provider-chip" id="providerChip" title="5sim Telecommunication Provider Status">
         <span class="chip-dot" id="providerDot"></span>
-        <span id="providerStatus">Checking 5sim...</span>
+        <span id="providerStatus">Connecting 5sim...</span>
       </div>
-      <button class="refresh-btn" onclick="refreshAll()" title="Refresh data">
-        <i class="ph ph-arrows-clockwise-right" id="refreshIcon"></i>
+      <a href="dashboard.html" class="topbar-action-btn" title="Open user dashboard view">
+        <i class="ph ph-user"></i> User Dashboard
+      </a>
+      <button class="refresh-btn" id="refreshBtn" onclick="refreshAll()" title="Refresh all administrative data">
+        <i class="ph ph-arrows-clockwise" id="refreshIcon"></i>
       </button>
     </div>
-  </div>
+  </header>
 
-  <!-- ── Main ── -->
+  <!-- ── Main Content ── -->
   <main class="main-content">
 
-    <!-- ═══ OVERVIEW ═══ -->
+    <!-- ═══ 1. OVERVIEW ═══ -->
     <section id="section-overview" class="section active">
       <div class="page-header">
         <h1>Dashboard Overview</h1>
         <div class="header-actions">
-          <input type="date" id="datePicker" onchange="refreshAll()">
+          <input type="date" id="datePicker" onchange="onOverviewDateChange()" title="Filter statistics by date">
+          <button class="btn-outline" onclick="resetDateFilter()"><i class="ph ph-arrow-counter-clockwise"></i> Reset Date</button>
         </div>
       </div>
 
@@ -97,7 +152,7 @@
           <div class="stat-body">
             <div class="stat-label">Active Users (7d)</div>
             <div class="stat-value" id="activeUsers">—</div>
-            <div class="stat-sub">Logged in last 7 days</div>
+            <div class="stat-sub">Active in past 7 days</div>
           </div>
         </div>
         <div class="stat-card purple">
@@ -119,13 +174,13 @@
         <div class="stat-card teal">
           <div class="stat-icon"><i class="ph ph-wallet"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Total User Wallets</div>
+            <div class="stat-label">User Wallets Sum</div>
             <div class="stat-value" id="totalUserWallets">—</div>
             <div class="stat-sub" id="providerBalance">5sim: Checking…</div>
           </div>
         </div>
         <div class="stat-card red">
-          <div class="stat-icon"><i class="ph ph-user-minus"></i></div>
+          <div class="stat-icon"><i class="ph ph-user-plus"></i></div>
           <div class="stat-body">
             <div class="stat-label">New Signups Today</div>
             <div class="stat-value" id="signupsToday">—</div>
@@ -134,76 +189,93 @@
         </div>
       </div>
 
-      <!-- Recent Users & Recent Orders side-by-side -->
+      <!-- Recent Users & Recent Orders -->
       <div class="two-col">
         <div class="panel">
           <div class="panel-header">
             <span><i class="ph ph-users"></i> Recent Users</span>
             <button class="panel-link" onclick="showSection('users', document.querySelector('[data-section=users]'))">View all →</button>
           </div>
-          <div class="panel-body">
-            <table class="data-table" id="recentUsersTable">
-              <thead><tr><th>Name</th><th>Joined</th><th>Balance</th></tr></thead>
-              <tbody id="recentUsersTbody"><tr><td colspan="3" class="empty-cell">Loading...</td></tr></tbody>
-            </table>
+          <div class="panel-body" style="padding:0;">
+            <div class="table-responsive">
+              <table class="data-table" id="recentUsersTable">
+                <thead>
+                  <tr><th>User</th><th>Joined</th><th>Balance</th></tr>
+                </thead>
+                <tbody id="recentUsersTbody">
+                  <tr><td colspan="3" class="empty-cell">Loading users...</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+
         <div class="panel">
           <div class="panel-header">
             <span><i class="ph ph-receipt"></i> Recent Orders</span>
             <button class="panel-link" onclick="showSection('orders', document.querySelector('[data-section=orders]'))">View all →</button>
           </div>
-          <div class="panel-body">
-            <table class="data-table" id="recentOrdersTable">
-              <thead><tr><th>Service</th><th>Country</th><th>Amount</th><th>Status</th></tr></thead>
-              <tbody id="recentOrdersTbody"><tr><td colspan="4" class="empty-cell">Loading...</td></tr></tbody>
+          <div class="panel-body" style="padding:0;">
+            <div class="table-responsive">
+              <table class="data-table" id="recentOrdersTable">
+                <thead>
+                  <tr><th>Service</th><th>Country</th><th>Amount</th><th>Status</th></tr>
+                </thead>
+                <tbody id="recentOrdersTbody">
+                  <tr><td colspan="4" class="empty-cell">Loading orders...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 2. USERS ═══ -->
+    <section id="section-users" class="section">
+      <div class="page-header">
+        <h1>User Management</h1>
+        <div class="header-actions">
+          <div class="search-wrap">
+            <i class="ph ph-magnifying-glass"></i>
+            <input type="text" id="userSearch" placeholder="Search by name, email, phone..." oninput="filterUsers()">
+          </div>
+          <button class="btn-outline" onclick="refreshUsersData()"><i class="ph ph-arrows-clockwise"></i> Refresh</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-body" style="padding:0;">
+          <div class="table-responsive">
+            <table class="data-table" id="usersTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>User Details</th>
+                  <th>Phone Number</th>
+                  <th>Wallet Balance</th>
+                  <th>Account Role</th>
+                  <th>Registered</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTbody">
+                <tr><td colspan="7" class="empty-cell">Loading users...</td></tr>
+              </tbody>
             </table>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══ USERS ═══ -->
-    <section id="section-users" class="section">
-      <div class="page-header">
-        <h1>All Users</h1>
-        <div class="header-actions">
-          <div class="search-wrap">
-            <i class="ph ph-magnifying-glass"></i>
-            <input type="text" id="userSearch" placeholder="Search users..." oninput="filterUsers()">
-          </div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-body">
-          <table class="data-table" id="usersTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Wallet (₦)</th>
-                <th>Joined</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="usersTbody">
-              <tr><td colspan="7" class="empty-cell">Loading users...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══ ORDERS ═══ -->
+    <!-- ═══ 3. ORDERS ═══ -->
     <section id="section-orders" class="section">
       <div class="page-header">
-        <h1>All Orders</h1>
+        <h1>Order Auditing</h1>
         <div class="header-actions">
           <div class="search-wrap">
             <i class="ph ph-magnifying-glass"></i>
-            <input type="text" id="orderSearch" placeholder="Search orders..." oninput="filterOrders()">
+            <input type="text" id="orderSearch" placeholder="Search orders, phone, service..." oninput="filterOrders()">
           </div>
           <select id="orderStatusFilter" onchange="filterOrders()" class="filter-select">
             <option value="">All Statuses</option>
@@ -213,129 +285,181 @@
             <option value="BANNED">Banned</option>
             <option value="PENDING">Pending</option>
           </select>
+          <button class="btn-outline" onclick="refreshOrdersData()"><i class="ph ph-arrows-clockwise"></i> Refresh</button>
         </div>
       </div>
+
       <div class="panel">
-        <div class="panel-body">
-          <table class="data-table" id="ordersTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Order ID</th>
-                <th>User</th>
-                <th>Service</th>
-                <th>Country</th>
-                <th>Number</th>
-                <th>Amount (₦)</th>
-                <th>Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody id="ordersTbody">
-              <tr><td colspan="9" class="empty-cell">Loading orders...</td></tr>
-            </tbody>
-          </table>
+        <div class="panel-body" style="padding:0;">
+          <div class="table-responsive">
+            <table class="data-table" id="ordersTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Order Reference</th>
+                  <th>User</th>
+                  <th>Service</th>
+                  <th>Country</th>
+                  <th>Assigned Phone</th>
+                  <th>Amount (₦)</th>
+                  <th>Status</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTbody">
+                <tr><td colspan="10" class="empty-cell">Loading orders...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══ ACTIVITY ═══ -->
-    <section id="section-activity" class="section">
+    <!-- ═══ 4. TRANSACTIONS ═══ -->
+    <section id="section-transactions" class="section">
       <div class="page-header">
-        <h1>Activity Log</h1>
+        <h1>Platform Transactions</h1>
         <div class="header-actions">
-          <input type="date" id="activityDatePicker" onchange="renderActivityLog()">
-          <button class="btn-outline" onclick="clearActivity()"><i class="ph ph-trash"></i> Clear Log</button>
+          <button class="btn-outline" onclick="loadBackendTransactions()"><i class="ph ph-arrows-clockwise"></i> Sync Backend Transactions</button>
         </div>
       </div>
+
+      <div class="panel">
+        <div class="panel-body" style="padding:0;">
+          <div class="table-responsive">
+            <table class="data-table" id="transactionsTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Transaction ID</th>
+                  <th>Type</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Date & Time</th>
+                </tr>
+              </thead>
+              <tbody id="transactionsTbody">
+                <tr><td colspan="6" class="empty-cell">Loading transactions...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 5. ACTIVITY LOG ═══ -->
+    <section id="section-activity" class="section">
+      <div class="page-header">
+        <h1>Platform Activity Log</h1>
+        <div class="header-actions">
+          <input type="date" id="activityDatePicker" onchange="renderActivityLog()" title="Filter logs by date">
+          <select id="activityTypeFilter" onchange="renderActivityLog()" class="filter-select">
+            <option value="">All Events</option>
+            <option value="login">Logins</option>
+            <option value="signup">Signups</option>
+            <option value="purchase">Orders / Purchases</option>
+            <option value="fund">Wallet Funding</option>
+            <option value="config">Settings / Config</option>
+          </select>
+          <button class="btn-outline btn-danger" onclick="confirmClearActivity()"><i class="ph ph-trash"></i> Clear Log</button>
+        </div>
+      </div>
+
       <div class="panel">
         <div class="panel-body" style="padding:0;">
           <div id="activityLog" class="activity-log">
-            <div class="empty-cell" style="padding:40px;text-align:center;">No activity recorded yet.</div>
+            <div class="empty-cell">No activity recorded yet.</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══ SETTINGS ═══ -->
+    <!-- ═══ 6. SETTINGS ═══ -->
     <section id="section-settings" class="section">
       <div class="page-header">
-        <h1>Admin Settings</h1>
+        <h1>Platform Administration Settings</h1>
       </div>
+
       <div class="two-col">
-        <!-- Admin Login Config -->
+        <!-- Platform Rates & Config -->
         <div class="panel">
-          <div class="panel-header"><span><i class="ph ph-key"></i> Admin Access</span></div>
+          <div class="panel-header"><span><i class="ph ph-sliders-horizontal"></i> Platform Parameters</span></div>
           <div class="panel-body">
             <div class="sfield-group">
-              <label class="sfield-label">Admin Username</label>
-              <input class="sfield-input" type="text" id="adminUsername" placeholder="admin">
+              <label class="sfield-label" for="adminRate">NGN / USD Exchange Rate (Display Multiplier)</label>
+              <input class="sfield-input" type="number" id="adminRate" placeholder="e.g. 1500" min="1">
             </div>
             <div class="sfield-group">
-              <label class="sfield-label">Admin Password</label>
-              <input class="sfield-input" type="password" id="adminPassword" placeholder="New password">
-            </div>
-            <button class="btn-primary" onclick="saveAdminCreds()"><i class="ph ph-floppy-disk"></i> Save Credentials</button>
-          </div>
-        </div>
-        <!-- Platform Config -->
-        <div class="panel">
-          <div class="panel-header"><span><i class="ph ph-sliders-horizontal"></i> Platform Config</span></div>
-          <div class="panel-body">
-            <div class="sfield-group">
-              <label class="sfield-label">NGN/USD Exchange Rate</label>
-              <input class="sfield-input" type="number" id="adminRate" placeholder="e.g. 1500">
-            </div>
-            <div class="sfield-group">
-              <label class="sfield-label">Markup Multiplier (e.g. 1.5 = 50% profit)</label>
-              <input class="sfield-input" type="number" step="0.01" id="adminMarkup" placeholder="e.g. 1.5">
+              <label class="sfield-label" for="adminMarkup">Markup Factor (e.g. 1.5 = 50% markup)</label>
+              <input class="sfield-input" type="number" step="0.01" id="adminMarkup" placeholder="e.g. 1.5" min="1">
             </div>
             <div class="sfield-group">
               <label class="sfield-label">Maintenance Mode</label>
-              <label class="stoggle" style="margin-top:6px;">
+              <label class="stoggle" style="margin-top:4px;">
                 <input type="checkbox" id="maintenanceMode">
                 <span class="stoggle-knob"></span>
               </label>
+              <small style="color:var(--muted);font-size:11px;margin-top:4px;">When active, users see a system maintenance alert on the dashboard.</small>
             </div>
-            <button class="btn-primary" onclick="savePlatformConfig()"><i class="ph ph-floppy-disk"></i> Save Config</button>
+            <button class="btn-primary" onclick="savePlatformConfig()"><i class="ph ph-floppy-disk"></i> Save Platform Parameters</button>
           </div>
         </div>
-      </div>
 
-      <!-- Fund a User -->
-      <div class="panel" style="margin-top:24px;">
-        <div class="panel-header"><span><i class="ph ph-money"></i> Fund User Wallet</span></div>
-        <div class="panel-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-          <div class="sfield-group" style="flex:1;min-width:180px;margin-bottom:0;">
-            <label class="sfield-label">Select User</label>
-            <select class="sfield-input" id="fundUserSelect"></select>
+        <!-- Fund User Wallet -->
+        <div class="panel">
+          <div class="panel-header"><span><i class="ph ph-wallet"></i> Fund User Balance</span></div>
+          <div class="panel-body">
+            <div class="sfield-group">
+              <label class="sfield-label" for="fundUserSelect">Select Target User</label>
+              <select class="sfield-input" id="fundUserSelect"></select>
+            </div>
+            <div class="sfield-group">
+              <label class="sfield-label" for="fundAmount">Credit Amount (₦)</label>
+              <input class="sfield-input" type="number" id="fundAmount" placeholder="e.g. 5000" min="100">
+            </div>
+            <button class="btn-primary" onclick="fundUser()"><i class="ph ph-plus-circle"></i> Add Funds to Wallet</button>
           </div>
-          <div class="sfield-group" style="flex:1;min-width:120px;margin-bottom:0;">
-            <label class="sfield-label">Amount (₦)</label>
-            <input class="sfield-input" type="number" id="fundAmount" placeholder="e.g. 5000">
-          </div>
-          <button class="btn-primary" style="height:44px;" onclick="fundUser()">Fund User</button>
         </div>
       </div>
 
       <!-- Announcements & Global Actions -->
       <div class="two-col" style="margin-top:24px;">
         <div class="panel">
-          <div class="panel-header"><span><i class="ph ph-megaphone"></i> Announcements</span></div>
+          <div class="panel-header"><span><i class="ph ph-megaphone"></i> Broadcast Announcement</span></div>
           <div class="panel-body">
             <div class="sfield-group">
-              <label class="sfield-label">Message</label>
-              <textarea class="sfield-input" id="announcementMessage" rows="3" placeholder="Type your announcement here..." style="resize:vertical;"></textarea>
+              <label class="sfield-label" for="announcementMessage">Announcement Message</label>
+              <textarea class="sfield-input" id="announcementMessage" rows="3" placeholder="Type platform announcement visible to all users..." style="resize:vertical;"></textarea>
             </div>
-            <button class="btn-primary" onclick="makeAnnouncement()"><i class="ph ph-paper-plane-right"></i> Send Announcement</button>
+            <button class="btn-primary" onclick="makeAnnouncement()"><i class="ph ph-paper-plane-right"></i> Broadcast to All Users</button>
           </div>
         </div>
+
         <div class="panel">
-          <div class="panel-header"><span><i class="ph ph-shield-check"></i> Global Actions</span></div>
+          <div class="panel-header"><span><i class="ph ph-shield-warning"></i> Global Security Actions</span></div>
           <div class="panel-body">
-            <p style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">Force all active users to log out. They will be required to sign in again to access their accounts.</p>
-            <button class="btn-primary" style="background: var(--amber);" onclick="logoutAllUsers()"><i class="ph ph-sign-out"></i> Logout All Users</button>
+            <p style="font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.6;">
+              Emergency session revocation: Force invalidate active client authentication sessions across the application, requiring users to log in again.
+            </p>
+            <button class="btn-primary btn-danger" onclick="confirmLogoutAllUsers()"><i class="ph ph-power"></i> Invalidate All Sessions</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Admin Access Credentials -->
+      <div class="panel" style="margin-top:24px;">
+        <div class="panel-header"><span><i class="ph ph-key"></i> Admin Access Credentials</span></div>
+        <div class="panel-body" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="sfield-group" style="flex:1;min-width:180px;margin-bottom:0;">
+            <label class="sfield-label" for="adminUsernameSetting">Admin Username</label>
+            <input class="sfield-input" type="text" id="adminUsernameSetting" placeholder="admin">
+          </div>
+          <div class="sfield-group" style="flex:1;min-width:180px;margin-bottom:0;">
+            <label class="sfield-label" for="adminNewPasswordSetting">New Password (optional)</label>
+            <input class="sfield-input" type="password" id="adminNewPasswordSetting" placeholder="Leave blank to keep current">
+          </div>
+          <button class="btn-primary" style="height:42px;" onclick="updateAdminCredentials()"><i class="ph ph-floppy-disk"></i> Update Admin Credentials</button>
         </div>
       </div>
     </section>
@@ -345,13 +469,41 @@
   <!-- ── User Detail Modal ── -->
   <div class="modal-overlay" id="userModal">
     <div class="modal">
-      <button class="modal-close" onclick="closeUserModal()"><i class="ph ph-x"></i></button>
-      <h2 class="modal-title"><i class="ph ph-user-circle"></i> User Detail</h2>
+      <button class="modal-close" onclick="closeModal('userModal')" aria-label="Close modal"><i class="ph ph-x"></i></button>
+      <h2 class="modal-title"><i class="ph ph-user-circle"></i> User Account Details</h2>
       <div id="userModalBody" class="modal-body-grid"></div>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeModal('userModal')">Close</button>
+      </div>
     </div>
   </div>
 
-  <!-- ── Toast ── -->
+  <!-- ── Order Status Check Modal ── -->
+  <div class="modal-overlay" id="orderModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('orderModal')" aria-label="Close modal"><i class="ph ph-x"></i></button>
+      <h2 class="modal-title"><i class="ph ph-receipt"></i> Live Order Verification</h2>
+      <div id="orderModalBody" class="modal-body-grid"></div>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeModal('orderModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Confirmation Modal ── -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('confirmModal')" aria-label="Close modal"><i class="ph ph-x"></i></button>
+      <h2 class="modal-title" id="confirmModalTitle"><i class="ph ph-warning-circle"></i> Confirm Action</h2>
+      <p id="confirmModalMessage" style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:20px;"></p>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeModal('confirmModal')">Cancel</button>
+        <button class="btn-primary" id="confirmModalBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast Notifications ── -->
   <div id="adminToast" class="admin-toast"></div>
 
   <script src="api.js?v=2.3"></script>

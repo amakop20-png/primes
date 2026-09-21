@@ -1,70 +1,118 @@
-/* Help page styling */
+/* ══════════════════════════════════════════════════════════════════════
+   help.css — Professional Help Center Styling
+   ══════════════════════════════════════════════════════════════════════ */
+
+.help-page-wrapper {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 3.5rem 1.5rem 5rem;
+  background: var(--bg, #FAFAFC);
+  width: 100%;
+  box-sizing: border-box;
+}
 
 .help-container {
-  max-width: 860px;
-  margin: 3rem auto;
-  padding: 0 1rem;
+  width: 100%;
+  max-width: 840px;
+  margin: 0 auto;
 }
 
 .help-header {
   text-align: center;
-  padding: 2rem 0 1rem;
+  margin-bottom: 2.5rem;
 }
 
 .help-logo {
-  width: 50px;
-  max-width: 72px;
-  margin: 0 auto 1rem;
+  height: 85px;
+  width: auto;
+  max-width: 260px;
+  object-fit: contain;
+  margin: 0 auto 1.5rem;
   display: block;
-  border-radius: 18px;
-  box-shadow: 0 16px 35px rgba(124, 58, 237, 0.12);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.04));
+  transition: transform 0.2s ease;
+}
+
+.help-logo:hover {
+  transform: scale(1.02);
 }
 
 .help-header h1 {
-  font-size: 2rem;
+  font-size: 2.25rem;
   font-weight: 800;
-  color: var(--text);
-  margin: 0;
-  line-height: 1.05;
+  color: var(--text, #10141F);
+  letter-spacing: -0.025em;
+  margin: 0 0 0.75rem;
+  line-height: 1.2;
 }
 
 .section-subtitle {
-  margin: 1rem auto 0;
+  margin: 0.75rem auto 0;
   max-width: 36rem;
-  color: var(--muted);
+  color: var(--muted, #5C6272);
   font-size: 1rem;
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
 .help-content {
-  background: var(--surface);
-  border: 1px solid rgba(229, 231, 235, 0.9);
-  border-radius: 28px;
-  padding: 2rem;
-  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.08);
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, #E5E7EE);
+  border-radius: 20px;
+  padding: 2.75rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
 }
 
 .help-section {
   margin-bottom: 1.75rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border, #E5E7EE);
+  transition: background 0.2s ease;
 }
 
-.help-section:last-child {
+.help-section:last-of-type {
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .help-section h2 {
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--text);
-  margin-bottom: 1rem;
+  color: var(--text, #10141F);
+  margin-bottom: 0.85rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.4rem 0;
+  transition: color 0.2s ease;
+}
+
+.help-section h2:hover {
+  color: var(--brand, #155EEF);
+}
+
+.help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--brand-tint, #EAF1FF);
+  color: var(--brand, #155EEF);
+  font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
 .help-section p {
-  font-size: 1rem;
-  color: var(--text);
+  font-size: 0.975rem;
+  color: var(--text-sidebar, var(--text, #374151));
   line-height: 1.75;
   margin: 0 0 1rem;
 }
@@ -73,40 +121,46 @@
   list-style: none;
   margin: 0 0 1.25rem;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 
 .help-section li {
-  margin-bottom: 0.9rem;
-  color: var(--text);
+  color: var(--text-sidebar, var(--text, #374151));
   position: relative;
   padding-left: 1.75rem;
-  line-height: 1.75;
+  line-height: 1.65;
+  font-size: 0.95rem;
 }
 
 .help-section li::before {
   content: "✓";
   position: absolute;
   left: 0;
-  top: 0.08rem;
-  color: var(--primary);
+  top: 0;
+  color: #16a34a;
   font-weight: 700;
   font-size: 0.95rem;
 }
 
 .contact-info {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid rgba(229, 231, 235, 0.7);
+  margin-top: 2.25rem;
+  padding: 1.75rem;
+  background: var(--surface-sunk, #F8FAFC);
+  border: 1px solid var(--border, #E5E7EE);
+  border-radius: 14px;
   text-align: center;
-  color: var(--muted);
+  color: var(--muted, #5C6272);
 }
 
 .contact-info p {
   margin: 0;
+  font-size: 0.95rem;
 }
 
 .contact-email {
-  color: var(--primary);
+  color: var(--brand, #155EEF);
   font-weight: 600;
   text-decoration: none;
 }
@@ -116,21 +170,92 @@
 }
 
 .header__nav .nav-link.active {
-  color: var(--primary);
+  color: var(--brand, #155EEF);
   font-weight: 700;
 }
 
-@media (max-width: 768px) {
-  .help-container {
-    margin: 2rem auto;
-    padding: 0 1rem;
-  }
+/* ── Dark Theme Support ── */
+body.dark-theme .help-page-wrapper {
+  background: var(--bg, #0B0E17);
+}
 
-  .help-content {
-    padding: 1.75rem;
+body.dark-theme .help-content {
+  background: var(--surface, #131826);
+  border-color: var(--border, #232A3B);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .help-icon {
+  background: rgba(76, 134, 255, 0.15);
+  color: #4C86FF;
+}
+
+body.dark-theme .help-section h2:hover {
+  color: #4C86FF;
+}
+
+body.dark-theme .contact-info {
+  background: var(--surface-sunk, #161D2E);
+  border-color: var(--border, #232A3B);
+}
+
+/* ── Responsive Adaptations ── */
+@media (max-width: 768px) {
+  .help-page-wrapper {
+    padding: 2.5rem 1.25rem 4rem;
   }
 
   .help-header {
-    padding-top: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .help-logo {
+    height: 72px;
+    max-width: 220px;
+    margin-bottom: 1.25rem;
+  }
+
+  .help-header h1 {
+    font-size: 1.85rem;
+  }
+
+  .help-content {
+    padding: 2rem 1.5rem;
+    border-radius: 16px;
+  }
+
+  .help-section h2 {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .help-page-wrapper {
+    padding: 1.75rem 1rem 3rem;
+  }
+
+  .help-logo {
+    height: 60px;
+    max-width: 190px;
+    margin-bottom: 1rem;
+  }
+
+  .help-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .help-content {
+    padding: 1.5rem 1.15rem;
+    border-radius: 14px;
+  }
+
+  .help-section h2 {
+    font-size: 1.05rem;
+  }
+
+  .help-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 1.05rem;
   }
 }

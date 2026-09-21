@@ -297,6 +297,179 @@
 
     .btn-modal-copy:hover { background: var(--primary-light); color: var(--primary); }
 
+    /* ── Cancel Number Confirmation Dialog ── */
+    .cancel-confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 2500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: cancelFadeIn 0.2s ease;
+    }
+
+    .cancel-confirm-overlay.show {
+      display: flex;
+    }
+
+    @keyframes cancelFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .cancel-confirm-modal {
+      background: var(--surface, #ffffff);
+      border-radius: 20px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 420px;
+      border: 1px solid var(--border, #e2e8f0);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+      text-align: center;
+      transform: scale(0.96);
+      animation: cancelPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes cancelPop {
+      to { transform: scale(1); }
+    }
+
+    .cancel-modal-icon-wrapper {
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .cancel-modal-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: #fee2e2;
+      color: #ef4444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+
+    body.dark-theme .cancel-modal-icon {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+
+    .cancel-modal-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text, #111827);
+      margin: 0 0 8px 0;
+    }
+
+    .cancel-modal-desc {
+      font-size: 14px;
+      color: var(--muted, #64748b);
+      margin: 0 0 16px 0;
+      line-height: 1.5;
+    }
+
+    .cancel-modal-warning-card {
+      background: rgba(239, 68, 68, 0.05);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      text-align: left;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--text, #334155);
+      margin-bottom: 22px;
+    }
+
+    body.dark-theme .cancel-modal-warning-card {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.25);
+      color: #e2e8f0;
+    }
+
+    .cancel-modal-warning-card i {
+      font-size: 17px;
+      color: #ef4444;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .cancel-modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 420px) {
+      .cancel-modal-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .btn-cancel-keep {
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border, #cbd5e1);
+      background: var(--border-light, #f1f5f9);
+      color: var(--text, #1e293b);
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-cancel-keep:hover {
+      background: var(--border, #e2e8f0);
+    }
+
+    .btn-cancel-confirm {
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 1px solid #b91c1c;
+      background: #dc2626;
+      color: #ffffff;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-cancel-confirm:hover {
+      background: #b91c1c;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    }
+
+    .btn-cancel-confirm:disabled,
+    .btn-cancel-keep:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .spin {
+      display: inline-block;
+      animation: spin-anim 1s linear infinite;
+    }
+
+    @keyframes spin-anim {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
     .modal-close-x {
       position: absolute;
       top: 16px;
@@ -951,7 +1124,7 @@
 
       <div class="sms-modal-actions">
         <button class="btn-modal-copy" id="btnCopyNumber"><i class="ph ph-copy"></i> Copy Number</button>
-        <button class="btn-modal-cancel" id="btnCancelOrder">❌ Cancel</button>
+        <button class="btn-modal-cancel" id="btnCancelOrder"><i class="ph ph-x-circle"></i> Cancel Number</button>
         <button class="btn-modal-ban" id="btnBanOrder">⚠️ Report Ban</button>
         <button class="btn-modal-finish" id="btnFinishOrder"><i class="ph ph-check-circle"></i> Done</button>
       </div>
@@ -960,6 +1133,36 @@
       <button id="btnRefreshInbox" style="display:none;width:100%;margin-top:10px;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--border-light);color:var(--text);font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;cursor:pointer;" onclick="refreshInbox()">
         🔄 Refresh Inbox
       </button>
+    </div>
+  </div>
+
+  <!-- ══ CANCEL NUMBER CONFIRMATION MODAL ══ -->
+  <div class="cancel-confirm-overlay" id="cancelConfirmOverlay" style="display:none;" aria-hidden="true" role="dialog" aria-labelledby="cancelModalTitle" aria-describedby="cancelModalDesc">
+    <div class="cancel-confirm-modal">
+      <div class="cancel-modal-icon-wrapper">
+        <div class="cancel-modal-icon">
+          <i class="ph ph-warning-circle"></i>
+        </div>
+      </div>
+      <div class="cancel-modal-body">
+        <h3 id="cancelModalTitle" class="cancel-modal-title">Cancel Number?</h3>
+        <p id="cancelModalDesc" class="cancel-modal-desc">
+          Are you sure you want to cancel this number?
+        </p>
+        <div class="cancel-modal-warning-card">
+          <i class="ph ph-info"></i>
+          <span>If you cancel it, the current activation/order may be terminated and the number may no longer be available for this request.</span>
+        </div>
+      </div>
+      <div class="cancel-modal-actions">
+        <button type="button" class="btn-cancel-keep" id="btnKeepNumber">
+          Keep Number
+        </button>
+        <button type="button" class="btn-cancel-confirm" id="btnConfirmCancelNumber">
+          <span class="btn-text">Cancel Number</span>
+          <span class="btn-spinner" style="display:none;"><i class="ph ph-spinner spin"></i> Cancelling…</span>
+        </button>
+      </div>
     </div>
   </div>
 

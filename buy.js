@@ -26,7 +26,13 @@ let isBuying         = false; // Guard against double-click on Buy
 let isActionBusy     = false; // Guard against multiple finish/cancel/ban requests
 
 const POLL_INTERVAL_MS = 5000;
-const CONVERSION_RATE  = 1500;
+function getConversionRate() {
+    if (typeof getExchangeRate === 'function') return getExchangeRate();
+    if (typeof window !== 'undefined' && typeof window.getExchangeRate === 'function') return window.getExchangeRate();
+    const stored = parseFloat(localStorage.getItem('primes_api_exchange_rate') || localStorage.getItem('adminRate'));
+    return (stored && stored > 0) ? stored : 1500;
+}
+const CONVERSION_RATE = 1500;
 
 /* ══════════════════════════════════════════
    ESCAPING HELPER
@@ -292,6 +298,7 @@ async function loadProducts(country) {
             return;
         }
 
+        const convRate = getConversionRate();
         allProducts = Object.entries(raw)
             .filter(([, info]) => info && typeof info === 'object')
             .map(([key, info]) => {
@@ -301,20 +308,20 @@ async function loadProducts(country) {
                 let category = (info.Category || info.category || 'activation').toLowerCase();
                 const isNativeNGN = String(info.currency || '').toUpperCase() === 'NGN';
 
-                // Requirement 9 & 10: If NuraSMS returns currency: "NGN", use the authoritative cost directly.
+                // Requirement 9 & 10: If NuraSQ returns currency: "NGN", use the authoritative cost directly.
                 // Do NOT convert an already-NGN product price through USD (e.g. AliExpress cost = ₦28, not $0.03 -> ₦41).
                 if (isNativeNGN && (info.cost !== undefined || info.Cost !== undefined)) {
                     priceNGN = parseFloat(info.cost !== undefined ? info.cost : info.Cost) || 0;
-                    priceUSD = info.Price !== undefined ? parseFloat(info.Price) : (priceNGN / CONVERSION_RATE);
+                    priceUSD = info.Price !== undefined ? parseFloat(info.Price) : (priceNGN / convRate);
                 } else if (info.cost !== undefined && info.Price !== undefined) {
                     priceNGN = parseFloat(info.cost) || 0;
                     priceUSD = parseFloat(info.Price) || 0;
                 } else if (info.cost !== undefined || info.rate !== undefined) {
                     priceNGN = parseFloat(info.cost || info.rate || 0);
-                    priceUSD = priceNGN / CONVERSION_RATE;
+                    priceUSD = priceNGN / convRate;
                 } else if (info.Price !== undefined || info.price !== undefined || info.Cost !== undefined) {
                     priceUSD = parseFloat(info.Price || info.price || info.Cost || 0);
-                    priceNGN = priceUSD * CONVERSION_RATE;
+                    priceNGN = priceUSD * convRate;
                 } else {
                     const operators = Object.values(info).filter(v => v && typeof v === 'object');
                     if (operators.length > 0) {
@@ -324,8 +331,8 @@ async function loadProducts(country) {
                         priceUSD = validUsdPrices.length > 0 ? Math.min(...validUsdPrices) : 0;
                         priceNGN = validNgnPrices.length > 0 ? Math.min(...validNgnPrices) : 0;
                         
-                        if (priceNGN === 0 && priceUSD > 0) priceNGN = priceUSD * CONVERSION_RATE;
-                        if (priceUSD === 0 && priceNGN > 0) priceUSD = priceNGN / CONVERSION_RATE;
+                        if (priceNGN === 0 && priceUSD > 0) priceNGN = priceUSD * convRate;
+                        if (priceUSD === 0 && priceNGN > 0) priceUSD = priceNGN / convRate;
 
                         qty = operators.reduce((sum, op) => sum + parseInt(op.count || op.qty || op.quantity || 0, 10), 0);
                         category = (operators[0].category || 'activation').toLowerCase();
@@ -555,7 +562,7 @@ async function handleBuyClick(country, product, btnEl) {
         // Requirement 16: Return clear upstream error instead of generic message
         let displayError = error.message || 'Failed to purchase number.';
         if (displayError.includes('400') || displayError.toLowerCase().includes('status code 400')) {
-            displayError = 'NuraSMS upstream provider error (Code 400): This service is currently unavailable or out of stock from the provider. Your wallet was not charged.';
+            displayError = 'Nura SQ upstream provider error (Code 400): This service is currently unavailable or out of stock from the provider. Your wallet was not charged.';
         } else if (displayError.toLowerCase().includes('insufficient')) {
             displayError = `Insufficient balance: Provider price for available numbers in this service exceeds current balance (${sym}${walletBalance}). Please fund your wallet.`;
         }
@@ -618,7 +625,8 @@ async function openOrderModal(orderId, initialOrder = null) {
     }
 
     const currentStatus = String(order?.status || 'PENDING').toUpperCase();
-    if (currentStatus === 'PENDING') {
+    const hasOtpOrSms = (Array.isArray(order?.sms) && order.sms.length > 0) || !!order?.code || !!order?.text;
+    if (currentStatus === 'PENDING' && !hasOtpOrSms) {
         startPolling(orderId);
     } else {
         stopPolling();
@@ -668,8 +676,8 @@ function updateOrderUI(order) {
         FINISHED: { dot: 'received', text: '✔ Order Completed',                            color: '#10b981' },
         CANCELED: { dot: '',         text: '❌ Order Cancelled',                           color: '#ef4444' },
         BANNED:   { dot: '',         text: '⚠️ Number Reported & Banned',                  color: '#ef4444' },
-        EXPIRED:  { dot: '',         text: '⏰ Number Expired (No SMS Received)',           color: '#888888' },
-        TIMEOUT:  { dot: '',         text: '⏰ Polling Timeout (Order pending)',            color: '#888888' },
+        EXPIRED:  { dot: '',         text: '⏰ Number Expired (No SMS Received)',           color: '#ef4444' },
+        TIMEOUT:  { dot: '',         text: '⏰ Order Timed Out (No SMS received from provider)', color: '#ef4444' },
     };
 
     const currentStatus = String(order.status || 'PENDING').toUpperCase();
@@ -685,19 +693,75 @@ function updateOrderUI(order) {
     const otpCode     = document.getElementById('otpCode');
     const otpFullText = document.getElementById('otpFullText');
 
-    const smsList = Array.isArray(order.sms) ? order.sms : (order.sms ? [order.sms] : []);
-    if (currentStatus === 'RECEIVED' && smsList.length > 0) {
-        const sms = smsList[0] || {};
-        const otp = sms.code || order.code || extractOTP(sms.text || order.text || '');
+    // Robust SMS and OTP extraction across all API shapes
+    const smsList = Array.isArray(order.sms)
+        ? order.sms
+        : (order.sms && typeof order.sms === 'object' ? [order.sms] : (typeof order.sms === 'string' ? [{ text: order.sms }] : []));
+
+    const topLevelCode = order.code || order.smsCode || order.otp || order.verification_code || order.passcode;
+    const topLevelText = order.text || order.smsText || order.message;
+
+    let otp = null;
+    let fullText = '';
+    let sender = '';
+    let smsTime = '';
+
+    if (smsList.length > 0) {
+        const latestSms = smsList[smsList.length - 1];
+        if (typeof latestSms === 'string') {
+            fullText = latestSms;
+            otp = extractOTP(latestSms);
+        } else if (latestSms && typeof latestSms === 'object') {
+            otp = latestSms.code || extractOTP(latestSms.text || '');
+            fullText = latestSms.text || '';
+            sender = latestSms.sender || '';
+            smsTime = latestSms.created_at || latestSms.date || '';
+        }
+    }
+
+    if (!otp && topLevelCode) otp = String(topLevelCode);
+    if (!otp && topLevelText) otp = extractOTP(topLevelText);
+    if (!fullText && topLevelText) fullText = String(topLevelText);
+
+    const hasReceivedSms = (smsList.length > 0 && !!fullText) || !!otp || !!topLevelText;
+
+    if (hasReceivedSms) {
         if (otpBox) otpBox.classList.add('show');
         if (otpCode) otpCode.textContent = otp || '—';
         if (otpFullText) {
-            const sender = sms.sender ? `[Sender: ${escapeHTML(sms.sender)}] ` : '';
-            const time   = sms.created_at || sms.date ? ` (${new Date(sms.created_at || sms.date).toLocaleTimeString()})` : '';
-            otpFullText.textContent = `${sender}${sms.text || ''}${time}`;
+            const senderLabel = sender ? `[Sender: ${escapeHTML(sender)}] ` : '';
+            const timeLabel   = smsTime ? ` (${new Date(smsTime).toLocaleTimeString()})` : '';
+            otpFullText.textContent = `${senderLabel}${fullText}${timeLabel}`;
+        }
+        if (statusDot) {
+            statusDot.className = 'dot received';
+            statusDot.style.background = '#10b981';
+        }
+        if (statusText && (currentStatus === 'PENDING' || currentStatus === 'RECEIVED')) {
+            statusText.textContent = '✅ SMS Received!';
         }
     } else {
         if (otpBox) otpBox.classList.remove('show');
+    }
+
+    // Populate multiple SMS messages in smsInboxList if present
+    const inboxList = document.getElementById('smsInboxList');
+    if (inboxList) {
+        if (smsList.length > 1) {
+            inboxList.style.display = 'block';
+            inboxList.innerHTML = smsList.map((m, idx) => {
+                const mText = typeof m === 'string' ? m : (m.text || m.code || '');
+                const mSender = typeof m === 'object' && m.sender ? escapeHTML(m.sender) : 'SMS';
+                const mTime = typeof m === 'object' && (m.created_at || m.date) ? new Date(m.created_at || m.date).toLocaleTimeString() : '';
+                return `<div style="padding:10px 14px;margin-bottom:8px;background:var(--border-light);border-radius:10px;font-size:12px;text-align:left;border:1px solid var(--border);">
+                    <div style="font-weight:700;color:var(--text);margin-bottom:2px;">#${idx + 1} [${mSender}] ${mTime ? '· ' + mTime : ''}</div>
+                    <div style="color:var(--muted);">${escapeHTML(mText)}</div>
+                </div>`;
+            }).join('');
+        } else {
+            inboxList.style.display = 'none';
+            inboxList.innerHTML = '';
+        }
     }
 
     const cancelBtn = document.getElementById('btnCancelOrder');
@@ -705,7 +769,7 @@ function updateOrderUI(order) {
     const finishBtn = document.getElementById('btnFinishOrder');
 
     const isPending  = currentStatus === 'PENDING';
-    const isReceived = currentStatus === 'RECEIVED';
+    const isReceived = currentStatus === 'RECEIVED' || hasReceivedSms;
     const isFinal    = currentStatus === 'FINISHED' || currentStatus === 'CANCELED' || currentStatus === 'BANNED' || currentStatus === 'EXPIRED' || currentStatus === 'TIMEOUT';
 
     if (cancelBtn) cancelBtn.disabled = !isPending && !isReceived;
@@ -715,8 +779,29 @@ function updateOrderUI(order) {
 
 function extractOTP(text) {
     if (!text) return null;
-    const match = text.match(/\b(\d{4,8})\b/);
-    return match ? match[1] : null;
+    const str = String(text).trim();
+
+    // 1. Explicit labels followed by digits or alphanumeric code: e.g. 'code is 123456', 'code: 123456', 'OTP: 9102'
+    const labeledMatch = str.match(/(?:code(?:\s+is)?|otp(?:\s+is)?|pin(?:\s+is)?|passcode|verification(?:\s+code)?|código)[\s:=#\-]+([0-9A-Za-z]{4,8})\b/i);
+    if (labeledMatch && labeledMatch[1] && /\d/.test(labeledMatch[1])) {
+        return labeledMatch[1];
+    }
+
+    // 2. Code at the beginning of text: e.g. '123456 is your code'
+    const startMatch = str.match(/^([0-9]{4,8})\b/);
+    if (startMatch && startMatch[1]) {
+        return startMatch[1];
+    }
+
+    // 3. Fallback to any 4 to 8 digit number, avoiding current years
+    const matches = str.match(/\b(\d{4,8})\b/g);
+    if (matches && matches.length > 0) {
+        const filtered = matches.filter(m => !['2024', '2025', '2026', '2027'].includes(m));
+        if (filtered.length > 0) return filtered[0];
+        return matches[0];
+    }
+
+    return null;
 }
 
 /* ══════════════════════════════════════════
@@ -794,14 +879,18 @@ function startPolling(orderId) {
 
             updateOrderUI(order);
 
-            if (status === 'RECEIVED') {
+            const hasSmsOrOtp = (Array.isArray(order.sms) && order.sms.length > 0) || !!order.code || !!order.text;
+            if (status === 'RECEIVED' || hasSmsOrOtp) {
                 stopPolling();
                 console.log(`[ORDER] Order completed! SMS / OTP received.`);
                 console.log(`[ORDER] Number received: ${order.phone || '—'}`);
                 showToast('📨 SMS received! Your verification code is ready.', 'success');
-            } else if (status === 'FINISHED' || status === 'CANCELED' || status === 'BANNED' || status === 'EXPIRED') {
+            } else if (status === 'FINISHED' || status === 'CANCELED' || status === 'BANNED' || status === 'EXPIRED' || status === 'TIMEOUT') {
                 stopPolling();
                 console.log(`[ORDER] Polling stopped. Terminal status: ${status}`);
+                if (status === 'TIMEOUT' || status === 'EXPIRED') {
+                    showToast('⏰ Number expired with no SMS received from provider.', 'warning');
+                }
             }
         } catch (err) {
             pollErrorCount++;
@@ -874,32 +963,91 @@ async function handleFinishOrder() {
     }
 }
 
-async function handleCancelOrder() {
-    if (!currentOrderId || isActionBusy) return;
-    if (!confirm('Cancel this activation order?')) return;
+/* ══════════════════════════════════════════
+   CANCEL NUMBER CONFIRMATION MODAL
+══════════════════════════════════════════ */
+function showCancelConfirmModal() {
+    const modal = document.getElementById('cancelConfirmOverlay');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
 
-    const btn = document.getElementById('btnCancelOrder');
+    // Focus "Keep Number" to prevent accidental confirmation via keyboard/enter
+    const keepBtn = document.getElementById('btnKeepNumber');
+    if (keepBtn) {
+        setTimeout(() => keepBtn.focus(), 80);
+    }
+}
+
+function hideCancelConfirmModal() {
+    const modal = document.getElementById('cancelConfirmOverlay');
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+
+    // Reset button states
+    const confirmBtn = document.getElementById('btnConfirmCancelNumber');
+    const keepBtn    = document.getElementById('btnKeepNumber');
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+        const textSpan = confirmBtn.querySelector('.btn-text');
+        const spinSpan = confirmBtn.querySelector('.btn-spinner');
+        if (textSpan) textSpan.style.display = '';
+        if (spinSpan) spinSpan.style.display = 'none';
+    }
+    if (keepBtn) keepBtn.disabled = false;
+}
+
+function handleCancelOrder() {
+    if (!currentOrderId || isActionBusy) return;
+    showCancelConfirmModal();
+}
+
+async function executeCancelOrder() {
+    if (!currentOrderId || isActionBusy) return;
+
+    const confirmBtn = document.getElementById('btnConfirmCancelNumber');
+    const keepBtn    = document.getElementById('btnKeepNumber');
+    const cancelBtn  = document.getElementById('btnCancelOrder');
+
     isActionBusy = true;
-    if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        const textSpan = confirmBtn.querySelector('.btn-text');
+        const spinSpan = confirmBtn.querySelector('.btn-spinner');
+        if (textSpan) textSpan.style.display = 'none';
+        if (spinSpan) spinSpan.style.display = 'inline-flex';
+    }
+    if (keepBtn) keepBtn.disabled = true;
+    if (cancelBtn) {
+        cancelBtn.disabled = true;
+        cancelBtn.textContent = 'Cancelling…';
+    }
 
     const targetOrderId = currentOrderId;
     console.log(`[STEP 6] Request: POST /api/order/${targetOrderId}/cancel`);
 
     try {
         const res = await cancelOrder(targetOrderId);
-        console.log('[STEP 6] Status: 200');
-        console.log('[STEP 6] Response:', res);
+        console.log('[STEP 6] Status: 200', res);
         stopPolling();
-        showToast('✅ Order cancelled successfully.', 'success');
+        hideCancelConfirmModal();
+        closeSmsModal();
+        showToast('✅ Number has been successfully cancelled.', 'success');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
         currentOrderData = null;
-        closeSmsModal();
         await loadWalletBalanceBuyPage();
     } catch (err) {
         console.error(`[STEP 6] cancelOrder error for Order ID ${targetOrderId}:`, err);
-        showToast(err.message || 'Failed to cancel order.', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '❌ Cancel'; }
+        hideCancelConfirmModal();
+        showToast(err.message || 'Failed to cancel number. Please try again.', 'error');
+        if (cancelBtn) {
+            cancelBtn.disabled = false;
+            cancelBtn.innerHTML = '<i class="ph ph-x-circle"></i> Cancel Number';
+        }
     } finally {
         isActionBusy = false;
     }
@@ -1020,6 +1168,20 @@ function attachEventListeners() {
     if (banBtn)    banBtn.addEventListener('click', handleBanOrder);
     if (finishBtn) finishBtn.addEventListener('click', handleFinishOrder);
 
+    // Cancel confirmation dialog buttons & backdrop
+    const keepNumberBtn    = document.getElementById('btnKeepNumber');
+    const confirmCancelBtn = document.getElementById('btnConfirmCancelNumber');
+    const cancelOverlay    = document.getElementById('cancelConfirmOverlay');
+    if (keepNumberBtn)    keepNumberBtn.addEventListener('click', hideCancelConfirmModal);
+    if (confirmCancelBtn) confirmCancelBtn.addEventListener('click', executeCancelOrder);
+    if (cancelOverlay) {
+        cancelOverlay.addEventListener('click', (e) => {
+            if (e.target === cancelOverlay && !isActionBusy) {
+                hideCancelConfirmModal();
+            }
+        });
+    }
+
     // Product cards — event delegation instead of inline onclick, so a
     // product key/name from 5sim can never break out of an HTML attribute.
     const cardsGrid = document.getElementById('cardsGrid');
@@ -1071,7 +1233,14 @@ function attachEventListeners() {
 
     // Keyboard ESC
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') closeSmsModal();
+        if (e.key === 'Escape') {
+            const cancelModal = document.getElementById('cancelConfirmOverlay');
+            if (cancelModal && (cancelModal.classList.contains('show') || cancelModal.style.display === 'flex')) {
+                hideCancelConfirmModal();
+                return;
+            }
+            closeSmsModal();
+        }
     });
 }
 

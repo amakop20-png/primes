@@ -169,9 +169,11 @@ function restoreTheme() {
 
 /* ══════════════════════════════════════════
    CURRENCY & ACCOUNT SWITCHER
-   Completely separate NGN and USD accounts:
-   - No currency conversions between NGN and USD
-   - Independent balances, virtual accounts & transactions
+   Display conversion:
+   - Authoritative wallet is stored in NGN on backend
+   - Switching to USD converts NGN balance to USD equivalent using dynamic exchange rate
+   - Switching back to NGN displays the original NGN balance
+   - Conversions apply consistently across wallet card, transactions, referral, and popups
 ══════════════════════════════════════════ */
 function getCurrency() {
     return localStorage.getItem('primes_currency') || 'NGN';
@@ -196,6 +198,9 @@ function updateCurrencyDisplay(currency) {
     }
 }
 
+// In-memory cache for authoritative NGN balance to enable instantaneous switching
+let cachedNgnBalance = parseFloat(localStorage.getItem('_walletBalance_NGN') || localStorage.getItem('_walletBalance') || '0') || 0;
+
 function toggleCurrency() {
     const current = getCurrency();
     const next    = current === 'NGN' ? 'USD' : 'NGN';
@@ -203,44 +208,71 @@ function toggleCurrency() {
 
     updateCurrencyDisplay(next);
 
-    // Switch and load independent data for the selected currency account
-    loadWalletBalance(next);
-    loadVirtualAccount(next);
-    loadTransactions(1, next);
+    // 1. Instantly re-render balance cards with converted amount (Zero flicker!)
+    renderBalanceCards(cachedNgnBalance, next);
 
-    showToast(`Switched to ${next === 'USD' ? 'Dollar (USD)' : 'Naira (NGN)'} Account`, 'info');
+    // 2. Re-render referral balance with correct currency
+    loadReferralBalance();
+
+    // 3. Re-render transactions with converted currency amounts
+    loadTransactions(txPage, next);
+
+    // 4. Virtual account display
+    loadVirtualAccount(next);
+
+    const rate = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
+    if (next === 'USD') {
+        showToast(`Currency display: USD ($) · Rate: ₦${rate.toLocaleString()} = $1.00`, 'info');
+    } else {
+        showToast(`Currency display: NGN (₦)`, 'info');
+    }
 }
 
 /**
  * Render the balance cards for the active currency.
- * NO conversion is performed — NGN balance is NGN, USD balance is USD.
+ * When currency is USD, converts the authoritative NGN balance to USD equivalent.
+ * When currency is NGN, displays the authoritative NGN balance.
  */
 function renderBalanceCards(rawBalance, currency) {
-    const curr   = currency || getCurrency();
-    const isUSD  = curr === 'USD';
-    const num    = parseFloat(rawBalance) || 0;
+    const curr  = currency || getCurrency();
+    const isUSD = curr === 'USD';
+    const rate  = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
 
-    const formatted = isUSD
-        ? '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        : '₦' + num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (rawBalance !== undefined && rawBalance !== null) {
+        const num = parseFloat(rawBalance) || 0;
+        cachedNgnBalance = num;
+        localStorage.setItem('_walletBalance_NGN', String(cachedNgnBalance));
+        localStorage.setItem('_walletBalance', String(cachedNgnBalance));
+    }
+
+    const ngnAmount = cachedNgnBalance;
+    const usdAmount = ngnAmount / rate;
+
+    const formattedNGN = '₦' + ngnAmount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedUSD = '$' + usdAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const balPrimaryEl   = document.getElementById('displayBalanceNGN');
     const balSecondaryEl = document.getElementById('displayBalanceUSD');
     const popBalEl       = document.getElementById('popupBalanceAmount');
 
-    if (balPrimaryEl)   balPrimaryEl.textContent   = formatted;
-    if (balSecondaryEl) balSecondaryEl.textContent = isUSD ? 'USD Account' : 'NGN Account';
-    if (popBalEl)       popBalEl.textContent       = formatted;
+    if (isUSD) {
+        if (balPrimaryEl)   balPrimaryEl.textContent   = formattedUSD;
+        if (balSecondaryEl) balSecondaryEl.textContent = `USD Equivalent · (₦${rate.toLocaleString()} = $1.00)`;
+        if (popBalEl)       popBalEl.textContent       = formattedUSD;
+    } else {
+        if (balPrimaryEl)   balPrimaryEl.textContent   = formattedNGN;
+        if (balSecondaryEl) balSecondaryEl.textContent = `NGN Account · Approx: ${formattedUSD}`;
+        if (popBalEl)       popBalEl.textContent       = formattedNGN;
+    }
 
     // Persist per-currency balance
-    localStorage.setItem('_walletBalance_' + curr, String(num));
-    if (!isUSD) localStorage.setItem('_walletBalance', String(num));
+    localStorage.setItem('_walletBalance_USD', String(usdAmount));
 
     // Sync to admin user records
-    syncAdminUserData(num, curr);
+    syncAdminUserData(ngnAmount, usdAmount);
 }
 
-function syncAdminUserData(balance, currency = 'NGN') {
+function syncAdminUserData(ngnBalance, usdBalance) {
     try {
         const session = getSession();
         if (!session) return;
@@ -252,8 +284,8 @@ function syncAdminUserData(balance, currency = 'NGN') {
         let found = false;
         for (let u of users) {
             if ((u.email && u.email.toLowerCase() === userEmail) || (u.name && u.name === userName)) {
-                if (currency === 'NGN') u.balance = String(balance);
-                else u.balanceUSD = String(balance);
+                u.balance = String(ngnBalance);
+                u.balanceUSD = String(usdBalance);
                 u.name    = userName;
                 u.phone   = userPhone || u.phone;
                 found = true;
@@ -263,10 +295,10 @@ function syncAdminUserData(balance, currency = 'NGN') {
         if (!found && (userEmail || userName)) {
             users.unshift({
                 name: userName,
-                email: userEmail || `${session.username || 'user'}@davessocial.com`,
+                email: userEmail || `${session.username || 'user'}@nurasq.com`,
                 phone: userPhone || '—',
-                balance: currency === 'NGN' ? String(balance) : '0',
-                balanceUSD: currency === 'USD' ? String(balance) : '0',
+                balance: String(ngnBalance),
+                balanceUSD: String(usdBalance),
                 createdAt: new Date().toISOString()
             });
         }
@@ -293,28 +325,45 @@ function logAdminActivity(type, message, username) {
 
 /* ══════════════════════════════════════════
    WALLET BALANCE
-   Loads separate balance per currency (NGN vs USD)
+   Loads authoritative NGN balance from backend and displays in active currency
 ══════════════════════════════════════════ */
 async function loadWalletBalance(currency) {
     const curr  = currency || getCurrency();
     const isUSD = curr === 'USD';
 
-    // Show loading placeholder
+    // Show loading placeholder if no cached balance exists yet
     const balPrimaryEl = document.getElementById('displayBalanceNGN');
     const popBalEl     = document.getElementById('popupBalanceAmount');
-    if (balPrimaryEl) balPrimaryEl.textContent = 'Loading...';
-    if (popBalEl)     popBalEl.textContent     = 'Loading...';
+    if (!cachedNgnBalance && cachedNgnBalance !== 0) {
+        if (balPrimaryEl) balPrimaryEl.textContent = 'Loading...';
+        if (popBalEl)     popBalEl.textContent     = 'Loading...';
+    } else {
+        // Render immediately from cache while fetching
+        renderBalanceCards(cachedNgnBalance, curr);
+    }
 
-    console.log(`[Wallet] Requesting ${curr} wallet balance...`);
+    console.log(`[Wallet] Requesting authoritative wallet balance...`);
     try {
-        const data = await getWalletBalance(curr);
-        console.log(`[Wallet] ${curr} Response received:`, data);
+        const data = await getWalletBalance('NGN');
+        console.log(`[Wallet] Response received:`, data);
 
-        const bal = normalizeWalletBalance(data, curr);
-        console.log(`[Wallet] Normalized ${curr} Balance: ${bal}`);
+        // Extract authoritative NGN balance
+        let bal = 0;
+        if (data && typeof data === 'object') {
+            const src = data.wallet || data.data || data;
+            bal = parseFloat(src.balance ?? src.ngnBalance ?? data.balance ?? 0) || 0;
+        }
+
+        console.log(`[Wallet] Authoritative NGN Balance: ${bal}`);
         renderBalanceCards(bal, curr);
     } catch (err) {
         console.error(`[Wallet] API error (${err.status || 0}): ${err.message}`);
+
+        // If we have a cached balance, maintain it
+        if (cachedNgnBalance > 0) {
+            renderBalanceCards(cachedNgnBalance, curr);
+            return;
+        }
 
         const setErrorDisplay = (msg) => {
             if (balPrimaryEl) balPrimaryEl.innerHTML = `<span style="font-size: 20px; font-weight: 600; line-height: 1.2; display: block; white-space: normal;">${msg}</span>`;
@@ -325,8 +374,7 @@ async function loadWalletBalance(currency) {
             setErrorDisplay('Auth Error');
             showToast('Your session has expired. Please log in again.', 'error');
         } else if (err.status === 404) {
-            console.log(`[Wallet] 404 received for ${curr} wallet.`);
-            setErrorDisplay('No Wallet');
+            console.log(`[Wallet] 404 received for wallet.`);
             renderBalanceCards(0, curr);
         } else if (err.status >= 500) {
             setErrorDisplay('Server error');
@@ -505,13 +553,14 @@ function copyVirtualAccount() {
 
 /* ══════════════════════════════════════════
    TRANSACTIONS
-   Independent transaction tracking per currency
+   Display and convert transactions according to active dashboard currency
 ══════════════════════════════════════════ */
 async function loadTransactions(page = 1, currency) {
     txPage = page;
     const curr   = currency || getCurrency();
     const isUSD  = curr === 'USD';
     const symbol = isUSD ? '$' : '₦';
+    const rate   = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
 
     const listEl    = document.getElementById('transactionsList');
     const paginEl   = document.getElementById('txPagination');
@@ -530,18 +579,48 @@ async function loadTransactions(page = 1, currency) {
         let txs    = data?.transactions || data?.data || [];
         const pg   = data?.pagination || {};
 
-        // Filter by currency if backend returns mixed transactions
-        if (Array.isArray(txs) && txs.length > 0) {
-            txs = txs.filter(t => !t.currency || t.currency.toUpperCase() === curr.toUpperCase());
+        // If backend returned empty when curr is USD, fallback to NGN query so user sees converted history
+        if ((!txs || txs.length === 0) && isUSD) {
+            try {
+                const fallbackData = await getTransactions(page, TX_LIMIT, 'NGN');
+                const fallbackTxs  = fallbackData?.transactions || fallbackData?.data || [];
+                if (fallbackTxs.length > 0) {
+                    txs = fallbackTxs;
+                }
+            } catch (e) {
+                // Ignore fallback error
+            }
         }
+
+        let totalRechargeInNGN = 0;
+        let numbersCount = 0;
 
         if (!txs || txs.length === 0) {
             listEl.innerHTML = `<li style="text-align:center;padding:24px;color:var(--muted,#888);font-size:14px;">No ${curr} transactions recorded yet.</li>`;
         } else {
             listEl.innerHTML = txs.map(tx => {
-                const amount    = parseFloat(tx.amount) || 0;
-                const isCredit  = (tx.type && tx.type.toLowerCase() === 'credit') || amount > 0;
-                const amtStr    = (isCredit ? '+' : '-') + symbol + Math.abs(amount).toLocaleString(isUSD ? 'en-US' : 'en-NG', { minimumFractionDigits: 2 });
+                const rawAmount = parseFloat(tx.amount) || 0;
+                const txCur     = (tx.currency || 'NGN').toUpperCase();
+                const isCredit  = (tx.type && tx.type.toLowerCase() === 'credit') || rawAmount > 0;
+                const absAmount = Math.abs(rawAmount);
+
+                // Convert transaction amount based on active display currency
+                let convertedAmt;
+                if (isUSD) {
+                    convertedAmt = (txCur === 'USD') ? absAmount : (absAmount / rate);
+                } else {
+                    convertedAmt = (txCur === 'USD') ? (absAmount * rate) : absAmount;
+                }
+
+                // Track stats for popup
+                const amountInNGN = (txCur === 'USD') ? (absAmount * rate) : absAmount;
+                if (isCredit) {
+                    totalRechargeInNGN += amountInNGN;
+                } else {
+                    numbersCount++;
+                }
+
+                const amtStr    = (isCredit ? '+' : '-') + symbol + convertedAmt.toLocaleString(isUSD ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const color     = isCredit ? '#10b981' : '#ef4444';
                 const dateStr   = tx.createdAt ? new Date(tx.createdAt).toLocaleString() : '—';
                 const status    = tx.status || 'success';
@@ -561,6 +640,17 @@ async function loadTransactions(page = 1, currency) {
                     <div style="font-weight:800;font-size:14px;color:${color};flex-shrink:0;">${amtStr}</div>
                 </li>`;
             }).join('');
+        }
+
+        // Update popup modal statistics
+        const totalRechargeEl = document.getElementById('popupTotalRecharge');
+        if (totalRechargeEl) {
+            const displayRecharge = isUSD ? (totalRechargeInNGN / rate) : totalRechargeInNGN;
+            totalRechargeEl.textContent = symbol + displayRecharge.toLocaleString(isUSD ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        const numbersPurchasedEl = document.getElementById('popupNumbersPurchased');
+        if (numbersPurchasedEl && numbersCount > 0) {
+            numbersPurchasedEl.textContent = String(numbersCount);
         }
 
         // Pagination controls
@@ -595,7 +685,7 @@ function renderUserInfo() {
     if (session.username) {
         const refCodeEl = document.getElementById('displayReferralCode');
         if (refCodeEl) {
-            const domain = window.location.host || 'davessocial.com';
+            const domain = window.location.host || 'nurasq.com';
             refCodeEl.textContent = domain + '/signup.html?ref=' + session.username;
         }
     }
@@ -610,10 +700,19 @@ async function loadReferralBalance() {
     
     try {
         const session = getSession();
-        const refBal = session?.referralBalance || 0;
-        el.textContent = '₦' + Number(refBal).toLocaleString('en-US', {minimumFractionDigits: 2});
+        const refBal = parseFloat(session?.referralBalance) || 0;
+        const curr   = getCurrency();
+        const isUSD  = curr === 'USD';
+        const rate   = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
+
+        if (isUSD) {
+            const usdVal = refBal / rate;
+            el.textContent = '$' + usdVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else {
+            el.textContent = '₦' + refBal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
     } catch (err) {
-        el.textContent = '₦0.00';
+        el.textContent = getCurrency() === 'USD' ? '$0.00' : '₦0.00';
     }
 }
 
@@ -742,9 +841,10 @@ async function launchPaystack(rawVal) {
     const curr         = getCurrency();
     const isNGN        = curr === 'NGN';
     const symbol       = isNGN ? '₦' : '$';
+    const rate         = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
     const amountInKobo = isNGN
         ? Math.round(rawVal * 100)
-        : Math.round(rawVal * 1500 * 100);
+        : Math.round(rawVal * rate * 100);
 
     const transactionRef = 'DAVE-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
 

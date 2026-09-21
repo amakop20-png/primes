@@ -3,88 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Dave Social</title>
+  <title>Login - Nura SQ</title>
+  <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="style.css">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--body-bg-login); min-height: 100vh; display: flex; flex-direction: column; color: var(--text-color); }
-    header { background: var(--header-bg); border-bottom: 1px solid var(--border-color); padding: 1rem 2rem; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
-    header .logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.5rem; font-weight: 700; color: var(--btn-secondary-text); }
-    header a { text-decoration: none; color: var(--btn-secondary-text); font-weight: 600; font-size: 0.95rem; transition: color 0.3s; padding: 0.5rem 1rem; }
-    header a:hover { color: #764ba2; }
-  </style>
+  <link rel="stylesheet" href="auth.css">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body class="auth-page">
-
   <script>
     if (localStorage.getItem('dashboardTheme') === 'dark') {
       document.body.classList.add('dark-theme');
     }
   </script>
-    <header>
-    <div class="logo"><img src="nuraxq-logo.png" alt="NuraXQ" style="height:48px;width:auto;object-fit:contain;"></div>
-      <a href="index.html">← Back to Home</a>
-     </header>
-    <div class="login-container" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; margin-top: -2rem;">
-        <div class="login-card" style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: var(--shadow); padding: 3rem; width: 100%; max-width: 420px; animation: slideUp 0.6s ease-out;">
-            <div class="login-header" style="text-align: center; margin-bottom: 2.5rem;">
-                <h1 style="font-size: 1.8rem; font-weight: 700; color: var(--text-color); margin-bottom: 0.5rem;">Welcome Back</h1>
-                <p style="color: var(--text-muted); font-size: 0.95rem;">Log in to your account to continue</p>
-            </div>
-            
-                        
-                        
-            <form class="login-form" method="post" id="loginForm" style="display: flex; flex-direction: column; gap: 1.5rem;">
-                <input type="hidden" name="ajax" value="1">
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    <label for="login_input" style="font-weight: 600; color: var(--text-color); font-size: 0.9rem;">Email or Username</label>
-                    <div class="input-group" style="position: relative; display: flex; align-items: center;">
-                        <span class="input-icon" style="position: absolute; left: 1rem; font-size: 1.1rem; pointer-events: none;">👤</span>
-                        <input type="text" id="login_input" name="login_input" class="form-control" 
-                               placeholder="your@email.com or username" required autocomplete="username" style="padding-left: 2.8rem;">
-                    </div>
-                </div>
-                
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    <label for="password" style="font-weight: 600; color: var(--text-color); font-size: 0.9rem;">Password</label>
-                    <div class="input-group" style="position: relative; display: flex; align-items: center;">
-                        <span class="input-icon" style="position: absolute; left: 1rem; font-size: 1.1rem; pointer-events: none;"><i class="ph ph-lock-key"></i></span>
-                        <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required autocomplete="current-password"
-                               style="padding-left: 2.8rem; padding-right: 2.8rem;">
-                        <button type="button" class="password-toggle" id="togglePassword" style="position: absolute; right: 1rem; background: none; border: none; font-size: 1.2rem; cursor: pointer;">👁</button>
-                    </div>
-                    <a href="forget-password.html" style="text-align: right; font-size: 0.9rem; color: #667eea; text-decoration: none; font-weight: 500; margin-top: 0.3rem;">Forgot password?</a>
-                </div>
-                
-                <button type="submit" class="btn8 btn-primary" id="loginBtn8" style="padding: 0.95rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%;">
-                  <span>Log In</span>
-                  <div id="loginSpinner" style="display:none; width:16px; height:16px; border:2px solid white; border-top-color:transparent; border-radius:50%; animation: spin 0.8s linear infinite;"></div>
-                </button>
-                
-                <div class="login-footer" style="text-align: center; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-                    <p style="color: var(--text-muted); font-size: 0.95rem;">Don't have an account? <a href="signup.html" style="color: var(--primary); font-weight: 700; text-decoration: none;">Sign Up</a></p>
-                </div>
-            </form>
-        </div>
-    </div>
-    <style>
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        #login_input:focus, #password:focus, #referral_code:focus {
-            outline: none;
-            border-color: #667eea !important;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
-        }
-        #loginBtn8:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
-        #loginBtn8:active:not(:disabled) { transform: translateY(0); }
-        #loginBtn8:disabled { opacity: 0.7; cursor: not-allowed; }
-    </style>
 
- <script src="api.js?v=2.3"></script>
- <script src="login.js?v=2.3"></script>
+  <!-- Top Navigation Header -->
+  <header class="auth-header">
+    <div class="logo">
+      <a href="index.html"><img src="nuraxq-logo.png" alt="NuraXQ" width="120" height="auto"></a>
+    </div>
+    <a href="index.html" class="auth-back-link"><i class="ph ph-arrow-left"></i> Back to Home</a>
+  </header>
+
+  <!-- Centered Auth Card Container -->
+  <main class="auth-main">
+    <div class="auth-card">
+      <div class="auth-card-logo-wrap">
+        <a href="index.html"><img src="nuraxq-logo.png" alt="NuraXQ" class="auth-card-logo"></a>
+      </div>
+
+      <div class="auth-card-header">
+        <h1>Welcome Back</h1>
+        <p>Log in to manage your virtual numbers and SMS services</p>
+      </div>
+
+      <form class="auth-form" method="post" id="loginForm">
+        <input type="hidden" name="ajax" value="1">
+
+        <div class="form-group">
+          <label for="login_input">Email or Username</label>
+          <div class="input-group">
+            <span class="input-icon"><i class="ph ph-user"></i></span>
+            <input type="text" id="login_input" name="login_input" class="form-control" 
+                   placeholder="name@example.com or username" required autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">
+            <span>Password</span>
+            <a href="forget-password.html" class="forgot-password-link">Forgot password?</a>
+          </label>
+          <div class="input-group">
+            <span class="input-icon"><i class="ph ph-lock-key"></i></span>
+            <input type="password" id="password" name="password" class="form-control" 
+                   placeholder="••••••••" required autocomplete="current-password"
+                   style="padding-right: 2.85rem;">
+            <button type="button" class="password-toggle" id="togglePassword" aria-label="Toggle password visibility">👁</button>
+          </div>
+        </div>
+
+        <button type="submit" class="auth-submit-btn" id="loginBtn8">
+          <span>Log In</span>
+          <div id="loginSpinner" class="btn-spinner" style="display:none;"></div>
+        </button>
+
+        <div class="auth-footer">
+          <p>Don't have an account? <a href="signup.html">Create an Account</a></p>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="api.js?v=2.3"></script>
+  <script src="login.js?v=2.3"></script>
 </body>
 </html>

@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy - NuraSMS</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Privacy Policy - Nura SQ</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="policy.css">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
@@ -14,20 +15,22 @@
       document.body.classList.add('dark-theme');
     }
   </script>
-  <!-- Loader (first thing inside body) -->
+
+  <!-- Loader -->
   <div class="loader-wrapper" id="loaderWrapper">
-      <img src="nuraxq-logo.png" alt="NuraXQ" class="loader-logo" style="width:160px;height:auto;object-fit:contain;">
+    <img src="nuraxq-logo.png" alt="NuraXQ" class="loader-logo" style="width:160px;height:auto;object-fit:contain;">
   </div>
+
   <!-- Header -->
-  <header >
+  <header>
     <div class="header__logo">
-      <img src="nuraxq-logo.png" alt="NuraXQ – Connect Without Borders" width="130" height="auto" style="height:auto;">
+      <a href="index.html"><img src="nuraxq-logo.png" alt="NuraXQ – Connect Without Borders" width="130" height="auto" style="height:auto;"></a>
     </div>
     
     <nav class="header__nav" id="nav">
       <a href="index.html" class="nav-link">Home</a>
       <a href="terms.html" class="nav-link">Terms</a>
-      <a href="privacy.html" class="nav-link">Privacy</a>
+      <a href="privacy.html" class="nav-link active">Privacy</a>
       <a href="help.html" class="nav-link">Help</a>
       <a href="refund.html" class="nav-link">Refunds</a>
     </nav>
@@ -47,153 +50,134 @@
       <span></span>
     </button>
   </header>
-     <div class="prike">
-   <div class="terms-container">
-        <div class="terms-header">
-            <h1><img src="nuraxq-logo.png" alt="NuraXQ" style="width:auto;height:80px;object-fit:contain;"></h1></br></br> Privacy Policy</h1>
-            <p>Last Updated: 18-07-2025</p>
-        </div>
-        
-   <div class="terms-content">
-  <div class="terms-section">
-      <p>
-       By accessing  or using our services, you agree to these Terms. If you disagree, please do not use our platform.
-      </p>
+
+  <main class="policy-page-wrapper">
+    <div class="policy-container">
+      <div class="policy-header">
+        <a href="index.html"><img src="nuraxq-logo.png" alt="NuraXQ" class="policy-logo"></a>
+        <h1>Privacy Policy</h1>
+        <div class="policy-badge"><i class="ph ph-shield-check"></i> Last Updated: July 18, 2025</div>
       </div>
-            
-            <div class="terms-section">
-                <h2>1. Data Collection</h2><p>We collect information to provide better services to our users.</p><h2>2. Account Use</h2>
-                <ul>
-                    <li>You're responsible for your account and password security.</li>
-                    <li>Provide accurate info and avoid sharing your login credentials.</li>
-                    <li>We may suspend accounts involved in abuse, fraud, or illegal activity.</li>
-                </ul>
-            </div>
-            
-            <div class="terms-section">
-                <h2>3. Acceptable Use</h2>
-                <ul>
-                    <li>Do not use our platform for fraud, spam, or illegal actions.</li>
-                    <li>Use of virtual numbers for banking, crypto, or fintech apps may be restricted.</li>
-                    <li>Don't reverse-engineer or resell our services without permission.</li>
-                </ul>
-            </div>
-            
-            <div class="terms-section">
-                <h2>4. Service Availability</h2>
-                <ul>
-                    <li>Service is provided "as is" with no uptime guarantee.</li>
-                    <li>We are not liable for delivery failures, bans, or third-party blocks.</li>
-                    <li>We may update or suspend services at any time.</li>
-                </ul>
-            </div>
-            
-            <div class="terms-section">
-                <h2>5. Intellectual Property</h2>
-                <p>
-                    All content on  is our property. Don't copy or reuse it without written consent.
-                </p>
-            </div>
-            
-            <div class="terms-section">
-                <h2>6. Legal Obligations</h2>
-                <p>
-                    You agree to comply with all applicable Nigerian and international laws. We may work with authorities where necessary.
-                </p>
-            </div>
-            
-            <div class="terms-section">
-                <h2>7. Limitation of Liability</h2>
-                <p>
-                    We're not responsible for indirect losses or damages. Our maximum liability is ₦25,000 NGN or the amount you paid in the last 30 days, whichever is less.
-                </p>
-            </div>
-            
-            <div class="terms-section">
-                <h2>8. Termination</h2>
-                <p>
-                    We reserve the right to suspend or terminate your account for violations of these terms or suspicious behavior.
-                </p>
-            </div>
-            
-            <div class="terms-section">
-                <h2>9. Changes to Terms</h2>
-                <p>
-                    We may update these Terms at any time. Continued use of our platform means you accept the latest version.
-                </p>
-            </div>
-            
-            <div class="contact-info">
-                <h2>10. Contact Us</h2>
-                <p>For questions or legal matters, contact:</p>
-                <p class="contact-email">📧 support@</p>
-                <p>Nigeria</p>
-            </div>
+
+      <div class="policy-card">
+        <div class="policy-section">
+          <p>Your privacy is of utmost importance to us. This Privacy Policy outlines how Nura SQ collects, safeguards, and utilizes your personal information when you access our virtual number platform, SMS delivery APIs, and related services.</p>
         </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-num">1</span> Information We Collect</h2>
+          <p>We only collect data necessary to provide reliable telecommunication services:</p>
+          <ul>
+            <li><strong>Account Information:</strong> Name, username, email address, phone number, and hashed authentication credentials.</li>
+            <li><strong>Transaction & Order Data:</strong> Order IDs, requested services, country origins, wallet funding receipts, and activation timestamps.</li>
+            <li><strong>Technical Diagnostics:</strong> IP addresses, browser user-agents, device categories, and error logs collected solely for system integrity and anti-fraud monitoring.</li>
+          </ul>
+        </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-num">2</span> How We Use Your Information</h2>
+          <ul>
+            <li>To allocate virtual telephone numbers and route SMS verifications accurately.</li>
+            <li>To maintain your wallet balance, process top-ups, and generate transaction histories.</li>
+            <li>To detect and prevent fraudulent account creation, automated bot abuse, or illicit traffic.</li>
+            <li>To communicate crucial service updates, maintenance windows, and respond to support requests.</li>
+          </ul>
+        </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-num">3</span> Data Sharing & Third Parties</h2>
+          <p>We do not sell, rent, or trade your personal data to advertisers. Information is disclosed strictly under the following circumstances:</p>
+          <ul>
+            <li><strong>Telecom & Carrier Networks:</strong> Upstream carrier partners required to provision virtual numbers and deliver SMS messages.</li>
+            <li><strong>Payment Gateways:</strong> Secure PCI-compliant processors who handle billing transactions without storing raw card credentials on our servers.</li>
+            <li><strong>Legal Requirements:</strong> When compelled by valid legal subpoenas, court orders, or applicable regulations.</li>
+          </ul>
+        </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-num">4</span> Data Security & Retention</h2>
+          <p>We implement enterprise-grade security protocols, including TLS encryption in transit, strict database access controls, and salted password hashing. Verification SMS logs are retained only as long as necessary to confirm order fulfillment, after which they are systematically purged.</p>
+        </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-num">5</span> Cookies & Local Storage</h2>
+          <p>Our platform uses essential local storage and session tokens strictly to keep you authenticated, remember your UI theme preferences (light/dark mode), and maintain your active session state.</p>
+        </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-num">6</span> Your Privacy Rights</h2>
+          <p>You have the right to access the personal data held on your account, request corrections to inaccurate details, or request full account closure and deletion of your profile by reaching out to our privacy compliance officer.</p>
+        </div>
+
+        <div class="policy-contact-box">
+          <h3>Data Privacy Questions?</h3>
+          <p>If you have any questions, concerns, or requests regarding this Privacy Policy or your data protection rights, please contact our data team.</p>
+          <a href="mailto:privacy@NuraSQ.com" class="policy-email-btn"><i class="ph ph-envelope-simple"></i> Contact Privacy Officer</a>
+        </div>
+      </div>
     </div>
-    </div>
-<script>
-  // ── Theme: update icon based on dark/light ──
-  function updateLandingThemeUI(isDark) {
-    const themeToggle = document.getElementById('themeToggle');
-    if (!themeToggle) return;
-    const icon = themeToggle.querySelector('i');
-    if (icon) {
-      icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
+  </main>
+
+  <script>
+    // ── Theme: update icon based on dark/light ──
+    function updateLandingThemeUI(isDark) {
+      const themeToggle = document.getElementById('themeToggle');
+      if (!themeToggle) return;
+      const icon = themeToggle.querySelector('i');
+      if (icon) {
+        icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
+      }
     }
-  }
 
-  // ── Restore saved theme before page paints ──
-  const savedTheme = localStorage.getItem('dashboardTheme');
-  if (savedTheme === 'dark') {
-    document.body.classList.add('dark-theme');
-  } else {
-    document.body.classList.remove('dark-theme');
-  }
+    // ── Restore saved theme before page paints ──
+    const savedTheme = localStorage.getItem('dashboardTheme');
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark-theme');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
 
-  // ── Mobile menu toggle ──
-  const menuToggle = document.getElementById('menu-toggle');
-  const nav        = document.getElementById('nav');
+    // ── Mobile menu toggle ──
+    const menuToggle = document.getElementById('menu-toggle');
+    const nav        = document.getElementById('nav');
 
-  if (menuToggle && nav) {
-    menuToggle.addEventListener('click', function () {
-      menuToggle.classList.toggle('open');
-      nav.classList.toggle('open');
-    });
-
-    nav.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', function () {
-        menuToggle.classList.remove('open');
-        nav.classList.remove('open');
+    if (menuToggle && nav) {
+      menuToggle.addEventListener('click', function () {
+        menuToggle.classList.toggle('open');
+        nav.classList.toggle('open');
       });
-    });
-  }
 
-  // ── Theme toggle button ──
-  const themeToggle = document.getElementById('themeToggle');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark-theme');
-      const isDark = document.body.classList.contains('dark-theme');
-      localStorage.setItem('dashboardTheme', isDark ? 'dark' : 'light');
-      updateLandingThemeUI(isDark);
-    });
+      nav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', function () {
+          menuToggle.classList.remove('open');
+          nav.classList.remove('open');
+        });
+      });
+    }
 
-        // Hide loader when page fully loads
+    // ── Theme toggle button ──
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-theme');
+        const isDark = document.body.classList.contains('dark-theme');
+        localStorage.setItem('dashboardTheme', isDark ? 'dark' : 'light');
+        updateLandingThemeUI(isDark);
+      });
+    }
+
+    // Hide loader when page fully loads
     window.addEventListener('load', function () {
       const loader = document.getElementById('loaderWrapper');
       if (loader) {
         loader.classList.add('hidden');
-
-        // Remove from DOM completely after fade out
         setTimeout(function () {
           loader.remove();
         }, 500);
       }
     });
-    // Set correct icon on load
+
     updateLandingThemeUI(document.body.classList.contains('dark-theme'));
-  }
-</script>
+  </script>
 </body>
 </html>

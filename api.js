@@ -214,42 +214,79 @@ async function apiRequest(endpoint, options = {}) {
 }
 
 /* ==========================================
+   DYNAMIC EXCHANGE RATE RESOLVER
+   Resolves the NGN / USD exchange rate dynamically.
+   1. API / backend provided rate if present in local cache
+   2. Admin-configured exchange rate (from admin panel: 'adminRate')
+   3. Platform configuration ('primes_platform_config')
+   4. Stored 'exchangeRate'
+   5. Fallback production rate: 1500 (₦1,500 = $1.00)
+========================================== */
+function getExchangeRate() {
+    const apiRate = parseFloat(localStorage.getItem('primes_api_exchange_rate'));
+    if (!isNaN(apiRate) && apiRate > 0) return apiRate;
+
+    const adminRate = parseFloat(localStorage.getItem('adminRate'));
+    if (!isNaN(adminRate) && adminRate > 0) return adminRate;
+
+    try {
+        const config = JSON.parse(localStorage.getItem('primes_platform_config') || '{}');
+        if (config && config.rate && parseFloat(config.rate) > 0) {
+            return parseFloat(config.rate);
+        }
+    } catch (_) {}
+
+    const stored = parseFloat(localStorage.getItem('exchangeRate'));
+    if (!isNaN(stored) && stored > 0) return stored;
+
+    return 1500;
+}
+
+/* ==========================================
    WALLET BALANCE NORMALIZER
-   Extracts real balance directly from backend response without synthetic
-   cross-currency conversion. NGN and USD remain strictly separate.
-   Authoritative backend wallet balance is preserved.
+   Extracts authoritative balance from backend response.
+   When currency is USD and the wallet is stored in NGN, converts to USD equivalent
+   using the dynamic exchange rate (e.g. ₦30,000 / 1,500 = $20.00).
+   When currency is NGN, returns the original NGN balance (₦30,000).
 ========================================== */
 function normalizeWalletBalance(data, currency = 'NGN') {
     if (!data || typeof data !== 'object') return 0;
     const isUSD = String(currency).toUpperCase() === 'USD';
+    const rate  = getExchangeRate();
 
     // Unnest if backend encapsulates in wallet or data object
     const src = (data.wallet && typeof data.wallet === 'object') ? data.wallet : ((data.data && typeof data.data === 'object') ? data.data : data);
 
+    // Extract explicit NGN balance
+    let rawNgn = null;
+    if (src.ngnBalance !== undefined) rawNgn = parseFloat(src.ngnBalance);
+    else if (data.ngnBalance !== undefined) rawNgn = parseFloat(data.ngnBalance);
+    else if (src.balance !== undefined && (src.currency || data.currency || '').toUpperCase() !== 'USD') {
+        rawNgn = parseFloat(src.balance);
+    } else if (data.balance !== undefined && (data.currency || '').toUpperCase() !== 'USD') {
+        rawNgn = parseFloat(data.balance);
+    }
+
+    // Extract explicit USD balance if tracked separately by backend
+    let rawUsd = null;
+    if (src.usdBalance !== undefined) rawUsd = parseFloat(src.usdBalance);
+    else if (data.usdBalance !== undefined) rawUsd = parseFloat(data.usdBalance);
+    else if (src.balanceUSD !== undefined) rawUsd = parseFloat(src.balanceUSD);
+    else if (data.balanceUSD !== undefined) rawUsd = parseFloat(data.balanceUSD);
+    else if ((src.currency || data.currency || '').toUpperCase() === 'USD') {
+        rawUsd = parseFloat(src.balance ?? data.balance ?? 0);
+    }
+
     if (isUSD) {
-        if (src.usdBalance !== undefined) return parseFloat(src.usdBalance) || 0;
-        if (data.usdBalance !== undefined) return parseFloat(data.usdBalance) || 0;
-        if (src.balanceUSD !== undefined) return parseFloat(src.balanceUSD) || 0;
-        if (data.balanceUSD !== undefined) return parseFloat(data.balanceUSD) || 0;
-        if ((src.currency || data.currency || '').toUpperCase() === 'USD') {
-            return parseFloat(src.balance ?? data.balance ?? 0) || 0;
-        }
-        if (src.balance !== undefined && src.usdBalance === undefined && src.ngnBalance === undefined) {
-            return parseFloat(src.balance) || 0;
-        }
+        // If backend explicitly tracked a separate non-zero USD balance, return it;
+        // otherwise calculate the exact USD equivalent from the authoritative NGN balance:
+        if (rawUsd !== null && rawUsd > 0) return rawUsd;
+        if (rawNgn !== null) return rawNgn / rate;
         return 0;
     } else {
-        if (src.ngnBalance !== undefined) return parseFloat(src.ngnBalance) || 0;
-        if (data.ngnBalance !== undefined) return parseFloat(data.ngnBalance) || 0;
-        if ((src.currency || data.currency || '').toUpperCase() === 'NGN') {
-            return parseFloat(src.balance ?? data.balance ?? 0) || 0;
-        }
-        if (src.balance !== undefined && src.usdBalance === undefined && src.ngnBalance === undefined) {
-            return parseFloat(src.balance) || 0;
-        }
-        if (data.balance !== undefined) {
-            return parseFloat(data.balance) || 0;
-        }
+        // Return authoritative NGN balance. If only USD exists, convert to NGN:
+        if (rawNgn !== null) return rawNgn;
+        if (rawUsd !== null) return rawUsd * rate;
         return 0;
     }
 }
@@ -428,6 +465,7 @@ window.setSession = setSession;
 window.logout = logout;
 window.normalizeVirtualAccount = normalizeVirtualAccount;
 window.normalizeWalletBalance = normalizeWalletBalance;
+window.getExchangeRate = getExchangeRate;
 
 window.createVirtualAccount = createVirtualAccount;
 window.getVirtualAccount = getVirtualAccount;
@@ -458,6 +496,7 @@ window.NuraAPI = {
     getSession,
     setSession,
     logout,
+    getExchangeRate,
     normalizeVirtualAccount,
     normalizeWalletBalance,
     createVirtualAccount,

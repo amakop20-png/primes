@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Refund Policy - Dave social</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Refund Policy - Nura SQ</title>
   <link rel="stylesheet" href="styles.css">
-
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="policy.css">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
@@ -15,14 +15,16 @@
       document.body.classList.add('dark-theme');
     }
   </script>
-   <!-- Loader (first thing inside body) -->
+
+  <!-- Loader -->
   <div class="loader-wrapper" id="loaderWrapper">
-      <img src="nuraxq-logo.png" alt="NuraXQ" class="loader-logo" style="width:160px;height:auto;object-fit:contain;">
+    <img src="nuraxq-logo.png" alt="NuraXQ" class="loader-logo" style="width:160px;height:auto;object-fit:contain;">
   </div>
+
   <!-- Header -->
-  <header >
+  <header>
     <div class="header__logo">
-      <img src="nuraxq-logo.png" alt="NuraXQ – Connect Without Borders" width="130" height="auto" style="height:auto;">
+      <a href="index.html"><img src="nuraxq-logo.png" alt="NuraXQ – Connect Without Borders" width="130" height="auto" style="height:auto;"></a>
     </div>
     
     <nav class="header__nav" id="nav">
@@ -30,7 +32,7 @@
       <a href="terms.html" class="nav-link">Terms</a>
       <a href="privacy.html" class="nav-link">Privacy</a>
       <a href="help.html" class="nav-link">Help</a>
-      <a href="refund.html" class="nav-link">Refunds</a>
+      <a href="refund.html" class="nav-link active">Refunds</a>
     </nav>
 
     <div class="header__actions">
@@ -48,116 +50,125 @@
       <span></span>
     </button>
   </header>
-    <div class="section">
-      <div class="refund-container">
-        <div class="refund-header">
-          <img src="nuraxq-logo.png" alt="NuraXQ" class="refund-logo" style="height:80px;width:auto;object-fit:contain;">
-          <h1>Refund Policy</h1>
-          <p class="section-subtitle">Last Updated: July 18, 2025</p>
+
+  <main class="policy-page-wrapper">
+    <div class="policy-container">
+      <div class="policy-header">
+        <a href="index.html"><img src="nuraxq-logo.png" alt="NuraXQ" class="policy-logo"></a>
+        <h1>Refund Policy</h1>
+        <div class="policy-badge"><i class="ph ph-clock-counter-clockwise"></i> Last Updated: July 18, 2025</div>
+      </div>
+
+      <div class="policy-card">
+        <div class="policy-section">
+          <p>At Nura SQ, customer satisfaction and dependable SMS verification are our foremost priorities. Because virtual numbers are instant digital goods, we have established clear guidelines below for when refunds and balance credits are applicable.</p>
         </div>
-        
-        <div class="refund-content">
-            <div class="refund-section">
-                <p>At <strong>JoshSMS</strong>, customer satisfaction is a priority. However, due to the digital and instant nature of our services, all successful purchases are final.</p>
-            </div>
-            
-            <div class="refund-section">
-                <h2><i class="ph ph-check-circle"></i> When Refunds Are Allowed</h2>
-                <ul>
-                    <li>No SMS received</li>
-                    <li>Major technical issues reported within 72 hours</li>
-                    <li>Issue not resolved within 72 hours</li>
-                </ul>
-            </div>
-            
-            <div class="refund-section">
-                <h2>❌ Non-Refundable Cases</h2>
-                <ul>
-                    <li>Service already used or credited</li>
-                    <li>Platform or user-side issues</li>
-                    <li>Request made after 7 days</li>
-                </ul>
-            </div>
-            
-            <div class="refund-section">
-                <h2>📨 How to Request</h2>
-                <p>Email: <a class="contact-email" href="mailto:support@NuraSMS.com">support@NuraSMS.com</a></p>
-                <p>Include your order ID, affected number/service, and a brief issue description. Screenshots help.</p>
-            </div>
-            
-            <div class="refund-section">
-                <h2>⏳ Refund Processing</h2>
-                <p>Refunds may be returned to the original payment method or as JoshSMS credit. Processing times depend on your provider.</p>
-            </div>
-            
-            <div class="contact-info">
-                <p>Questions? Reach us at <a class="contact-email" href=" https://Deevado669@gmail.com">support@NuraSMS.com</a></p>
-            </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-icon success"><i class="ph ph-check-circle"></i></span> When Refunds Are Eligible</h2>
+          <p>You are eligible for an immediate automatic balance refund or support credit in the following circumstances:</p>
+          <ul>
+            <li class="check-item"><strong>No SMS Received:</strong> If no verification code arrives before the activation window expires (or if you cancel before an SMS is received), your balance is immediately restored.</li>
+            <li class="check-item"><strong>Service Carrier Outage:</strong> If a technical outage on upstream carrier routes prevents message delivery and is verified by our system diagnostics.</li>
+            <li class="check-item"><strong>Duplicate Payment Deductions:</strong> If an automated gateway billing glitch leads to double-deduction on a single top-up order.</li>
+          </ul>
         </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-icon danger"><i class="ph ph-x-circle"></i></span> Non-Refundable Scenarios</h2>
+          <p>Refunds or credit reversals cannot be issued in the following cases:</p>
+          <ul>
+            <li class="cross-item"><strong>Successfully Delivered SMS:</strong> Once an SMS verification code has been successfully received by the number, the order is deemed fulfilled and non-refundable.</li>
+            <li class="cross-item"><strong>Third-Party Account Restrictions:</strong> If the destination service (e.g. WhatsApp, Telegram, Google) denies your registration due to prior device bans or application-level restrictions outside our control.</li>
+            <li class="cross-item"><strong>Expired Unreported Requests:</strong> Refund claims submitted more than 7 days after the affected transaction timestamp.</li>
+          </ul>
+        </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-icon warning"><i class="ph ph-arrow-circle-right"></i></span> How to Request a Manual Refund</h2>
+          <p>If your issue is not resolved by our automatic cancellation engine, please contact support with the following information:</p>
+          <ul>
+            <li>Your registered account email or username.</li>
+            <li>The Order ID or Transaction Reference.</li>
+            <li>The virtual phone number and target service requested.</li>
+            <li>A concise description or screenshot of the error encountered.</li>
+          </ul>
+        </div>
+
+        <div class="policy-section">
+          <h2><span class="policy-icon"><i class="ph ph-wallet"></i></span> Refund Processing & Payouts</h2>
+          <p>Approved refunds are typically returned as instant Nura SQ account balance credit, allowing immediate reuse for alternative numbers. For direct fiat payment reversals (via the original payment processor), processing takes between 3 to 7 business days depending on your banking provider.</p>
+        </div>
+
+        <div class="policy-contact-box">
+          <h3>Need help with an order refund?</h3>
+          <p>Our billing support specialists are available around the clock to review your transactions and ensure fair resolution.</p>
+          <a href="mailto:support@NuraSQ.com" class="policy-email-btn"><i class="ph ph-envelope-simple"></i> Request Refund Support</a>
+        </div>
+      </div>
     </div>
-    </div>
-    <script>
-       // ── Theme: update icon based on dark/light ──
-  function updateLandingThemeUI(isDark) {
-    const themeToggle = document.getElementById('themeToggle');
-    if (!themeToggle) return;
-    const icon = themeToggle.querySelector('i');
-    if (icon) {
-      icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
+  </main>
+
+  <script>
+    // ── Theme: update icon based on dark/light ──
+    function updateLandingThemeUI(isDark) {
+      const themeToggle = document.getElementById('themeToggle');
+      if (!themeToggle) return;
+      const icon = themeToggle.querySelector('i');
+      if (icon) {
+        icon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
+      }
     }
-  }
 
-  // ── Restore saved theme before page paints ──
-  const savedTheme = localStorage.getItem('dashboardTheme');
-  if (savedTheme === 'dark') {
-    document.body.classList.add('dark-theme');
-  } else {
-    document.body.classList.remove('dark-theme');
-  }
+    // ── Restore saved theme before page paints ──
+    const savedTheme = localStorage.getItem('dashboardTheme');
+    if (savedTheme === 'dark') {
+      document.body.classList.add('dark-theme');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
 
-  // ── Mobile menu toggle ──
-  const menuToggle = document.getElementById('menu-toggle');
-  const nav        = document.getElementById('nav');
+    // ── Mobile menu toggle ──
+    const menuToggle = document.getElementById('menu-toggle');
+    const nav        = document.getElementById('nav');
 
-  if (menuToggle && nav) {
-    menuToggle.addEventListener('click', function () {
-      menuToggle.classList.toggle('open');
-      nav.classList.toggle('open');
-    });
-
-    nav.querySelectorAll('a').forEach(link => {
-      link.addEventListener('click', function () {
-        menuToggle.classList.remove('open');
-        nav.classList.remove('open');
+    if (menuToggle && nav) {
+      menuToggle.addEventListener('click', function () {
+        menuToggle.classList.toggle('open');
+        nav.classList.toggle('open');
       });
-    });
-  }
 
-  // ── Theme toggle button ──
-  const themeToggle = document.getElementById('themeToggle');
-  if (themeToggle) {
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark-theme');
-      const isDark = document.body.classList.contains('dark-theme');
-      localStorage.setItem('dashboardTheme', isDark ? 'dark' : 'light');
-      updateLandingThemeUI(isDark);
-    });
+      nav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', function () {
+          menuToggle.classList.remove('open');
+          nav.classList.remove('open');
+        });
+      });
+    }
 
-        // Hide loader when page fully loads
+    // ── Theme toggle button ──
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-theme');
+        const isDark = document.body.classList.contains('dark-theme');
+        localStorage.setItem('dashboardTheme', isDark ? 'dark' : 'light');
+        updateLandingThemeUI(isDark);
+      });
+    }
+
+    // Hide loader when page fully loads
     window.addEventListener('load', function () {
       const loader = document.getElementById('loaderWrapper');
       if (loader) {
         loader.classList.add('hidden');
-
-        // Remove from DOM completely after fade out
         setTimeout(function () {
           loader.remove();
         }, 500);
       }
     });
-    // Set correct icon on load
+
     updateLandingThemeUI(document.body.classList.contains('dark-theme'));
-  }
-    </script>
+  </script>
 </body>
 </html>
