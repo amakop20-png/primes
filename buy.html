@@ -215,36 +215,97 @@
     }
 
     .sms-otp-box {
-      background: linear-gradient(135deg, var(--primary), #a855f7);
+      background: var(--surface-card, rgba(0, 0, 0, 0.03));
+      border: 1.5px dashed var(--border);
       border-radius: 14px;
-      padding: 20px;
+      padding: 16px 18px;
       text-align: center;
       margin-bottom: 16px;
-      display: none;
+      transition: all 0.3s ease;
+      display: block;
     }
 
-    .sms-otp-box.show { display: block; }
+    .sms-otp-box.code-received {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: none;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
+    }
+
+    .sms-otp-box .otp-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
 
     .sms-otp-box .otp-label {
       font-size: 11px;
-      color: rgba(255,255,255,0.8);
+      color: var(--muted);
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
     }
 
+    .sms-otp-box.code-received .otp-label {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
     .sms-otp-box .otp-code {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 1px;
+      margin: 6px 0;
+      word-break: break-all;
+      transition: all 0.2s ease;
+    }
+
+    .sms-otp-box.code-received .otp-code {
       font-size: 2.2rem;
       font-weight: 800;
       color: #fff;
       letter-spacing: 6px;
-      margin: 6px 0;
     }
 
     .sms-otp-box .otp-text {
-      font-size: 11px;
-      color: rgba(255,255,255,0.7);
-      margin-top: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      word-break: break-word;
+      line-height: 1.4;
+    }
+
+    .sms-otp-box.code-received .otp-text {
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.15);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+
+    .btn-copy-code {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      background: #ffffff;
+      color: #065f46;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.12);
+      transition: all 0.2s ease;
+    }
+
+    .btn-copy-code:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+    }
+
+    .btn-copy-code.copied {
+      background: #064e3b;
+      color: #ffffff;
     }
 
     .sms-modal-actions {
@@ -1107,11 +1168,16 @@
         <span id="statusText">Waiting for SMS...</span>
       </div>
 
-      <!-- OTP Box (shows when SMS arrives) -->
+      <!-- Verification Code Box -->
       <div class="sms-otp-box" id="smsOtpBox">
-        <div class="otp-label">OTP Code Received</div>
-        <div class="otp-code" id="otpCode">—</div>
-        <div class="otp-text" id="otpFullText"></div>
+        <div class="otp-header-row">
+          <span class="otp-label" id="otpLabel">Verification Code</span>
+          <button type="button" class="btn-copy-code" id="btnCopyCode" title="Copy Verification Code">
+            <i class="ph ph-copy"></i> Copy Code
+          </button>
+        </div>
+        <div class="otp-code" id="otpCode">Waiting for code...</div>
+        <div class="otp-text" id="otpFullText">Send your verification SMS to this number. Code will appear automatically.</div>
       </div>
 
       <!-- Hosting inbox -->

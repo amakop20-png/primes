@@ -641,12 +641,25 @@ function setModalLoading(orderId) {
     const statusText = document.getElementById('statusText');
     if (statusText) statusText.textContent = 'Fetching order status…';
     const otpBox = document.getElementById('smsOtpBox');
-    if (otpBox) otpBox.classList.remove('show');
+    if (otpBox) {
+        otpBox.classList.remove('code-received');
+        otpBox.classList.add('code-waiting');
+    }
+    const otpCode = document.getElementById('otpCode');
+    if (otpCode) otpCode.textContent = 'Waiting for code...';
+    const otpFullText = document.getElementById('otpFullText');
+    if (otpFullText) otpFullText.textContent = 'Fetching order status…';
+    const copyCodeBtn = document.getElementById('btnCopyCode');
+    if (copyCodeBtn) copyCodeBtn.style.display = 'none';
 }
 
 function setModalError(msg) {
     const statusText = document.getElementById('statusText');
     if (statusText) statusText.textContent = msg;
+    const otpCode = document.getElementById('otpCode');
+    if (otpCode) otpCode.textContent = 'Error';
+    const otpFullText = document.getElementById('otpFullText');
+    if (otpFullText) otpFullText.textContent = msg;
 }
 
 function updateOrderUI(order) {
@@ -671,13 +684,13 @@ function updateOrderUI(order) {
     const statusDot  = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
     const statusMap  = {
-        PENDING:  { dot: 'pulse',    text: '⏳ Waiting for SMS (Auto-polling every 5s)…', color: '#f59e0b' },
-        RECEIVED: { dot: 'received', text: '✅ SMS Received!',                             color: '#10b981' },
-        FINISHED: { dot: 'received', text: '✔ Order Completed',                            color: '#10b981' },
-        CANCELED: { dot: '',         text: '❌ Order Cancelled',                           color: '#ef4444' },
-        BANNED:   { dot: '',         text: '⚠️ Number Reported & Banned',                  color: '#ef4444' },
-        EXPIRED:  { dot: '',         text: '⏰ Number Expired (No SMS Received)',           color: '#ef4444' },
-        TIMEOUT:  { dot: '',         text: '⏰ Order Timed Out (No SMS received from provider)', color: '#ef4444' },
+        PENDING:  { dot: 'pulse',    text: 'Waiting for SMS...',                                color: '#f59e0b' },
+        RECEIVED: { dot: 'received', text: 'SMS Received',                                      color: '#10b981' },
+        FINISHED: { dot: 'received', text: 'Order Completed',                                   color: '#10b981' },
+        CANCELED: { dot: '',         text: 'Order Cancelled',                                   color: '#ef4444' },
+        BANNED:   { dot: '',         text: 'Number Reported & Banned',                          color: '#ef4444' },
+        EXPIRED:  { dot: '',         text: 'Number Expired (No SMS Received)',                  color: '#ef4444' },
+        TIMEOUT:  { dot: '',         text: 'Order Timed Out (No SMS received from provider)',  color: '#ef4444' },
     };
 
     const currentStatus = String(order.status || 'PENDING').toUpperCase();
@@ -692,6 +705,7 @@ function updateOrderUI(order) {
     const otpBox      = document.getElementById('smsOtpBox');
     const otpCode     = document.getElementById('otpCode');
     const otpFullText = document.getElementById('otpFullText');
+    const copyCodeBtn = document.getElementById('btnCopyCode');
 
     // Robust SMS and OTP extraction across all API shapes
     const smsList = Array.isArray(order.sms)
@@ -712,9 +726,9 @@ function updateOrderUI(order) {
             fullText = latestSms;
             otp = extractOTP(latestSms);
         } else if (latestSms && typeof latestSms === 'object') {
-            otp = latestSms.code || extractOTP(latestSms.text || '');
-            fullText = latestSms.text || '';
-            sender = latestSms.sender || '';
+            otp = latestSms.code || extractOTP(latestSms.text || latestSms.message || '');
+            fullText = latestSms.text || latestSms.message || (latestSms.code ? `Verification code: ${latestSms.code}` : '');
+            sender = latestSms.sender || latestSms.from || '';
             smsTime = latestSms.created_at || latestSms.date || '';
         }
     }
@@ -722,26 +736,53 @@ function updateOrderUI(order) {
     if (!otp && topLevelCode) otp = String(topLevelCode);
     if (!otp && topLevelText) otp = extractOTP(topLevelText);
     if (!fullText && topLevelText) fullText = String(topLevelText);
+    if (!fullText && otp) fullText = `Your verification code is ${otp}.`;
 
-    const hasReceivedSms = (smsList.length > 0 && !!fullText) || !!otp || !!topLevelText;
+    const hasReceivedSms = (smsList.length > 0 && !!fullText) || !!otp;
 
     if (hasReceivedSms) {
-        if (otpBox) otpBox.classList.add('show');
-        if (otpCode) otpCode.textContent = otp || '—';
+        if (otpBox) {
+            otpBox.classList.remove('code-waiting');
+            otpBox.classList.add('code-received');
+        }
+        if (otpCode) otpCode.textContent = otp || 'Code received';
         if (otpFullText) {
-            const senderLabel = sender ? `[Sender: ${escapeHTML(sender)}] ` : '';
+            const senderLabel = sender ? `[${escapeHTML(sender)}] ` : '';
             const timeLabel   = smsTime ? ` (${new Date(smsTime).toLocaleTimeString()})` : '';
-            otpFullText.textContent = `${senderLabel}${fullText}${timeLabel}`;
+            otpFullText.textContent = `Message: ${senderLabel}${fullText}${timeLabel}`;
+        }
+        if (copyCodeBtn && otp) {
+            copyCodeBtn.style.display = 'inline-flex';
         }
         if (statusDot) {
             statusDot.className = 'dot received';
             statusDot.style.background = '#10b981';
         }
         if (statusText && (currentStatus === 'PENDING' || currentStatus === 'RECEIVED')) {
-            statusText.textContent = '✅ SMS Received!';
+            statusText.textContent = 'SMS Received';
         }
     } else {
-        if (otpBox) otpBox.classList.remove('show');
+        if (otpBox) {
+            otpBox.classList.remove('code-received');
+            otpBox.classList.add('code-waiting');
+        }
+        if (copyCodeBtn) {
+            copyCodeBtn.style.display = 'none';
+        }
+        if (currentStatus === 'TIMEOUT' || currentStatus === 'EXPIRED') {
+            if (otpCode) otpCode.textContent = 'No code received';
+            if (otpFullText) otpFullText.textContent = 'Activation window expired without receiving an SMS from provider.';
+        } else if (currentStatus === 'CANCELED') {
+            if (otpCode) otpCode.textContent = 'Order Cancelled';
+            if (otpFullText) otpFullText.textContent = 'This number was cancelled before an SMS arrived.';
+        } else if (currentStatus === 'BANNED') {
+            if (otpCode) otpCode.textContent = 'Number Banned';
+            if (otpFullText) otpFullText.textContent = 'Number was reported and banned.';
+        } else {
+            // PENDING or waiting
+            if (otpCode) otpCode.textContent = 'Waiting for code...';
+            if (otpFullText) otpFullText.textContent = 'Send your verification SMS to this number. Code will appear automatically.';
+        }
     }
 
     // Populate multiple SMS messages in smsInboxList if present
@@ -781,19 +822,31 @@ function extractOTP(text) {
     if (!text) return null;
     const str = String(text).trim();
 
-    // 1. Explicit labels followed by digits or alphanumeric code: e.g. 'code is 123456', 'code: 123456', 'OTP: 9102'
-    const labeledMatch = str.match(/(?:code(?:\s+is)?|otp(?:\s+is)?|pin(?:\s+is)?|passcode|verification(?:\s+code)?|código)[\s:=#\-]+([0-9A-Za-z]{4,8})\b/i);
+    // 1. Explicit labels followed by digits or alphanumeric code: e.g. 'code is 123456', 'code: 123456', 'OTP: 9102', 'código: 123456'
+    const labeledMatch = str.match(/(?:code(?:\s+is)?|otp(?:\s+is)?|pin(?:\s+is)?|passcode(?:\s+is)?|verification(?:\s+code)?|código)[\s:=#\-]+([0-9A-Za-z]{4,8})\b/i);
     if (labeledMatch && labeledMatch[1] && /\d/.test(labeledMatch[1])) {
         return labeledMatch[1];
     }
 
-    // 2. Code at the beginning of text: e.g. '123456 is your code'
+    // 2. Prefixed formats like G-123456, FB-12345, WA-123456
+    const prefixedMatch = str.match(/\b(?:G|FB|VK|WA|TG)[-\s]?(\d{4,8})\b/i);
+    if (prefixedMatch && prefixedMatch[1]) {
+        return prefixedMatch[1];
+    }
+
+    // 3. Code at beginning of text: e.g. '123456 is your code'
     const startMatch = str.match(/^([0-9]{4,8})\b/);
     if (startMatch && startMatch[1]) {
         return startMatch[1];
     }
 
-    // 3. Fallback to any 4 to 8 digit number, avoiding current years
+    // 4. Code at the end or before punctuation: e.g. 'Your code is: 123456.'
+    const endMatch = str.match(/[:\s]([0-9]{4,8})[.\s]*$/);
+    if (endMatch && endMatch[1]) {
+        return endMatch[1];
+    }
+
+    // 5. Fallback to any 4 to 8 digit sequence, filtering out common years
     const matches = str.match(/\b(\d{4,8})\b/g);
     if (matches && matches.length > 0) {
         const filtered = matches.filter(m => !['2024', '2025', '2026', '2027'].includes(m));
@@ -853,7 +906,7 @@ function startPolling(orderId) {
             const res = await getOrder(orderId);
             console.log('[STEP 4] Status: 200');
             console.log('[STEP 4] Response:', res);
-            const order = res?.order || res;
+            const order = res?.order || res?.data || res;
 
             if (!order) {
                 console.warn(`[ORDER] Empty order response for Order ID: ${orderId}`);
@@ -863,19 +916,8 @@ function startPolling(orderId) {
             pollErrorCount = 0; // Reset consecutive errors
             currentOrderData = order;
 
-            const status = String(order.status || '').toUpperCase();
+            const status = String(order.status || 'PENDING').toUpperCase();
             console.log(`[ORDER] Status response: ${status}`, order);
-
-            // Check if order expiration time has passed
-            const expiresAt = order.expires || order.expiresAt;
-            if (status === 'PENDING' && expiresAt && new Date(expiresAt).getTime() < Date.now()) {
-                order.status = 'EXPIRED';
-                updateOrderUI(order);
-                stopPolling();
-                console.log(`[ORDER] Order ID: ${orderId} has expired.`);
-                showToast('⏰ This number expired without receiving an SMS.', 'warning');
-                return;
-            }
 
             updateOrderUI(order);
 
@@ -1126,6 +1168,32 @@ function copyNumberToClipboard() {
 }
 
 /* ══════════════════════════════════════════
+   COPY VERIFICATION CODE
+══════════════════════════════════════════ */
+function copyOtpCodeToClipboard() {
+    const otpCode = document.getElementById('otpCode');
+    if (!otpCode) return;
+    const code = otpCode.textContent.trim();
+    if (!code || code === '—' || code === 'Waiting for code...' || code.includes('No code') || code.includes('Cancelled') || code.includes('Banned') || code.includes('Error')) return;
+
+    navigator.clipboard.writeText(code).then(() => {
+        showToast('📋 Verification code copied to clipboard!', 'success');
+        const btn = document.getElementById('btnCopyCode');
+        if (btn) {
+            btn.classList.add('copied');
+            btn.innerHTML = '<i class="ph ph-check"></i> Copied!';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.innerHTML = '<i class="ph ph-copy"></i> Copy Code';
+            }, 2000);
+        }
+    }).catch(() => {
+        showToast('Code: ' + code, 'info');
+    });
+}
+window.copyOtpCodeToClipboard = copyOtpCodeToClipboard;
+
+/* ══════════════════════════════════════════
    STATE HELPERS
 ══════════════════════════════════════════ */
 function showSelectCountryPrompt() {
@@ -1185,14 +1253,16 @@ function attachEventListeners() {
     }
 
     // Order action buttons
-    const copyBtn   = document.getElementById('btnCopyNumber');
-    const cancelBtn = document.getElementById('btnCancelOrder');
-    const banBtn    = document.getElementById('btnBanOrder');
-    const finishBtn = document.getElementById('btnFinishOrder');
-    if (copyBtn)   copyBtn.addEventListener('click', copyNumberToClipboard);
-    if (cancelBtn) cancelBtn.addEventListener('click', handleCancelOrder);
-    if (banBtn)    banBtn.addEventListener('click', handleBanOrder);
-    if (finishBtn) finishBtn.addEventListener('click', handleFinishOrder);
+    const copyBtn    = document.getElementById('btnCopyNumber');
+    const copyOtpBtn = document.getElementById('btnCopyCode');
+    const cancelBtn  = document.getElementById('btnCancelOrder');
+    const banBtn     = document.getElementById('btnBanOrder');
+    const finishBtn  = document.getElementById('btnFinishOrder');
+    if (copyBtn)    copyBtn.addEventListener('click', copyNumberToClipboard);
+    if (copyOtpBtn) copyOtpBtn.addEventListener('click', copyOtpCodeToClipboard);
+    if (cancelBtn)  cancelBtn.addEventListener('click', handleCancelOrder);
+    if (banBtn)     banBtn.addEventListener('click', handleBanOrder);
+    if (finishBtn)  finishBtn.addEventListener('click', handleFinishOrder);
 
     // Cancel confirmation dialog buttons & backdrop
     const keepNumberBtn    = document.getElementById('btnKeepNumber');
