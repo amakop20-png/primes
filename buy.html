@@ -1183,9 +1183,9 @@
       <!-- Hosting inbox -->
       <div class="sms-inbox-list" id="smsInboxList"></div>
 
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:12px;">
         <span>Order: <strong id="modalOrderId">—</strong></span>
-        <span>Expires: <strong id="modalExpires">—</strong></span>
+        <span>Expires: <strong id="countdown" style="color:var(--primary);font-weight:700;">60s</strong> <span id="modalExpires" style="display:none;">—</span></span>
       </div>
 
       <div class="sms-modal-actions">

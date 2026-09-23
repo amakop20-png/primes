@@ -22,6 +22,8 @@ let currentOrderId   = null; // Active order ID (from backend)
 let currentOrderData = null; // Full order object from backend
 
 let orderPollInterval = null; // Single active polling interval for the active order
+let countdownInterval = null; // Countdown timer interval
+let remainingTime    = 60;   // Remaining countdown time in seconds
 let pollInterval     = null; // Reference for SMS polling
 let isBuying         = false; // Guard against double-click on Buy
 let isActionBusy     = false; // Guard against multiple finish/cancel/ban requests
@@ -501,6 +503,7 @@ async function handleBuyClick(country, product, btnEl) {
         const order = response?.order || response?.data || response;
         const orderId = response?.order?.id || order?.id || order?.orderId || order?.activationId;
 
+        console.log("[ORDER] Order ID:", orderId);
         console.log("[OTP] Order ID:", orderId);
 
         if (!orderId) {
@@ -521,6 +524,8 @@ async function handleBuyClick(country, product, btnEl) {
         await loadWalletBalanceBuyPage();
 
         openOrderModal(orderId, order);
+        startCountdown();
+        startOrderPolling(orderId);
     } catch (error) {
         console.error("[PURCHASE] Network/backend error:", error);
         console.error("[PURCHASE] Error status:", error?.status);
@@ -574,6 +579,7 @@ async function openOrderModal(orderId, initialOrder = null) {
         updateOrderUI(order);
     }
 
+    startCountdown();
     startOrderPolling(orderId);
 }
 
@@ -810,11 +816,38 @@ function extractOTP(text) {
      first, and pollInterval is a single module-level handle.
 ══════════════════════════════════════════ */
 /* ══════════════════════════════════════════
-   SMS / ORDER POLLING & OTP RETRIEVAL (Step 4)
+   COUNTDOWN TIMER & ORDER POLLING (Step 4)
    Endpoint: GET https://nurasms-api.onrender.com/api/order/:orderId
    Uses: getOrder(orderId) from api.js with Authorization: Bearer ACCESS_TOKEN
 ══════════════════════════════════════════ */
 let isPollRequestInProgress = false;
+
+function startCountdown() {
+    clearInterval(countdownInterval);
+
+    remainingTime = 60;
+    updateCountdown();
+
+    countdownInterval = setInterval(() => {
+        remainingTime--;
+
+        updateCountdown();
+
+        if (remainingTime <= 0) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+    }, 1000);
+}
+
+function updateCountdown() {
+    console.log("[TIMER] Countdown:", remainingTime);
+    const timer = document.getElementById("countdown");
+
+    if (timer) {
+        timer.textContent = `${remainingTime}s`;
+    }
+}
 
 function startOrderPolling(orderId) {
     if (!orderId) {
@@ -822,9 +855,7 @@ function startOrderPolling(orderId) {
         return;
     }
 
-    if (orderPollInterval) {
-        clearInterval(orderPollInterval);
-    }
+    clearInterval(orderPollInterval);
 
     checkOrder(orderId);
 
@@ -834,6 +865,7 @@ function startOrderPolling(orderId) {
 }
 
 async function checkOrder(orderId) {
+    console.log("[POLL] Checking order:", orderId);
     console.log("[OTP] Checking order:", orderId);
     try {
         const response = await getOrder(orderId);
@@ -847,6 +879,7 @@ async function checkOrder(orderId) {
             response.order = { ...response };
         }
 
+        console.log("[POLL] Response:", response);
         console.log("[OTP] Status:", response?.status);
         console.log("[OTP] SMS:", response?.sms);
 
@@ -858,17 +891,20 @@ async function checkOrder(orderId) {
 
         const sms = response?.sms?.[0];
 
-        if (response?.status === "RECEIVED" && sms) {
+        if (response?.status === "RECEIVED" && (response?.sms?.length > 0 || sms)) {
             console.log("[OTP] SMS received:", sms);
 
             // Display the OTP
-            displayOTP(sms.code);
+            displayOTP(sms?.code);
 
             // Display the complete SMS
-            displaySMS(sms.text, sms.sender);
+            displaySMS(sms?.text, sms?.sender);
 
             clearInterval(orderPollInterval);
+            clearInterval(countdownInterval);
+
             orderPollInterval = null;
+            countdownInterval = null;
             return;
         }
 
@@ -879,7 +915,10 @@ async function checkOrder(orderId) {
             displaySMS(sms.text, sms.sender);
 
             clearInterval(orderPollInterval);
+            clearInterval(countdownInterval);
+
             orderPollInterval = null;
+            countdownInterval = null;
             return;
         }
 
@@ -887,12 +926,14 @@ async function checkOrder(orderId) {
         const currentStatus = String(response?.status || '').toUpperCase();
         const terminalStates = ['RECEIVED', 'FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
         if (terminalStates.includes(currentStatus)) {
-            console.log(`[OTP] Terminal status reached: ${currentStatus}. Stopping polling.`);
+            console.log(`[POLL] Terminal status reached: ${currentStatus}. Stopping polling.`);
             clearInterval(orderPollInterval);
+            clearInterval(countdownInterval);
             orderPollInterval = null;
+            countdownInterval = null;
         }
     } catch (err) {
-        console.error("[OTP] Error checking order:", err);
+        console.error("[POLL] Error checking order:", err);
     }
 }
 
@@ -964,9 +1005,13 @@ function displaySMS(text, sender = '') {
 
 function stopPolling(reason = 'Manual stop / cleanup') {
     if (orderPollInterval) {
-        console.log(`[OTP] Stopping polling — Reason: ${reason}`);
+        console.log(`[POLL] Stopping polling — Reason: ${reason}`);
         clearInterval(orderPollInterval);
         orderPollInterval = null;
+    }
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
     }
     if (pollInterval) {
         clearInterval(pollInterval);
@@ -983,6 +1028,10 @@ function startPolling(orderId) {
     startOrderPolling(orderId);
 }
 
+window.countdownInterval = countdownInterval;
+window.remainingTime     = remainingTime;
+window.startCountdown    = startCountdown;
+window.updateCountdown   = updateCountdown;
 window.orderPollInterval = orderPollInterval;
 window.startOrderPolling = startOrderPolling;
 window.checkOrder        = checkOrder;
