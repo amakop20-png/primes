@@ -21,7 +21,8 @@ let selectedProduct  = '';   // Currently selected product key (e.g. 'whatsapp')
 let currentOrderId   = null; // Active order ID (from backend)
 let currentOrderData = null; // Full order object from backend
 
-let pollInterval     = null; // setInterval reference for SMS polling
+let orderPollInterval = null; // Single active polling interval for the active order
+let pollInterval     = null; // Reference for SMS polling
 let isBuying         = false; // Guard against double-click on Buy
 let isActionBusy     = false; // Guard against multiple finish/cancel/ban requests
 
@@ -498,17 +499,17 @@ async function handleBuyClick(country, product, btnEl) {
         console.log("[PURCHASE] Backend response:", response);
 
         const order = response?.order || response?.data || response;
+        const orderId = response?.order?.id || order?.id || order?.orderId || order?.activationId;
 
-        if (!order || (!order.id && !order._id && !order.orderId && !order.activationId)) {
+        console.log("[OTP] Order ID:", orderId);
+
+        if (!orderId) {
             throw new Error(response?.message || 'Server did not return a valid activation or order ID.');
         }
 
-        const orderId = order.id || order._id || order.orderId || order.activationId;
-        const phone = order.phone || order.phoneNumber || order.number || '—';
+        const phone = order?.phone || order?.phoneNumber || order?.number || response?.phone || '—';
 
         console.log(`[Purchase] Order ID: ${orderId}`);
-        console.log(`[Purchase] Activation ID: ${orderId}`);
-        console.log(`[Purchase] Status: ${order.status || 'PENDING'}`);
         console.log(`[Purchase] Number: ${phone}`);
 
         currentOrderId   = orderId;
@@ -551,11 +552,12 @@ async function handleBuyClick(country, product, btnEl) {
 ══════════════════════════════════════════ */
 async function openOrderModal(orderId, initialOrder = null) {
     if (!orderId) {
-        console.error('[ORDER] Cannot open order modal: missing Order ID.');
+        console.error('[OTP] Missing order ID');
         return;
     }
 
     currentOrderId = orderId;
+    localStorage.setItem('currentOrderId', String(orderId));
     console.log(`[ORDER] Opening Order Modal for Order ID: ${orderId}`);
 
     const overlay = document.getElementById('smsModalOverlay');
@@ -564,37 +566,15 @@ async function openOrderModal(orderId, initialOrder = null) {
     overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
 
+    setModalLoading(orderId);
+
     let order = initialOrder;
     if (order) {
         currentOrderData = order;
         updateOrderUI(order);
-    } else {
-        setModalLoading(orderId);
-        try {
-            console.log(`[STEP 4] Request: GET /api/order/${orderId}`);
-            console.log(`[ORDER] Checking status... (GET /api/order/${orderId})`);
-            const res = await getOrder(orderId);
-            console.log('[STEP 4] Status: 200');
-            console.log('[STEP 4] Response:', res);
-            order = res?.order || res;
-            console.log(`[ORDER] Status response:`, order);
-            currentOrderData = order;
-            updateOrderUI(order);
-        } catch (err) {
-            console.error(`[STEP 4] Error fetching order ${orderId}:`, err);
-            console.error(`[ORDER] Error fetching order ${orderId}:`, err);
-            setModalError(`Could not load order details (#${orderId}): ${err.message}`);
-            return;
-        }
     }
 
-    const currentStatus = String(order?.status || 'PENDING').toUpperCase();
-    const hasOtpOrSms = (Array.isArray(order?.sms) && order.sms.length > 0) || !!order?.code || !!order?.text;
-    if (currentStatus === 'PENDING' && !hasOtpOrSms) {
-        startPolling(orderId);
-    } else {
-        stopPolling(`Order already ${currentStatus}${hasOtpOrSms ? ' with SMS/code present' : ''} on modal open — no polling needed`);
-    }
+    startOrderPolling(orderId);
 }
 
 function setModalLoading(orderId) {
@@ -829,122 +809,186 @@ function extractOTP(text) {
      impossible: startPolling() unconditionally calls stopPolling()
      first, and pollInterval is a single module-level handle.
 ══════════════════════════════════════════ */
-let pollStartTime = 0;
-let pollErrorCount = 0;
+/* ══════════════════════════════════════════
+   SMS / ORDER POLLING & OTP RETRIEVAL (Step 4)
+   Endpoint: GET https://nurasms-api.onrender.com/api/order/:orderId
+   Uses: getOrder(orderId) from api.js with Authorization: Bearer ACCESS_TOKEN
+══════════════════════════════════════════ */
 let isPollRequestInProgress = false;
-const MAX_POLL_DURATION_MS = 15 * 60 * 1000; // 15 minutes ceiling
-const MAX_CONSECUTIVE_POLL_ERRORS = 5;
 
-function startPolling(orderId) {
-    stopPolling('Restarting polling (new order opened / re-entered)'); // Ensure no duplicate intervals exist
-
+function startOrderPolling(orderId) {
     if (!orderId) {
-        console.warn('[ORDER] Cannot start polling: No Order ID provided.');
+        console.error("[OTP] Missing order ID");
         return;
     }
 
-    pollStartTime = Date.now();
-    pollErrorCount = 0;
-    isPollRequestInProgress = false;
-    let pollCount = 0;
+    if (orderPollInterval) {
+        clearInterval(orderPollInterval);
+    }
 
-    console.log(`[ORDER] Starting polling for Order ID: ${orderId}`);
-    console.log(`[ORDER] Poll start time: ${new Date(pollStartTime).toISOString()} (interval: ${POLL_INTERVAL_MS / 1000}s, ceiling: ${MAX_POLL_DURATION_MS / 60000}min)`);
+    checkOrder(orderId);
 
-    const executePoll = async () => {
-        if (isPollRequestInProgress) {
-            console.log(`[ORDER] Skipping poll tick for Order ID: ${orderId} — previous request still in flight.`);
-            return; // Prevent overlapping requests
+    orderPollInterval = setInterval(() => {
+        checkOrder(orderId);
+    }, 5000);
+}
+
+async function checkOrder(orderId) {
+    console.log("[OTP] Checking order:", orderId);
+    try {
+        const response = await getOrder(orderId);
+
+        // Normalize response so response.status and response.sms work seamlessly
+        // whether backend returns { order: { status, sms } } or { status, sms }
+        if (response?.order) {
+            if (response.status === undefined) response.status = response.order.status;
+            if (response.sms === undefined) response.sms = response.order.sms;
+        } else if (response?.status && !response?.order) {
+            response.order = { ...response };
         }
 
-        // Check overall timeout ceiling
-        if (Date.now() - pollStartTime > MAX_POLL_DURATION_MS) {
-            console.warn(`[ORDER] Max poll timeout reached for Order ID: ${orderId}`);
-            stopPolling(`Max poll duration (${MAX_POLL_DURATION_MS / 60000}min) reached for Order ID: ${orderId}`);
-            if (currentOrderData) {
-                currentOrderData.status = 'TIMEOUT';
-                updateOrderUI(currentOrderData);
-            }
-            showToast('⏰ Polling timed out. You can manually refresh or check later.', 'warning');
+        console.log("[OTP] Status:", response?.status);
+        console.log("[OTP] SMS:", response?.sms);
+
+        const orderObj = response?.order || response;
+        if (orderObj) {
+            currentOrderData = orderObj;
+            updateOrderUI(orderObj);
+        }
+
+        const sms = response?.sms?.[0];
+
+        if (response?.status === "RECEIVED" && sms) {
+            console.log("[OTP] SMS received:", sms);
+
+            // Display the OTP
+            displayOTP(sms.code);
+
+            // Display the complete SMS
+            displaySMS(sms.text, sms.sender);
+
+            clearInterval(orderPollInterval);
+            orderPollInterval = null;
             return;
         }
 
-        isPollRequestInProgress = true;
-        pollCount++;
+        // Also handle case where SMS arrived while status is PENDING or other
+        if (sms && (sms.code || sms.text)) {
+            console.log("[OTP] SMS received:", sms);
+            displayOTP(sms.code);
+            displaySMS(sms.text, sms.sender);
 
-        try {
-            console.log(`[STEP 4] Request: GET /api/order/${orderId}`);
-            console.log(`[ORDER] Checking status... (Poll #${pollCount} for Order ID: ${orderId}, elapsed ${Math.round((Date.now() - pollStartTime) / 1000)}s)`);
-            const res = await getOrder(orderId);
-            console.log('[STEP 4] Status: 200');
-            console.log('[STEP 4] Response:', res);
-            const order = res?.order || res?.data || res;
-
-            if (!order) {
-                console.warn(`[ORDER] Empty order response for Order ID: ${orderId}`);
-                return;
-            }
-
-            pollErrorCount = 0; // Reset consecutive errors
-            currentOrderData = order;
-
-            const status = String(order.status || 'PENDING').toUpperCase();
-            console.log(`[ORDER] Status response: ${status}`, order);
-
-            updateOrderUI(order);
-
-            const hasSmsOrOtp = (Array.isArray(order.sms) && order.sms.length > 0) || !!order.code || !!order.text;
-            if (status === 'RECEIVED' || hasSmsOrOtp) {
-                const latestSms = Array.isArray(order.sms) && order.sms.length > 0 ? order.sms[order.sms.length - 1] : null;
-                const receivedCode =
-                    order.code || order.smsCode || order.otp || order.verification_code || order.passcode ||
-                    latestSms?.code ||
-                    extractOTP(latestSms?.text || latestSms?.message || order.text || '') ||
-                    '(code present in message text — see full SMS above)';
-                console.log(`[ORDER] SMS/code received for Order ID: ${orderId} — Code: ${receivedCode}`);
-                stopPolling(`SMS/OTP received for Order ID: ${orderId}`);
-                console.log(`[ORDER] Order completed! SMS / OTP received.`);
-                console.log(`[ORDER] Number received: ${order.phone || '—'}`);
-                showToast('📨 SMS received! Your verification code is ready.', 'success');
-            } else if (status === 'FINISHED' || status === 'CANCELED' || status === 'BANNED' || status === 'EXPIRED' || status === 'TIMEOUT') {
-                stopPolling(`Terminal order status reached: ${status} for Order ID: ${orderId}`);
-                console.log(`[ORDER] Polling stopped. Terminal status: ${status}`);
-                if (status === 'TIMEOUT' || status === 'EXPIRED') {
-                    showToast('⏰ Number expired with no SMS received from provider.', 'warning');
-                }
-            }
-        } catch (err) {
-            pollErrorCount++;
-            console.error(`[ORDER] Error checking status for Order ID ${orderId} (${pollErrorCount}/${MAX_CONSECUTIVE_POLL_ERRORS}):`, err.message);
-
-            if (err.status === 404 || err.status === 401) {
-                stopPolling(`Order ${err.status === 404 ? 'not found' : 'unauthorized'} (${err.status}) for Order ID: ${orderId}`);
-                setModalError(err.message || 'Order not found or unauthorized.');
-            } else if (pollErrorCount >= MAX_CONSECUTIVE_POLL_ERRORS) {
-                stopPolling(`${MAX_CONSECUTIVE_POLL_ERRORS} consecutive poll failures for Order ID: ${orderId}`);
-                console.warn(`[ORDER] Stopped polling Order ID ${orderId} after ${MAX_CONSECUTIVE_POLL_ERRORS} consecutive failures.`);
-                showToast('Temporary network or server issue while checking order status.', 'error');
-            }
-            // Transient errors below the consecutive-failure ceiling: swallow and let
-            // the next tick retry automatically — the purchase flow itself stays untouched.
-        } finally {
-            isPollRequestInProgress = false;
+            clearInterval(orderPollInterval);
+            orderPollInterval = null;
+            return;
         }
-    };
 
-    // Execute immediately, then periodically
-    executePoll();
-    pollInterval = setInterval(executePoll, POLL_INTERVAL_MS);
+        // Only stop when the order reaches a final state
+        const currentStatus = String(response?.status || '').toUpperCase();
+        const terminalStates = ['RECEIVED', 'FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
+        if (terminalStates.includes(currentStatus)) {
+            console.log(`[OTP] Terminal status reached: ${currentStatus}. Stopping polling.`);
+            clearInterval(orderPollInterval);
+            orderPollInterval = null;
+        }
+    } catch (err) {
+        console.error("[OTP] Error checking order:", err);
+    }
+}
+
+function displayOTP(code) {
+    let otp = code;
+    if (!otp && currentOrderData) {
+        const smsList = Array.isArray(currentOrderData.sms) ? currentOrderData.sms : [];
+        const text = smsList[0]?.text || currentOrderData.text || '';
+        otp = extractOTP(text);
+    }
+
+    console.log("[OTP] Displaying OTP code:", otp);
+
+    const otpCode = document.getElementById('otpCode');
+    if (otpCode) {
+        otpCode.textContent = otp || 'Code received';
+    }
+
+    const otpBox = document.getElementById('smsOtpBox');
+    if (otpBox) {
+        otpBox.classList.remove('code-waiting');
+        otpBox.classList.add('code-received');
+    }
+
+    const copyCodeBtn = document.getElementById('btnCopyCode');
+    if (copyCodeBtn && otp) {
+        copyCodeBtn.style.display = 'inline-flex';
+    }
+
+    const statusDot = document.getElementById('statusDot');
+    if (statusDot) {
+        statusDot.className = 'dot received';
+        statusDot.style.background = '#10b981';
+    }
+
+    const statusText = document.getElementById('statusText');
+    if (statusText) {
+        statusText.textContent = 'SMS Received';
+    }
+
+    const finishBtn = document.getElementById('btnFinishOrder');
+    if (finishBtn) finishBtn.disabled = false;
+
+    const cancelBtn = document.getElementById('btnCancelOrder');
+    if (cancelBtn) cancelBtn.disabled = true;
+}
+
+function displaySMS(text, sender = '') {
+    console.log("[OTP] Displaying complete SMS:", text);
+
+    const otpFullText = document.getElementById('otpFullText');
+    if (otpFullText) {
+        const senderLabel = sender ? `[${escapeHTML(sender)}] ` : '';
+        otpFullText.textContent = `Message: ${senderLabel}${text || ''}`;
+    }
+
+    const inboxList = document.getElementById('smsInboxList');
+    if (inboxList && text) {
+        inboxList.style.display = 'block';
+        const senderLabel = sender ? escapeHTML(sender) : 'SMS';
+        inboxList.innerHTML = `<div style="padding:10px 14px;margin-bottom:8px;background:var(--border-light);border-radius:10px;font-size:12px;text-align:left;border:1px solid var(--border);">
+            <div style="font-weight:700;color:var(--text);margin-bottom:2px;">[${senderLabel}]</div>
+            <div style="color:var(--muted);">${escapeHTML(text)}</div>
+        </div>`;
+    }
+
+    showToast('📨 SMS received! Your verification code is ready.', 'success');
 }
 
 function stopPolling(reason = 'Manual stop / cleanup') {
+    if (orderPollInterval) {
+        console.log(`[OTP] Stopping polling — Reason: ${reason}`);
+        clearInterval(orderPollInterval);
+        orderPollInterval = null;
+    }
     if (pollInterval) {
-        console.log(`[ORDER] Stopping polling — Reason: ${reason}`);
         clearInterval(pollInterval);
         pollInterval = null;
     }
     isPollRequestInProgress = false;
 }
+
+function stopOrderPolling(reason) {
+    stopPolling(reason);
+}
+
+function startPolling(orderId) {
+    startOrderPolling(orderId);
+}
+
+window.orderPollInterval = orderPollInterval;
+window.startOrderPolling = startOrderPolling;
+window.checkOrder        = checkOrder;
+window.displayOTP        = displayOTP;
+window.displaySMS        = displaySMS;
+window.stopOrderPolling  = stopOrderPolling;
 
 function closeSmsModal() {
     stopPolling('Order modal closed by user');
