@@ -118,14 +118,6 @@ function toggleBuyCurrency() {
 /* ══════════════════════════════════════════
    WALLET BALANCE (buy page)
    Uses: getWalletBalance() / createVirtualAccount() from api.js
-
-   NOTE (fix): a 404 from get-wallet-balance means "Wallet not found" —
-   this user has no wallet row yet for this currency on the backend.
-   Previously that just fell through to a stale cached localStorage
-   number with no real explanation. Now: on 404 specifically, we call
-   createVirtualAccount(currency) to provision the wallet, then retry
-   the balance fetch once. Any other error (timeout, network, 5xx)
-   still falls back to the cached balance exactly as before.
 ══════════════════════════════════════════ */
 async function loadWalletBalanceBuyPage() {
     const balEl = document.getElementById('buyWalletBalance');
@@ -195,12 +187,6 @@ function applyWalletBalance(data, currency, symbol, balEl) {
 /* ══════════════════════════════════════════
    COUNTRIES
    Uses: getCountries() from api.js
-   NOTE: the 'change' listener on #countryFilter is attached ONCE in
-   attachEventListeners() — NOT here. This function can run multiple
-   times (initial load + retry-on-click), and re-attaching a listener
-   here every time it (re)runs was stacking duplicate listeners, so one
-   country selection fired onCountryChange (and loadProducts) 2x, 3x,
-   however many times loadCountries had run. Don't add it back here.
 ══════════════════════════════════════════ */
 async function loadCountries() {
     const select = document.getElementById('countryFilter');
@@ -280,7 +266,6 @@ async function loadProducts(country) {
     const cardsGrid = document.getElementById('cardsGrid');
     if (!cardsGrid) return;
 
-    // Loading skeletons
     cardsGrid.innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join('');
     const resultCount = document.getElementById('resultCount');
     if (resultCount) resultCount.textContent = 'Loading products…';
@@ -308,8 +293,6 @@ async function loadProducts(country) {
                 let category = (info.Category || info.category || 'activation').toLowerCase();
                 const isNativeNGN = String(info.currency || '').toUpperCase() === 'NGN';
 
-                // Requirement 9 & 10: If NuraSQ returns currency: "NGN", use the authoritative cost directly.
-                // Do NOT convert an already-NGN product price through USD (e.g. AliExpress cost = ₦28, not $0.03 -> ₦41).
                 if (isNativeNGN && (info.cost !== undefined || info.Cost !== undefined)) {
                     priceNGN = parseFloat(info.cost !== undefined ? info.cost : info.Cost) || 0;
                     priceUSD = info.Price !== undefined ? parseFloat(info.Price) : (priceNGN / convRate);
@@ -327,10 +310,10 @@ async function loadProducts(country) {
                     if (operators.length > 0) {
                         const validUsdPrices = operators.map(op => parseFloat(op.Price || op.price || 0)).filter(p => p > 0);
                         const validNgnPrices = operators.map(op => parseFloat(op.cost || op.rate || op.Cost || 0)).filter(p => p > 0);
-                        
+
                         priceUSD = validUsdPrices.length > 0 ? Math.min(...validUsdPrices) : 0;
                         priceNGN = validNgnPrices.length > 0 ? Math.min(...validNgnPrices) : 0;
-                        
+
                         if (priceNGN === 0 && priceUSD > 0) priceNGN = priceUSD * convRate;
                         if (priceUSD === 0 && priceNGN > 0) priceUSD = priceNGN / convRate;
 
@@ -393,11 +376,6 @@ function renderProductCards(products) {
     const currency = getCurrency();
     const symbol   = currency === 'USD' ? '$' : '₦';
 
-    // NOTE: no inline onclick attributes here anymore. Product keys came
-    // from 5sim's API — if one ever contained a quote character, an
-    // inline onclick="fn('${key}')" string would silently break (or
-    // worse). Instead we stash the key in a data-attribute and handle
-    // clicks via event delegation in attachEventListeners().
     cardsGrid.innerHTML = filtered.map(p => {
         const displayPrice = currency === 'USD' ? p.priceUSD : p.priceNGN;
         const priceStr     = symbol + displayPrice.toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -434,7 +412,7 @@ function selectProduct(key) {
    Uses: buyActivation(country, product) from api.js
 ══════════════════════════════════════════ */
 async function handleBuyClick(country, product, btnEl) {
-    if (isBuying) return; // Prevent duplicate rapid clicks
+    if (isBuying) return;
 
     if (!country || !product) {
         showToast('Please select a country and service first.', 'error');
@@ -450,11 +428,9 @@ async function handleBuyClick(country, product, btnEl) {
     const activeCurrency = getCurrency();
     const sym = activeCurrency === 'USD' ? '$' : '₦';
 
-    // ── 1. Authoritative Product Pricing (Requirement 4, 9, 10) ──
     const prodObj = allProducts.find(p => p.key === product);
     const isNativeNGN = prodObj?.isNativeNGN || false;
 
-    // Explicitly separate values (Requirement 4)
     let productPrice = 0;
     let convertedProductPrice = null;
 
@@ -464,7 +440,6 @@ async function handleBuyClick(country, product, btnEl) {
             convertedProductPrice = productPrice;
         }
     } else {
-        // NGN currency: use authoritative NuraSMS cost directly without converting through USD!
         productPrice = prodObj?.priceNGN || 0;
     }
 
@@ -475,8 +450,6 @@ async function handleBuyClick(country, product, btnEl) {
         console.log(`[PRODUCT] Converted Product Price: $${convertedProductPrice}`);
     }
 
-    // ── 2. Authoritative Backend Wallet Balance (Requirement 5, 7, 11, 12) ──
-    // Never trust localStorage as authoritative wallet balance!
     let walletBalance = 0;
     try {
         console.log(`[Purchase] Querying authoritative backend wallet balance for ${activeCurrency}...`);
@@ -484,7 +457,6 @@ async function handleBuyClick(country, product, btnEl) {
         walletBalance = normalizeWalletBalance(walletRes, activeCurrency);
         console.log(`[WALLET] Authoritative Backend Wallet Balance: ${sym}${walletBalance}`);
 
-        // Update UI with true backend balance
         const buyBalEl = document.getElementById('buyWalletBalance');
         if (buyBalEl) {
             buyBalEl.textContent = sym + Number(walletBalance).toLocaleString(activeCurrency === 'USD' ? 'en-US' : 'en-NG', {
@@ -502,7 +474,6 @@ async function handleBuyClick(country, product, btnEl) {
         return;
     }
 
-    // ── 3. Purchase validation: actual backend wallet balance >= authoritative product cost (Requirement 11) ──
     if (walletBalance < productPrice) {
         isBuying = false;
         if (btnEl) {
@@ -526,14 +497,12 @@ async function handleBuyClick(country, product, btnEl) {
         const response = await buyActivation(country, product, activeCurrency);
         console.log("[PURCHASE] Backend response:", response);
 
-        // Normalize order from result (Requirement 17)
         const order = response?.order || response?.data || response;
 
         if (!order || (!order.id && !order._id && !order.orderId && !order.activationId)) {
             throw new Error(response?.message || 'Server did not return a valid activation or order ID.');
         }
 
-        // Dynamically capture the real Order ID and Phone from API response
         const orderId = order.id || order._id || order.orderId || order.activationId;
         const phone = order.phone || order.phoneNumber || order.number || '—';
 
@@ -542,24 +511,20 @@ async function handleBuyClick(country, product, btnEl) {
         console.log(`[Purchase] Status: ${order.status || 'PENDING'}`);
         console.log(`[Purchase] Number: ${phone}`);
 
-        // Save real backend order ID
         currentOrderId   = orderId;
         currentOrderData = order;
         localStorage.setItem('currentOrderId', String(orderId));
 
         showToast('✅ Number purchased successfully! Opening order…', 'success');
 
-        // Authoritative wallet refresh after purchase (Requirement 13)
         await loadWalletBalanceBuyPage();
 
-        // Open SMS modal and start Step 4 polling
         openOrderModal(orderId, order);
     } catch (error) {
         console.error("[PURCHASE] Network/backend error:", error);
         console.error("[PURCHASE] Error status:", error?.status);
         console.error("[PURCHASE] Error message:", error?.message);
 
-        // Requirement 16: Return clear upstream error instead of generic message
         let displayError = error.message || 'Failed to purchase number.';
         if (displayError.includes('400') || displayError.toLowerCase().includes('status code 400')) {
             displayError = 'Nura SQ upstream provider error (Code 400): This service is currently unavailable or out of stock from the provider. Your wallet was not charged.';
@@ -568,7 +533,6 @@ async function handleBuyClick(country, product, btnEl) {
         }
         showToast(displayError, 'error');
 
-        // Refresh authoritative balance after failed purchase to guarantee no incorrect deductions (Requirement 14, 15)
         try {
             await loadWalletBalanceBuyPage();
         } catch (_) {}
@@ -629,7 +593,7 @@ async function openOrderModal(orderId, initialOrder = null) {
     if (currentStatus === 'PENDING' && !hasOtpOrSms) {
         startPolling(orderId);
     } else {
-        stopPolling();
+        stopPolling(`Order already ${currentStatus}${hasOtpOrSms ? ' with SMS/code present' : ''} on modal open — no polling needed`);
     }
 }
 
@@ -665,12 +629,10 @@ function setModalError(msg) {
 function updateOrderUI(order) {
     if (!order) return;
 
-    // Display purchased number
     const phone = order.phone || order.number || order.phone_number || '—';
     const phoneEl = document.getElementById('modalPhone');
     if (phoneEl) phoneEl.textContent = phone;
 
-    // Display dynamic Order ID
     const orderId = order.id || order._id || order.orderId || currentOrderId || '—';
     const orderIdEl = document.getElementById('modalOrderId');
     if (orderIdEl) orderIdEl.textContent = '#' + orderId;
@@ -707,7 +669,6 @@ function updateOrderUI(order) {
     const otpFullText = document.getElementById('otpFullText');
     const copyCodeBtn = document.getElementById('btnCopyCode');
 
-    // Robust SMS and OTP extraction across all API shapes
     const smsList = Array.isArray(order.sms)
         ? order.sms
         : (order.sms && typeof order.sms === 'object' ? [order.sms] : (typeof order.sms === 'string' ? [{ text: order.sms }] : []));
@@ -779,13 +740,11 @@ function updateOrderUI(order) {
             if (otpCode) otpCode.textContent = 'Number Banned';
             if (otpFullText) otpFullText.textContent = 'Number was reported and banned.';
         } else {
-            // PENDING or waiting
             if (otpCode) otpCode.textContent = 'Waiting for code...';
             if (otpFullText) otpFullText.textContent = 'Send your verification SMS to this number. Code will appear automatically.';
         }
     }
 
-    // Populate multiple SMS messages in smsInboxList if present
     const inboxList = document.getElementById('smsInboxList');
     if (inboxList) {
         if (smsList.length > 1) {
@@ -822,31 +781,26 @@ function extractOTP(text) {
     if (!text) return null;
     const str = String(text).trim();
 
-    // 1. Explicit labels followed by digits or alphanumeric code: e.g. 'code is 123456', 'code: 123456', 'OTP: 9102', 'código: 123456'
     const labeledMatch = str.match(/(?:code(?:\s+is)?|otp(?:\s+is)?|pin(?:\s+is)?|passcode(?:\s+is)?|verification(?:\s+code)?|código)[\s:=#\-]+([0-9A-Za-z]{4,8})\b/i);
     if (labeledMatch && labeledMatch[1] && /\d/.test(labeledMatch[1])) {
         return labeledMatch[1];
     }
 
-    // 2. Prefixed formats like G-123456, FB-12345, WA-123456
     const prefixedMatch = str.match(/\b(?:G|FB|VK|WA|TG)[-\s]?(\d{4,8})\b/i);
     if (prefixedMatch && prefixedMatch[1]) {
         return prefixedMatch[1];
     }
 
-    // 3. Code at beginning of text: e.g. '123456 is your code'
     const startMatch = str.match(/^([0-9]{4,8})\b/);
     if (startMatch && startMatch[1]) {
         return startMatch[1];
     }
 
-    // 4. Code at the end or before punctuation: e.g. 'Your code is: 123456.'
     const endMatch = str.match(/[:\s]([0-9]{4,8})[.\s]*$/);
     if (endMatch && endMatch[1]) {
         return endMatch[1];
     }
 
-    // 5. Fallback to any 4 to 8 digit sequence, filtering out common years
     const matches = str.match(/\b(\d{4,8})\b/g);
     if (matches && matches.length > 0) {
         const filtered = matches.filter(m => !['2024', '2025', '2026', '2027'].includes(m));
@@ -860,6 +814,20 @@ function extractOTP(text) {
 /* ══════════════════════════════════════════
    SMS / ORDER POLLING (Step 4)
    Uses: getOrder(orderId) from api.js
+
+   FIX SUMMARY (this pass):
+   - Every stopPolling() call now takes a `reason` string, and the
+     interval is only ever cleared/logged there — so there is exactly
+     one place that decides "polling has stopped" and why.
+   - startPolling() logs the Order ID + wall-clock start time up front,
+     so "is this actually ticking, and for which order" is answerable
+     from the console alone.
+   - Each tick logs elapsed time + attempt count, and the moment an
+     SMS/OTP is detected, the actual extracted code is logged (not just
+     "received").
+   - Duplicate intervals for the same or a different order remain
+     impossible: startPolling() unconditionally calls stopPolling()
+     first, and pollInterval is a single module-level handle.
 ══════════════════════════════════════════ */
 let pollStartTime = 0;
 let pollErrorCount = 0;
@@ -868,7 +836,7 @@ const MAX_POLL_DURATION_MS = 15 * 60 * 1000; // 15 minutes ceiling
 const MAX_CONSECUTIVE_POLL_ERRORS = 5;
 
 function startPolling(orderId) {
-    stopPolling(); // Ensure no duplicate intervals exist
+    stopPolling('Restarting polling (new order opened / re-entered)'); // Ensure no duplicate intervals exist
 
     if (!orderId) {
         console.warn('[ORDER] Cannot start polling: No Order ID provided.');
@@ -880,15 +848,19 @@ function startPolling(orderId) {
     isPollRequestInProgress = false;
     let pollCount = 0;
 
-    console.log(`[ORDER] Starting polling for Order ID: ${orderId} (Interval: ${POLL_INTERVAL_MS / 1000}s)`);
+    console.log(`[ORDER] Starting polling for Order ID: ${orderId}`);
+    console.log(`[ORDER] Poll start time: ${new Date(pollStartTime).toISOString()} (interval: ${POLL_INTERVAL_MS / 1000}s, ceiling: ${MAX_POLL_DURATION_MS / 60000}min)`);
 
     const executePoll = async () => {
-        if (isPollRequestInProgress) return; // Prevent overlapping requests
+        if (isPollRequestInProgress) {
+            console.log(`[ORDER] Skipping poll tick for Order ID: ${orderId} — previous request still in flight.`);
+            return; // Prevent overlapping requests
+        }
 
         // Check overall timeout ceiling
         if (Date.now() - pollStartTime > MAX_POLL_DURATION_MS) {
             console.warn(`[ORDER] Max poll timeout reached for Order ID: ${orderId}`);
-            stopPolling();
+            stopPolling(`Max poll duration (${MAX_POLL_DURATION_MS / 60000}min) reached for Order ID: ${orderId}`);
             if (currentOrderData) {
                 currentOrderData.status = 'TIMEOUT';
                 updateOrderUI(currentOrderData);
@@ -902,7 +874,7 @@ function startPolling(orderId) {
 
         try {
             console.log(`[STEP 4] Request: GET /api/order/${orderId}`);
-            console.log(`[ORDER] Checking status... (Poll #${pollCount} for Order ID: ${orderId})`);
+            console.log(`[ORDER] Checking status... (Poll #${pollCount} for Order ID: ${orderId}, elapsed ${Math.round((Date.now() - pollStartTime) / 1000)}s)`);
             const res = await getOrder(orderId);
             console.log('[STEP 4] Status: 200');
             console.log('[STEP 4] Response:', res);
@@ -923,12 +895,19 @@ function startPolling(orderId) {
 
             const hasSmsOrOtp = (Array.isArray(order.sms) && order.sms.length > 0) || !!order.code || !!order.text;
             if (status === 'RECEIVED' || hasSmsOrOtp) {
-                stopPolling();
+                const latestSms = Array.isArray(order.sms) && order.sms.length > 0 ? order.sms[order.sms.length - 1] : null;
+                const receivedCode =
+                    order.code || order.smsCode || order.otp || order.verification_code || order.passcode ||
+                    latestSms?.code ||
+                    extractOTP(latestSms?.text || latestSms?.message || order.text || '') ||
+                    '(code present in message text — see full SMS above)';
+                console.log(`[ORDER] SMS/code received for Order ID: ${orderId} — Code: ${receivedCode}`);
+                stopPolling(`SMS/OTP received for Order ID: ${orderId}`);
                 console.log(`[ORDER] Order completed! SMS / OTP received.`);
                 console.log(`[ORDER] Number received: ${order.phone || '—'}`);
                 showToast('📨 SMS received! Your verification code is ready.', 'success');
             } else if (status === 'FINISHED' || status === 'CANCELED' || status === 'BANNED' || status === 'EXPIRED' || status === 'TIMEOUT') {
-                stopPolling();
+                stopPolling(`Terminal order status reached: ${status} for Order ID: ${orderId}`);
                 console.log(`[ORDER] Polling stopped. Terminal status: ${status}`);
                 if (status === 'TIMEOUT' || status === 'EXPIRED') {
                     showToast('⏰ Number expired with no SMS received from provider.', 'warning');
@@ -939,13 +918,15 @@ function startPolling(orderId) {
             console.error(`[ORDER] Error checking status for Order ID ${orderId} (${pollErrorCount}/${MAX_CONSECUTIVE_POLL_ERRORS}):`, err.message);
 
             if (err.status === 404 || err.status === 401) {
-                stopPolling();
+                stopPolling(`Order ${err.status === 404 ? 'not found' : 'unauthorized'} (${err.status}) for Order ID: ${orderId}`);
                 setModalError(err.message || 'Order not found or unauthorized.');
             } else if (pollErrorCount >= MAX_CONSECUTIVE_POLL_ERRORS) {
-                stopPolling();
+                stopPolling(`${MAX_CONSECUTIVE_POLL_ERRORS} consecutive poll failures for Order ID: ${orderId}`);
                 console.warn(`[ORDER] Stopped polling Order ID ${orderId} after ${MAX_CONSECUTIVE_POLL_ERRORS} consecutive failures.`);
                 showToast('Temporary network or server issue while checking order status.', 'error');
             }
+            // Transient errors below the consecutive-failure ceiling: swallow and let
+            // the next tick retry automatically — the purchase flow itself stays untouched.
         } finally {
             isPollRequestInProgress = false;
         }
@@ -956,8 +937,9 @@ function startPolling(orderId) {
     pollInterval = setInterval(executePoll, POLL_INTERVAL_MS);
 }
 
-function stopPolling() {
+function stopPolling(reason = 'Manual stop / cleanup') {
     if (pollInterval) {
+        console.log(`[ORDER] Stopping polling — Reason: ${reason}`);
         clearInterval(pollInterval);
         pollInterval = null;
     }
@@ -965,7 +947,7 @@ function stopPolling() {
 }
 
 function closeSmsModal() {
-    stopPolling();
+    stopPolling('Order modal closed by user');
     const overlay = document.getElementById('smsModalOverlay');
     if (overlay) overlay.classList.remove('show');
     document.body.style.overflow = '';
@@ -1015,7 +997,7 @@ async function handleFinishOrder() {
         const res = await finishOrder(targetOrderId);
         console.log('[STEP 5] Status: 200');
         console.log('[STEP 5] Response:', res);
-        stopPolling();
+        stopPolling(`Order finished by user (Order ID: ${targetOrderId})`);
         showToast('✅ Order finished and marked complete!', 'success');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -1041,7 +1023,6 @@ function showCancelConfirmModal() {
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
 
-    // Focus "Keep Number" to prevent accidental confirmation via keyboard/enter
     const keepBtn = document.getElementById('btnKeepNumber');
     if (keepBtn) {
         setTimeout(() => keepBtn.focus(), 80);
@@ -1055,7 +1036,6 @@ function hideCancelConfirmModal() {
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
 
-    // Reset button states
     const confirmBtn = document.getElementById('btnConfirmCancelNumber');
     const keepBtn    = document.getElementById('btnKeepNumber');
     if (confirmBtn) {
@@ -1100,7 +1080,7 @@ async function executeCancelOrder() {
     try {
         const res = await cancelOrder(targetOrderId);
         console.log('[STEP 6] Status: 200', res);
-        stopPolling();
+        stopPolling(`Order cancelled by user (Order ID: ${targetOrderId})`);
         hideCancelConfirmModal();
         closeSmsModal();
         showToast('✅ Number has been successfully cancelled.', 'success');
@@ -1136,7 +1116,7 @@ async function handleBanOrder() {
         const res = await banOrder(targetOrderId);
         console.log('[STEP 7] Status: 200');
         console.log('[STEP 7] Response:', res);
-        stopPolling();
+        stopPolling(`Order banned by user (Order ID: ${targetOrderId})`);
         showToast('⚠️ Number reported as banned.', 'success');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -1232,19 +1212,15 @@ function showErrorState(grid, msg) {
    when loadCountries() runs more than once (initial load, retry-click).
 ══════════════════════════════════════════ */
 function attachEventListeners() {
-    // Currency switch
     const currencySwitch = document.getElementById('currencySwitch');
     if (currencySwitch) currencySwitch.addEventListener('click', toggleBuyCurrency);
 
-    // Country dropdown — attached ONCE, here, not inside loadCountries()
     const countryFilter = document.getElementById('countryFilter');
     if (countryFilter) countryFilter.addEventListener('change', onCountryChange);
 
-    // Modal close X
     const modalCloseX = document.getElementById('modalCloseX');
     if (modalCloseX) modalCloseX.addEventListener('click', closeSmsModal);
 
-    // Modal backdrop click
     const modalOverlay = document.getElementById('smsModalOverlay');
     if (modalOverlay) {
         modalOverlay.addEventListener('click', e => {
@@ -1252,7 +1228,6 @@ function attachEventListeners() {
         });
     }
 
-    // Order action buttons
     const copyBtn    = document.getElementById('btnCopyNumber');
     const copyOtpBtn = document.getElementById('btnCopyCode');
     const cancelBtn  = document.getElementById('btnCancelOrder');
@@ -1264,7 +1239,6 @@ function attachEventListeners() {
     if (banBtn)     banBtn.addEventListener('click', handleBanOrder);
     if (finishBtn)  finishBtn.addEventListener('click', handleFinishOrder);
 
-    // Cancel confirmation dialog buttons & backdrop
     const keepNumberBtn    = document.getElementById('btnKeepNumber');
     const confirmCancelBtn = document.getElementById('btnConfirmCancelNumber');
     const cancelOverlay    = document.getElementById('cancelConfirmOverlay');
@@ -1278,8 +1252,6 @@ function attachEventListeners() {
         });
     }
 
-    // Product cards — event delegation instead of inline onclick, so a
-    // product key/name from 5sim can never break out of an HTML attribute.
     const cardsGrid = document.getElementById('cardsGrid');
     if (cardsGrid) {
         cardsGrid.addEventListener('click', (e) => {
@@ -1298,19 +1270,16 @@ function attachEventListeners() {
         });
     }
 
-    // Sidebar settings
     const settingsBtn = document.getElementById('sidebarSettingsBtn');
     if (settingsBtn) {
         settingsBtn.addEventListener('click', e => { e.preventDefault(); openSettings(); });
     }
 
-    // Search filter
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.addEventListener('input', () => {
         if (allProducts.length > 0) renderProductCards(allProducts);
     });
 
-    // Service & type filter
     const serviceFilter = document.getElementById('serviceFilter');
     const typeFilter    = document.getElementById('typeFilter');
     if (serviceFilter) serviceFilter.addEventListener('change', () => {
@@ -1320,14 +1289,12 @@ function attachEventListeners() {
         if (allProducts.length > 0) renderProductCards(allProducts);
     });
 
-    // Toggle aside (mobile)
     const toggleBtnEl  = document.getElementById('toggle-btn');
     const closeAsideEl = document.getElementById('close-btn');
     const asideEl      = document.getElementById('aside');
     if (toggleBtnEl) toggleBtnEl.addEventListener('click', () => asideEl && asideEl.classList.toggle('open'));
     if (closeAsideEl) closeAsideEl.addEventListener('click', () => asideEl && asideEl.classList.remove('open'));
 
-    // Keyboard ESC
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') {
             const cancelModal = document.getElementById('cancelConfirmOverlay');
@@ -1442,8 +1409,6 @@ function savePasswordSettings() {
     if (newPw.length < 8)            { showToast('New password must be at least 8 characters.', 'error'); return; }
     if (newPw !== confPw)            { showToast('Passwords do not match.', 'error'); return; }
 
-    // NOTE: This would ideally call a backend change-password endpoint.
-    // Confirm & clear for now.
     showToast('🔒 Password updated successfully!', 'success');
     document.getElementById('settingsOldPw').value  = '';
     document.getElementById('settingsNewPw').value  = '';
@@ -1558,11 +1523,6 @@ function confirmDeleteAccount() {
 
 /* ══════════════════════════════════════════
    TOAST FALLBACK
-   showToast is expected to come from a shared UI script (e.g. utils.js)
-   loaded before this file. If that script isn't present, or loads after
-   buy.js, every call above would throw ReferenceError and halt whatever
-   function called it. This fallback keeps the page working either way —
-   but the real fix is making sure the real showToast loads before buy.js.
 ══════════════════════════════════════════ */
 if (typeof showToast === 'undefined') {
     window.showToast = function(message, type = 'info') {
@@ -1584,8 +1544,8 @@ if (typeof showToast === 'undefined') {
 }
 
 /* ── Page-level cleanup on unload (stop SMS polling) ── */
-window.addEventListener('beforeunload', stopPolling);
-window.addEventListener('pagehide',    stopPolling);
+window.addEventListener('beforeunload', () => stopPolling('Page unloading (beforeunload)'));
+window.addEventListener('pagehide',    () => stopPolling('Page hidden (pagehide)'));
 
 /* ══════════════════════════════════════════
    NOTIFICATIONS (SHARED)
@@ -1598,10 +1558,10 @@ function toggleNotifDropdown() {
     if (!dropdown || !notifToggle) return;
     const isOpen = dropdown.classList.toggle('show');
     notifToggle.setAttribute('aria-expanded', isOpen.toString());
-    
+
     const profDrop = document.getElementById('dropdown');
     if (profDrop && profDrop.classList.contains('show')) toggleDropdown();
-    
+
     if (isOpen) loadNotifications();
 }
 
@@ -1622,11 +1582,6 @@ async function loadNotifications() {
     list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Loading notifications...</div>';
 
     try {
-        // Mocked because the backend endpoint does not exist yet (returns 404)
-        // const res = await apiRequest('/api/user/notifications', { method: 'GET' });
-        // renderNotifications(res.notifications || res.data || []);
-        
-        // Simulating the 404 response to avoid browser console errors:
         const err = new Error('Not Found');
         err.status = 404;
         throw err;
@@ -1643,7 +1598,7 @@ function renderNotifications(notifs) {
     const list = document.getElementById('notifList');
     const badge = document.getElementById('notifBadge');
     if (!list) return;
-    
+
     if (!notifs || notifs.length === 0) {
         list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">No new notifications.</div>';
         if (badge) badge.style.display = 'none';
