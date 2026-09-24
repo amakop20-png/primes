@@ -878,9 +878,14 @@ function setModalError(msg) {
 function parseOrderSms(order) {
     if (!order) return { hasReceivedSms: false, otp: null, fullText: '', sender: '', smsTime: '', smsList: [] };
 
-    const smsList = Array.isArray(order.sms)
-        ? order.sms
-        : (order.sms && typeof order.sms === 'object' ? [order.sms] : (typeof order.sms === 'string' ? [{ text: order.sms }] : []));
+    let smsList = [];
+    if (Array.isArray(order.sms)) {
+        smsList = order.sms;
+    } else if (order.sms && typeof order.sms === 'object') {
+        smsList = [order.sms];
+    } else if (typeof order.sms === 'string' && order.sms.trim()) {
+        smsList = [{ text: order.sms.trim() }];
+    }
 
     const topLevelCode = order.code || order.smsCode || order.otp || order.verification_code || order.passcode;
     const topLevelText = order.text || order.smsText || order.message;
@@ -896,7 +901,7 @@ function parseOrderSms(order) {
             fullText = latestSms;
             otp = extractOTP(latestSms);
         } else if (latestSms && typeof latestSms === 'object') {
-            otp = latestSms.code || extractOTP(latestSms.text || latestSms.message || '');
+            otp = latestSms.code || latestSms.otp || latestSms.pin || extractOTP(latestSms.text || latestSms.message || '');
             fullText = latestSms.text || latestSms.message || (latestSms.code ? `Verification code: ${latestSms.code}` : '');
             sender = latestSms.sender || latestSms.from || '';
             smsTime = latestSms.created_at || latestSms.date || '';
@@ -906,9 +911,16 @@ function parseOrderSms(order) {
     if (!otp && topLevelCode) otp = String(topLevelCode);
     if (!otp && topLevelText) otp = extractOTP(topLevelText);
     if (!fullText && topLevelText) fullText = String(topLevelText);
-    if (!fullText && otp) fullText = `Your verification code is ${otp}.`;
+    if (!fullText && otp) fullText = `Verification code: ${otp}`;
 
-    const hasReceivedSms = (smsList.length > 0 && !!fullText) || !!otp;
+    const currentStatus = String(order.status || '').toUpperCase();
+    const isReceivedStatus = currentStatus === 'RECEIVED' || currentStatus === 'FINISHED';
+
+    if (isReceivedStatus && !otp && !fullText) {
+        fullText = 'SMS received. Waiting for code display...';
+    }
+
+    const hasReceivedSms = isReceivedStatus || (smsList.length > 0 && !!fullText) || !!otp;
 
     return { hasReceivedSms, otp, fullText, sender, smsTime, smsList };
 }
@@ -941,19 +953,21 @@ function updateOrderUI(order) {
     const { hasReceivedSms, otp, fullText, sender, smsTime, smsList } = parsed;
     const currentStatus = String(order.status || 'PENDING').toUpperCase();
 
-    if (hasReceivedSms) {
+    if (hasReceivedSms || currentStatus === 'RECEIVED' || currentStatus === 'FINISHED') {
         if (otpBox) {
             otpBox.classList.remove('code-waiting');
             otpBox.classList.add('code-received');
         }
-        if (otpCode) otpCode.textContent = otp || 'Code received';
+        if (otpCode) {
+            otpCode.textContent = otp || 'Code received';
+        }
         if (otpFullText) {
             const senderLabel = sender ? `[${escapeHTML(sender)}] ` : '';
             const timeLabel   = smsTime ? ` (${new Date(smsTime).toLocaleTimeString()})` : '';
-            otpFullText.textContent = `Message: ${senderLabel}${fullText}${timeLabel}`;
+            otpFullText.textContent = `Message: ${senderLabel}${fullText || 'SMS received'}${timeLabel}`;
         }
-        if (copyCodeBtn && otp) {
-            copyCodeBtn.style.display = 'inline-flex';
+        if (copyCodeBtn) {
+            copyCodeBtn.style.display = otp ? 'inline-flex' : 'none';
         }
         if (statusDot) {
             statusDot.className = 'dot received';
@@ -1000,7 +1014,7 @@ function updateOrderUI(order) {
             if (otpCode) otpCode.textContent = 'Number Banned';
             if (otpFullText) otpFullText.textContent = 'Number was reported and banned.';
         } else {
-            // PENDING or RECEIVED (without SMS yet) -> active waiting
+            // PENDING -> active waiting
             if (statusDot) {
                 statusDot.className = 'dot pulse';
                 statusDot.style.background = '#f59e0b';
@@ -1013,10 +1027,10 @@ function updateOrderUI(order) {
 
     const inboxList = document.getElementById('smsInboxList');
     if (inboxList) {
-        if (smsList.length > 1) {
+        if (smsList.length > 0) {
             inboxList.style.display = 'block';
             inboxList.innerHTML = smsList.map((m, idx) => {
-                const mText = typeof m === 'string' ? m : (m.text || m.code || '');
+                const mText = typeof m === 'string' ? m : (m.text || m.code || m.message || '');
                 const mSender = typeof m === 'object' && m.sender ? escapeHTML(m.sender) : 'SMS';
                 const mTime = typeof m === 'object' && (m.created_at || m.date) ? new Date(m.created_at || m.date).toLocaleTimeString() : '';
                 return `<div style="padding:10px 14px;margin-bottom:8px;background:var(--border-light);border-radius:10px;font-size:12px;text-align:left;border:1px solid var(--border);">
@@ -1053,6 +1067,11 @@ function extractOTP(text) {
     const prefixedMatch = str.match(/\b(?:G|FB|VK|WA|TG)[-\s]?(\d{4,8})\b/i);
     if (prefixedMatch && prefixedMatch[1]) {
         return prefixedMatch[1];
+    }
+
+    const hyphenatedMatch = str.match(/\b(\d{3}[-\s]\d{3})\b/);
+    if (hyphenatedMatch && hyphenatedMatch[1]) {
+        return hyphenatedMatch[1];
     }
 
     const startMatch = str.match(/^([0-9]{4,8})\b/);
@@ -1183,23 +1202,23 @@ function startOrderPolling(orderId) {
 async function checkOrder(orderId) {
     if (isPollRequestInProgress) return;
     isPollRequestInProgress = true;
-    console.log("[POLL] Checking order:", orderId);
-    console.log("[OTP] Checking order:", orderId);
+
     try {
         const response = await getOrder(orderId);
 
         // Normalize response so response.status and response.sms work seamlessly
         // whether backend returns { order: { status, sms } } or { status, sms }
-        if (response?.order) {
+        if (response && response.order) {
             if (response.status === undefined) response.status = response.order.status;
             if (response.sms === undefined) response.sms = response.order.sms;
-        } else if (response?.status && !response?.order) {
+        } else if (response && response.status && !response.order) {
             response.order = { ...response };
         }
 
-        console.log("[POLL] Response:", response);
-        console.log("[OTP] Status:", response?.status);
-        console.log("[OTP] SMS:", response?.sms);
+        console.log("[OTP] Order ID:", orderId);
+        console.log("[OTP] API response:", response);
+        console.log("[OTP] Status:", response.status);
+        console.log("[OTP] SMS:", response.sms);
 
         const orderObj = response?.order || response;
         if (orderObj) {
@@ -1207,32 +1226,72 @@ async function checkOrder(orderId) {
             updateOrderUI(orderObj);
         }
 
+        const currentStatus = String(response?.status || orderObj?.status || '').toUpperCase();
         const parsed = parseOrderSms(orderObj);
 
-        // If an SMS / OTP has arrived, display it and stop polling
-        if (parsed.hasReceivedSms) {
+        // If status is RECEIVED or parsed.hasReceivedSms is true
+        if (currentStatus === 'RECEIVED' || parsed.hasReceivedSms) {
             console.log("[OTP] SMS received:", parsed);
 
             // Display the OTP
             displayOTP(parsed.otp);
 
             // Display the complete SMS
-            displaySMS(parsed.fullText, parsed.sender);
+            if (parsed.fullText) {
+                displaySMS(parsed.fullText, parsed.sender);
+            }
 
-            stopPolling('SMS code received successfully');
+            stopPolling('Status RECEIVED - SMS code received');
             return;
         }
 
-        // Only stop when the order reaches a final state
-        // NOTE: 'RECEIVED' without SMS is NOT terminal; it continues polling!
-        const currentStatus = String(orderObj?.status || response?.status || '').toUpperCase();
+        // Terminal states: FINISHED, CANCELED, BANNED, TIMEOUT, EXPIRED
         const terminalStates = ['FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
         if (terminalStates.includes(currentStatus)) {
             console.log(`[POLL] Terminal status reached: ${currentStatus}. Stopping polling.`);
             stopPolling(`Terminal status reached: ${currentStatus}`);
+            return;
+        }
+
+        // If PENDING: keep waiting
+        if (currentStatus === 'PENDING') {
+            const statusText = document.getElementById('statusText');
+            if (statusText) statusText.textContent = 'Waiting for SMS...';
         }
     } catch (err) {
-        console.error("[POLL] Error checking order:", err);
+        console.error("[OTP] Error checking order:", err);
+        console.error("[OTP] Error status:", err?.status);
+        console.error("[OTP] Error message:", err?.message);
+
+        const statusText = document.getElementById('statusText');
+        const otpFullText = document.getElementById('otpFullText');
+        const statusDot = document.getElementById('statusDot');
+
+        if (statusDot) {
+            statusDot.className = 'dot';
+            statusDot.style.background = '#ef4444';
+        }
+
+        const statusCode = err?.status || err?.statusCode;
+        const errMsg = err?.message || 'Error checking order status';
+
+        if (statusCode === 401) {
+            if (statusText) statusText.textContent = 'Session Expired (401)';
+            if (otpFullText) otpFullText.textContent = 'Your session has expired. Please log in again to view your order.';
+            stopPolling('Authentication error (401)');
+            showToast('Session expired. Please log in again.', 'error');
+        } else if (statusCode === 404) {
+            if (statusText) statusText.textContent = 'Order Not Found (404)';
+            if (otpFullText) otpFullText.textContent = `Order #${orderId} was not found on the server.`;
+            stopPolling('Order not found (404)');
+            showToast(`Order #${orderId} not found.`, 'error');
+        } else if (statusCode === 500) {
+            if (statusText) statusText.textContent = 'Server Error (500)';
+            if (otpFullText) otpFullText.textContent = `Backend server error (${errMsg}). Retrying...`;
+        } else {
+            if (statusText) statusText.textContent = 'Connection Error';
+            if (otpFullText) otpFullText.textContent = `Could not refresh status: ${errMsg}. Retrying...`;
+        }
     } finally {
         isPollRequestInProgress = false;
     }
@@ -1241,9 +1300,8 @@ async function checkOrder(orderId) {
 function displayOTP(code) {
     let otp = code;
     if (!otp && currentOrderData) {
-        const smsList = Array.isArray(currentOrderData.sms) ? currentOrderData.sms : [];
-        const text = smsList[0]?.text || currentOrderData.text || '';
-        otp = extractOTP(text);
+        const parsed = parseOrderSms(currentOrderData);
+        otp = parsed.otp;
     }
 
     console.log("[OTP] Displaying OTP code:", otp);
@@ -1839,26 +1897,51 @@ function switchSettingsTab(tab) {
 }
 
 function saveProfileSettings() {
-    const name  = document.getElementById('settingsDisplayName')?.value.trim();
-    const email = document.getElementById('settingsEmail')?.value.trim();
-    const phone = document.getElementById('settingsPhone')?.value.trim();
+    if (window.saveProfileSettings && window.saveProfileSettings !== saveProfileSettings) {
+        return window.saveProfileSettings();
+    }
 
-    if (!name) { showToast('Please enter your display name.', 'error'); return; }
+    console.log("[PROFILE] Saving profile...");
+
+    const nameEl  = document.getElementById('settingsDisplayName');
+    const emailEl = document.getElementById('settingsEmail');
+    const phoneEl = document.getElementById('settingsPhone');
+
+    const name  = nameEl ? nameEl.value.trim() : '';
+    const email = emailEl ? emailEl.value.trim() : '';
+    const phone = phoneEl ? phoneEl.value.trim() : '';
 
     const session = getSession() || {};
-    session.name  = name;
-    if (email) session.email = email;
-    if (phone) session.phone = phone;
-    localStorage.setItem('primes_session', JSON.stringify(session));
+    const displayName = name || session.name || session.username;
 
-    document.querySelectorAll('#dashboardUsername, #Username, .dropdown-name, .username, #buyUsername, #profileName').forEach(el => {
-        el.textContent = name;
-    });
-    document.querySelectorAll('.dropdown-email').forEach(el => {
-        if (email) el.textContent = email;
-    });
+    if (nameEl && !displayName) { 
+        showToast('Please enter your display name.', 'error'); 
+        return; 
+    }
 
-    showToast('✅ Profile updated successfully!', 'success');
+    try {
+        if (displayName) session.name = displayName;
+        if (email) session.email = email;
+        if (phone) session.phone = phone;
+
+        if (window.pendingAvatarData) {
+            localStorage.setItem('userAvatar', window.pendingAvatarData);
+            session.avatar = window.pendingAvatarData;
+            window.pendingAvatarData = null;
+        }
+
+        localStorage.setItem('primes_session', JSON.stringify(session));
+
+        if (typeof updateProfileUI === 'function') {
+            updateProfileUI();
+        }
+
+        console.log("[PROFILE] Profile saved successfully");
+        showToast('✅ Profile saved successfully!', 'success');
+    } catch (err) {
+        console.error("[PROFILE] Error saving profile:", err);
+        showToast('Failed to save profile: ' + (err.message || 'Storage error'), 'error');
+    }
 }
 
 function savePasswordSettings() {
@@ -1962,16 +2045,24 @@ function togglePw(inputId, btn) {
 }
 
 function previewAvatar(input) {
+    if (typeof window.handleAvatarFileSelect === 'function') {
+        window.handleAvatarFileSelect(input);
+        return;
+    }
     if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    console.log("[PROFILE] File selected:", file);
     const reader = new FileReader();
     reader.onload = e => {
-        const img = document.getElementById('settingsAvatarImg');
-        if (img) img.src = e.target.result;
-        const headerImg = document.querySelector('.profile img');
-        if (headerImg) headerImg.src = e.target.result;
-        localStorage.setItem('userAvatar', e.target.result);
+        window.pendingAvatarData = e.target.result;
+        const img = document.getElementById('settingsAvatarImg') || document.getElementById('profileAvatar');
+        if (img) {
+            img.src = e.target.result;
+            img.style.display = 'block';
+        }
+        console.log("[PROFILE] Image preview created");
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
 }
 
 function confirmDeleteAccount() {

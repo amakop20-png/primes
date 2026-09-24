@@ -48,10 +48,33 @@ function updateSettingsThemeBtns() {
     if (darkBtn)  darkBtn.classList.toggle('active',  isDark);
 }
 
-// ── Profile Sync ──
+// ── Profile Sync & Avatar State ──
+let pendingAvatarData = null;
+try {
+    Object.defineProperty(window, 'pendingAvatarData', {
+        get: () => pendingAvatarData,
+        set: (v) => { pendingAvatarData = v; },
+        configurable: true
+    });
+} catch (_) {}
+
+function renderAvatarPreview(dataUrl) {
+    const previewImgs = document.querySelectorAll('#profileAvatar, #settingsAvatarImg, .profile-avatar-img, .avatar-preview img');
+    previewImgs.forEach(img => {
+        if (img.tagName === 'IMG') {
+            img.src = dataUrl;
+            img.style.display = 'block';
+        }
+    });
+
+    const previewIcons = document.querySelectorAll('#settingsAvatarIcon, .avatar-preview i.ph-user-circle');
+    previewIcons.forEach(icon => {
+        icon.style.display = 'none';
+    });
+}
+
 function updateProfileUI() {
-    const session = getSession();
-    if (!session) return;
+    const session = getSession() || {};
     
     // Update text elements
     const nameToDisplay = session.name || session.username || 'User';
@@ -72,11 +95,86 @@ function updateProfileUI() {
         if (session.email) el.textContent = session.email;
     });
 
-    // Update avatar images - handle profile-toggle button images and dropdown header images
-    const savedAvatar = localStorage.getItem('userAvatar');
+    // Current effective avatar (pending preview takes precedence while modal is open, then saved avatar)
+    const savedAvatar = pendingAvatarData || localStorage.getItem('userAvatar') || session.avatar;
+
+    // 1. Settings avatar preview in modal
+    const previewImgs = document.querySelectorAll('#profileAvatar, #settingsAvatarImg, .profile-avatar-img, .avatar-preview img');
+    const previewIcons = document.querySelectorAll('#settingsAvatarIcon, .avatar-preview i.ph-user-circle');
+
     if (savedAvatar) {
-        document.querySelectorAll('.profile img, .profile-toggle img, #settingsAvatarImg, .dropdown-header img, .avatar-preview img').forEach(img => {
+        previewImgs.forEach(img => {
+            if (img.tagName === 'IMG') {
+                img.src = savedAvatar;
+                img.style.display = 'block';
+            }
+        });
+        previewIcons.forEach(icon => {
+            icon.style.display = 'none';
+        });
+    } else {
+        previewImgs.forEach(img => {
+            if (img.tagName === 'IMG') {
+                img.style.display = 'none';
+            }
+        });
+        previewIcons.forEach(icon => {
+            icon.style.display = 'inline-block';
+        });
+    }
+
+    // 2. Header profile button (profileToggle)
+    const profileToggles = document.querySelectorAll('#profileToggle, .profile-toggle');
+    profileToggles.forEach(btn => {
+        if (btn.id === 'notifToggle' || btn.closest('.notifications')) return;
+        let img = btn.querySelector('img.avatar-thumb');
+        let icon = btn.querySelector('.ph-user-circle');
+        if (savedAvatar) {
+            if (!img) {
+                img = document.createElement('img');
+                img.className = 'avatar-thumb';
+                img.alt = 'User Avatar';
+                img.style.cssText = 'width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:4px;display:inline-block;';
+                btn.insertBefore(img, btn.firstChild);
+            }
             img.src = savedAvatar;
+            img.style.display = 'inline-block';
+            if (icon) icon.style.display = 'none';
+        } else {
+            if (img) img.style.display = 'none';
+            if (icon) icon.style.display = 'inline-block';
+        }
+    });
+
+    // 3. User dropdown menu header
+    const dropdownHeaders = document.querySelectorAll('#dropdown .dropdown-header, .profile-dropdown .dropdown-header');
+    dropdownHeaders.forEach(header => {
+        if (header.closest('#notifDropdown')) return;
+        let img = header.querySelector('img.dropdown-avatar');
+        let icon = header.querySelector('.ph-user-circle');
+        if (savedAvatar) {
+            if (!img) {
+                img = document.createElement('img');
+                img.className = 'dropdown-avatar';
+                img.alt = 'User Avatar';
+                img.style.cssText = 'width:42px;height:42px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:12px;display:inline-block;';
+                header.insertBefore(img, header.firstChild);
+            }
+            img.src = savedAvatar;
+            img.style.display = 'inline-block';
+            if (icon) icon.style.display = 'none';
+        } else {
+            if (img) img.style.display = 'none';
+            if (icon) icon.style.display = 'inline-block';
+        }
+    });
+
+    // 4. Any other avatar images
+    if (savedAvatar) {
+        document.querySelectorAll('.profile img, .profile-toggle img, .avatar-preview img').forEach(img => {
+            if (img.tagName === 'IMG') {
+                img.src = savedAvatar;
+            }
         });
     }
 }
@@ -132,9 +230,14 @@ function openSettings() {
         overlay.addEventListener('click', e => { if (e.target === overlay) closeSettings(); });
         overlay._wired = true;
     }
+
+    updateProfileUI();
+    attachProfileEventListeners();
 }
 
 function closeSettings() {
+    pendingAvatarData = null;
+    updateProfileUI();
     const overlay = document.getElementById('settingsOverlay');
     if (overlay) overlay.classList.remove('show');
     document.body.style.overflow = '';
@@ -150,23 +253,50 @@ function switchSettingsTab(tab) {
 }
 
 function saveProfileSettings() {
-    const name  = document.getElementById('settingsDisplayName')?.value.trim();
-    const email = document.getElementById('settingsEmail')?.value.trim();
-    const phone = document.getElementById('settingsPhone')?.value.trim();
+    console.log("[PROFILE] Saving profile...");
 
-    if (!name) { 
+    const nameEl  = document.getElementById('settingsDisplayName');
+    const emailEl = document.getElementById('settingsEmail');
+    const phoneEl = document.getElementById('settingsPhone');
+
+    const name  = nameEl ? nameEl.value.trim() : '';
+    const email = emailEl ? emailEl.value.trim() : '';
+    const phone = phoneEl ? phoneEl.value.trim() : '';
+
+    const session = getSession() || {};
+    const displayName = name || session.name || session.username;
+
+    if (nameEl && !displayName) { 
         if (typeof showToast === 'function') showToast('Please enter your display name.', 'error'); 
         return; 
     }
 
-    const session = getSession() || {};
-    session.name  = name;
-    if (email) session.email = email;
-    if (phone) session.phone = phone;
-    localStorage.setItem('primes_session', JSON.stringify(session));
+    try {
+        if (displayName) session.name = displayName;
+        if (email) session.email = email;
+        if (phone) session.phone = phone;
 
-    updateProfileUI();
-    if (typeof showToast === 'function') showToast('✅ Profile updated successfully!', 'success');
+        // Persist avatar if pending
+        if (pendingAvatarData) {
+            localStorage.setItem('userAvatar', pendingAvatarData);
+            session.avatar = pendingAvatarData;
+            pendingAvatarData = null;
+        }
+
+        localStorage.setItem('primes_session', JSON.stringify(session));
+
+        updateProfileUI();
+
+        console.log("[PROFILE] Profile saved successfully");
+        if (typeof showToast === 'function') {
+            showToast('✅ Profile saved successfully!', 'success');
+        }
+    } catch (err) {
+        console.error("[PROFILE] Error saving profile:", err);
+        if (typeof showToast === 'function') {
+            showToast('Failed to save profile: ' + (err.message || 'Storage error'), 'error');
+        }
+    }
 }
 
 function savePasswordSettings() {
@@ -253,14 +383,140 @@ function togglePw(inputId, btn) {
     btn.querySelector('i').className = isHidden ? 'ph ph-eye-slash' : 'ph ph-eye';
 }
 
-function previewAvatar(input) {
-    if (!input.files || !input.files[0]) return;
+function handleAvatarFileSelect(inputOrFile) {
+    let file = null;
+    if (typeof File !== 'undefined' && inputOrFile instanceof File) {
+        file = inputOrFile;
+    } else if (inputOrFile && inputOrFile.files && inputOrFile.files[0]) {
+        file = inputOrFile.files[0];
+    } else {
+        const input = document.getElementById('imageUpload') || document.getElementById('settingsAvatarFile');
+        if (input && input.files && input.files[0]) {
+            file = input.files[0];
+        }
+    }
+
+    if (!file) return;
+
+    console.log("[PROFILE] File selected:", file);
+
+    // 1. File format validation: JPG, JPEG, PNG, WEBP
+    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowedExts  = ['.jpg', '.jpeg', '.png', '.webp'];
+    const nameLower    = (file.name || '').toLowerCase();
+    const hasValidExt  = allowedExts.some(ext => nameLower.endsWith(ext));
+    const hasValidMime = allowedMimes.includes((file.type || '').toLowerCase());
+
+    if (!hasValidExt && !hasValidMime) {
+        console.error("[PROFILE] Invalid file format:", file.type, file.name);
+        if (typeof showToast === 'function') {
+            showToast('Invalid file format. Please upload a JPG, JPEG, PNG, or WEBP image.', 'error');
+        }
+        if (inputOrFile && inputOrFile.value !== undefined) inputOrFile.value = '';
+        return;
+    }
+
+    // 2. Prevent unnecessarily large files (max 2MB)
+    const maxSizeBytes = 2 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+        console.error("[PROFILE] File too large:", file.size);
+        if (typeof showToast === 'function') {
+            showToast('Image file is too large. Maximum allowed size is 2MB.', 'error');
+        }
+        if (inputOrFile && inputOrFile.value !== undefined) inputOrFile.value = '';
+        return;
+    }
+
+    // 3. Read image and create preview
     const reader = new FileReader();
     reader.onload = e => {
-        localStorage.setItem('userAvatar', e.target.result);
-        updateProfileUI(); // Sync immediately everywhere
+        const rawDataUrl = e.target.result;
+        compressAvatarImage(rawDataUrl, (optimizedDataUrl) => {
+            pendingAvatarData = optimizedDataUrl;
+            renderAvatarPreview(optimizedDataUrl);
+            console.log("[PROFILE] Image preview created");
+        });
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.onerror = err => {
+        console.error("[PROFILE] FileReader error:", err);
+        if (typeof showToast === 'function') {
+            showToast('Failed to read image file. Please try another image.', 'error');
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function compressAvatarImage(dataUrl, callback) {
+    const img = new Image();
+    img.onload = () => {
+        try {
+            const maxDim = 320;
+            let width = img.width || maxDim;
+            let height = img.height || maxDim;
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = Math.round((height * maxDim) / width);
+                    width = maxDim;
+                } else {
+                    width = Math.round((width * maxDim) / height);
+                    height = maxDim;
+                }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const optimized = canvas.toDataURL('image/jpeg', 0.88);
+            callback(optimized);
+        } catch (_) {
+            callback(dataUrl);
+        }
+    };
+    img.onerror = () => callback(dataUrl);
+    img.src = dataUrl;
+}
+
+function previewAvatar(input) {
+    handleAvatarFileSelect(input);
+}
+
+function attachProfileEventListeners() {
+    // 1. File input listeners (support both #imageUpload and #settingsAvatarFile)
+    const fileInputs = document.querySelectorAll('#imageUpload, #settingsAvatarFile');
+    fileInputs.forEach(input => {
+        if (!input._wired) {
+            input.addEventListener('change', () => handleAvatarFileSelect(input));
+            input._wired = true;
+        }
+    });
+
+    // 2. Avatar click to open file picker (requirement 1 & 2)
+    const avatarClickTargets = document.querySelectorAll('.avatar-preview, #profileAvatar, #settingsAvatarImg, #settingsAvatarIcon');
+    avatarClickTargets.forEach(target => {
+        if (!target._avatarClickWired) {
+            target.style.cursor = 'pointer';
+            target.addEventListener('click', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                const fileInput = document.getElementById('imageUpload') || document.getElementById('settingsAvatarFile');
+                if (fileInput) {
+                    fileInput.click();
+                }
+            });
+            target._avatarClickWired = true;
+        }
+    });
+
+    // 3. Save profile button
+    const saveBtn = document.getElementById('saveProfileBtn') || document.querySelector('#stab-profile .sbtn-primary');
+    if (saveBtn && !saveBtn._saveWired) {
+        saveBtn.addEventListener('click', () => {
+            if (!saveBtn.getAttribute('onclick')) {
+                saveProfileSettings();
+            }
+        });
+        saveBtn._saveWired = true;
+    }
 }
 
 function confirmDeleteAccount() {
@@ -270,10 +526,18 @@ function confirmDeleteAccount() {
     }
 }
 
+window.handleAvatarFileSelect = handleAvatarFileSelect;
+window.previewAvatar          = previewAvatar;
+window.saveProfileSettings    = saveProfileSettings;
+window.updateProfileUI        = updateProfileUI;
+window.openSettings           = openSettings;
+window.closeSettings          = closeSettings;
+
 // ── Auto-init on load ──
 document.addEventListener('DOMContentLoaded', () => {
     restoreTheme();
     updateProfileUI();
+    attachProfileEventListeners();
 
     const sidebarSettingsBtn = document.getElementById('sidebarSettingsBtn');
     if (sidebarSettingsBtn && !sidebarSettingsBtn._wired) {
