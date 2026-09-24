@@ -6,7 +6,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="buy.css">
-  <link rel="stylesheet" href="styles.css?v=2.4">
+  <link rel="stylesheet" href="styles.css?v=2.5">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="nuraxq-logo.png">
   <link rel="apple-touch-icon" href="nuraxq-logo.png">
@@ -1129,8 +1129,8 @@
             </div>
           </div>
           <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
-          <a href="buy.html"><i class="ph ph-shopping-cart"></i> Buy Number</a>
-          <a href="#contact"><i class="ph ph-phone"></i> Contact</a>
+          <a href="buy.html"><i class="ph ph-sim-card"></i> Buy Number</a>
+          <a href="#contact"><i class="ph ph-headset"></i> Contact</a>
           <a href="login.html" class="logout" onclick="logout()"><i class="ph ph-sign-out"></i> Logout</a>
         </div>
       </div>
@@ -1149,19 +1149,19 @@
         </div>
       </div>
       <a href="dashboard.html">
-        <span><i class="ph ph-gauge"></i> Dashboard</span>
+        <span><i class="ph ph-squares-four"></i> Dashboard</span>
       </a>
       <a href="dashboard.html?open=wallet">
         <span><i class="ph ph-wallet"></i> Wallet</span>
       </a>
       <a href="dashboard.html#recentActivity">
-        <span><i class="ph ph-chart-line-up"></i> Activity</span>
+        <span><i class="ph ph-clock-counter-clockwise"></i> Activity</span>
       </a>
       <a href="#" id="sidebarSettingsBtn">
         <span><i class="ph ph-gear"></i> Settings</span>
       </a>
       <a href="buy.html" class="active">
-        <span><i class="ph ph-shopping-cart"></i> Buy Number</span>
+        <span><i class="ph ph-sim-card"></i> Buy Number</span>
       </a>
     </div>
     <div class="mode-tag" onclick="toggleDark()">
@@ -1243,7 +1243,7 @@
     <div class="sms-modal">
       <button class="modal-close-x" id="modalCloseX"><i class="ph ph-x"></i></button>
 
-      <h3><i class="ph ph-device-mobile"></i> Your Virtual Number</h3>
+      <h3><i class="ph ph-sim-card"></i> Your Virtual Number</h3>
 
       <div class="sms-phone-display">
         <div class="phone-num" id="modalPhone">—</div>
@@ -1272,19 +1272,19 @@
 
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:12px;">
         <span>Order: <strong id="modalOrderId">—</strong></span>
-        <span>Expires: <strong id="countdown" style="color:var(--primary);font-weight:700;">05:00</strong> <span id="modalExpires" style="display:none;">—</span></span>
+        <span><i class="ph ph-timer" style="font-size:13px;vertical-align:middle;margin-right:2px;"></i>Expires: <strong id="countdown" style="color:var(--primary);font-weight:700;">05:00</strong> <span id="modalExpires" style="display:none;">—</span></span>
       </div>
 
       <div class="sms-modal-actions">
         <button class="btn-modal-copy" id="btnCopyNumber"><i class="ph ph-copy"></i> Copy Number</button>
         <button class="btn-modal-cancel" id="btnCancelOrder"><i class="ph ph-x-circle"></i> Cancel Number</button>
-        <button class="btn-modal-ban" id="btnBanOrder">⚠️ Report Ban</button>
+        <button class="btn-modal-ban" id="btnBanOrder"><i class="ph ph-warning-circle"></i> Report Ban</button>
         <button class="btn-modal-finish" id="btnFinishOrder"><i class="ph ph-check-circle"></i> Done</button>
       </div>
 
       <!-- Refresh for hosting -->
       <button id="btnRefreshInbox" style="display:none;width:100%;margin-top:10px;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--border-light);color:var(--text);font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;cursor:pointer;" onclick="refreshInbox()">
-        🔄 Refresh Inbox
+        <i class="ph ph-arrows-clockwise"></i> Refresh Inbox
       </button>
     </div>
   </div>
@@ -1470,7 +1470,7 @@
 
   <script src="api.js?v=2.3"></script>
   <script src="ui-shared.js?v=2.4"></script>
-  <script src="buy.js?v=2.8"></script>
+  <script src="buy.js?v=2.9"></script>
   <!-- Announcement Modal -->
   <div id="announcementModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10000; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
     <div style="background:var(--surface); border-radius:16px; padding:2rem; width:100%; max-width:450px; margin:1rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); animation:slideUp 0.3s ease; position:relative; overflow:hidden;">

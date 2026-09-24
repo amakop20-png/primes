@@ -410,7 +410,7 @@ function renderProductCards(products) {
 
         return `
         <div class="card${isSelected ? ' selected' : ''}" style="position:relative;cursor:pointer;" data-product-key="${safeKey}">
-            <span class="card-flag" style="font-size:2rem;display:block;margin-bottom:6px;">📱</span>
+            <div class="card-icon-badge"><i class="ph ph-sim-card"></i></div>
             <div class="card-title" style="font-weight:800;font-size:15px;color:var(--text);">${escapeHTML(p.name)}</div>
             <div class="card-meta">
                 <span style="font-size:12px;color:var(--muted);">${p.qty > 0 ? p.qty.toLocaleString() + ' available' : 'In stock'}</span>
@@ -422,7 +422,7 @@ function renderProductCards(products) {
                 class="btn btn-buy"
                 data-product-key="${safeKey}"
             >
-                🛒 Buy Now
+                <i class="ph ph-shopping-bag"></i> Buy Now
             </button>
         </div>`;
     }).join('');
@@ -525,7 +525,7 @@ function renderCountrySearchCards(query) {
 
     cardsGrid.innerHTML = matched.slice(0, 12).map(c => `
         <div class="card country-search-card" style="position:relative;cursor:pointer;" data-country-key="${escapeHTML(c.key)}">
-            <span class="card-flag" style="font-size:2rem;display:block;margin-bottom:6px;">🌍</span>
+            <div class="card-icon-badge"><i class="ph ph-globe"></i></div>
             <div class="card-title" style="font-weight:800;font-size:15px;color:var(--text);">${escapeHTML(c.name)}</div>
             <div class="card-meta">
                 <span style="font-size:13px;font-weight:700;color:var(--primary);">${c.prefix ? escapeHTML(c.prefix) : 'Available'}</span>
@@ -537,7 +537,7 @@ function renderCountrySearchCards(query) {
                 style="margin-top:12px;width:100%;padding:9px;border-radius:10px;font-size:13px;"
                 data-country-key="${escapeHTML(c.key)}"
             >
-                View Numbers ➔
+                View Numbers <i class="ph ph-arrow-right"></i>
             </button>
         </div>
     `).join('');
@@ -602,7 +602,7 @@ function renderSearchResultsDropdown(query) {
         <div class="search-section-header">Direct Match</div>
         <div class="search-item" data-action="select-country-product" data-country="${escapeHTML(c.key)}" data-product="${escapeHTML(crossMatchProductKey)}">
             <div class="search-item-info">
-                <span class="search-item-flag">📱</span>
+                <span class="search-item-icon-box"><i class="ph ph-sim-card"></i></span>
                 <div>
                     <div class="search-item-title">${escapeHTML(crossMatchProductKey.toUpperCase())} in ${escapeHTML(c.name)}</div>
                     <div class="search-item-subtitle">${c.prefix ? escapeHTML(c.prefix) + ' • ' : ''}Ready to purchase</div>
@@ -626,7 +626,7 @@ function renderSearchResultsDropdown(query) {
             html += `
             <div class="search-item" data-action="buy-product" data-country="${escapeHTML(selectedCountry)}" data-product="${escapeHTML(p.key)}">
                 <div class="search-item-info">
-                    <span class="search-item-flag">📱</span>
+                    <span class="search-item-icon-box"><i class="ph ph-sim-card"></i></span>
                     <div>
                         <div class="search-item-title">${escapeHTML(p.name)}</div>
                         <div class="search-item-subtitle">${stockLabel} • ${escapeHTML(p.category)}</div>
@@ -634,7 +634,7 @@ function renderSearchResultsDropdown(query) {
                 </div>
                 <div class="search-item-action">
                     <span style="color:var(--text);font-weight:800;font-size:13px;margin-right:8px;">${priceStr}</span>
-                    <button type="button" class="btn btn-buy btn-sm" data-product-key="${escapeHTML(p.key)}" style="padding:4px 12px;font-size:12px;border-radius:8px;">🛒 Buy</button>
+                    <button type="button" class="btn btn-buy btn-sm" data-product-key="${escapeHTML(p.key)}" style="padding:4px 12px;font-size:12px;border-radius:8px;"><i class="ph ph-shopping-bag"></i> Buy</button>
                 </div>
             </div>`;
         });
@@ -648,14 +648,14 @@ function renderSearchResultsDropdown(query) {
             html += `
             <div class="search-item" data-action="select-country" data-country="${escapeHTML(c.key)}">
                 <div class="search-item-info">
-                    <span class="search-item-flag">🌍</span>
+                    <span class="search-item-icon-box"><i class="ph ph-globe"></i></span>
                     <div>
                         <div class="search-item-title">${escapeHTML(c.name)} ${c.prefix ? `<span style="color:var(--primary);font-weight:700;">(${escapeHTML(c.prefix)})</span>` : ''}</div>
                         <div class="search-item-subtitle">${isCurrentlySelected ? '✓ Currently selected' : 'Click to view available numbers'}</div>
                     </div>
                 </div>
                 <div class="search-item-action">
-                    <span style="font-size:12px;color:var(--primary);font-weight:700;">Select ➔</span>
+                    <span style="font-size:12px;color:var(--primary);font-weight:700;">Select <i class="ph ph-arrow-right"></i></span>
                 </div>
             </div>`;
         });
@@ -665,7 +665,7 @@ function renderSearchResultsDropdown(query) {
     if (matchedCountries.length === 0 && matchedCurrentProducts.length === 0 && (!crossMatchCountry || !crossMatchProductKey)) {
         html += `
         <div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">
-            <div style="font-size:22px;margin-bottom:6px;">🔍</div>
+            <i class="ph ph-magnifying-glass" style="font-size:26px;color:var(--muted);display:inline-block;margin-bottom:6px;"></i>
             <div style="font-weight:700;color:var(--text);margin-bottom:4px;">No matching results for "${escapeHTML(query)}"</div>
             <div>Try searching by country name (e.g. <em>Nigeria</em>, <em>USA</em>), dial code (e.g. <em>+234</em>, <em>+1</em>), or select a country from the dropdown above.</div>
         </div>`;
@@ -736,7 +736,7 @@ async function handleBuyClick(country, product, btnEl) {
         isBuying = false;
         if (btnEl) {
             btnEl.disabled = false;
-            btnEl.textContent = '🛒 Buy Now';
+            btnEl.innerHTML = '<i class="ph ph-shopping-bag"></i> Buy Now';
         }
         showToast(balErr.message || 'Unable to connect to server to verify wallet balance.', 'error');
         return;
@@ -746,7 +746,7 @@ async function handleBuyClick(country, product, btnEl) {
         isBuying = false;
         if (btnEl) {
             btnEl.disabled = false;
-            btnEl.textContent = '🛒 Buy Now';
+            btnEl.innerHTML = '<i class="ph ph-shopping-bag"></i> Buy Now';
         }
         showToast(`Insufficient balance: Required ${sym}${productPrice.toLocaleString()}, available balance is ${sym}${walletBalance.toLocaleString()}. Please fund your wallet.`, 'error');
         return;
@@ -813,7 +813,7 @@ async function handleBuyClick(country, product, btnEl) {
         isBuying = false;
         if (btnEl) {
             btnEl.disabled = false;
-            btnEl.textContent = '🛒 Buy Now';
+            btnEl.innerHTML = '<i class="ph ph-shopping-bag"></i> Buy Now';
         }
     }
 }

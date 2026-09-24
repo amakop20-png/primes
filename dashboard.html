@@ -14,7 +14,7 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=2.4">
+  <link rel="stylesheet" href="styles.css?v=2.5">
  
 </head>
 
@@ -67,8 +67,8 @@
                 </div>
               </div>
               <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
-              <a href="buy.html"><i class="ph ph-shopping-cart"></i> Buy Number</a>
-              <a href="#contact"><i class="ph ph-phone"></i> Contact</a>
+              <a href="buy.html"><i class="ph ph-sim-card"></i> Buy Number</a>
+              <a href="#contact"><i class="ph ph-headset"></i> Contact</a>
               <a href="login.html" class="logout" onclick="logout()"><i class="ph ph-sign-out"></i> Logout</a>
             </div>
         </div>
@@ -87,19 +87,19 @@
         </div>
       </div>
       <a href="dashboard.html" class="active">
-        <span><i class="ph ph-gauge"></i> Dashboard</span>
+        <span><i class="ph ph-squares-four"></i> Dashboard</span>
       </a>
       <a href="#" id="sidebarWalletBtn">
         <span><i class="ph ph-wallet"></i> Wallet</span>
       </a>
       <a href="#recentActivity" id="sidebarActivityBtn">
-        <span><i class="ph ph-chart-line-up"></i> Activity</span>
+        <span><i class="ph ph-clock-counter-clockwise"></i> Activity</span>
       </a>
       <a href="#" id="sidebarSettingsBtn">
         <span><i class="ph ph-gear"></i> Settings</span>
       </a>
       <a href="buy.html">
-        <span><i class="ph ph-shopping-cart"></i> Buy Number</span>
+        <span><i class="ph ph-sim-card"></i> Buy Number</span>
       </a>
     </div>
 
@@ -154,7 +154,9 @@
                 <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #fff;">Referral and Rewards</h3>
                 <p style="font-size: 12px; color: rgba(255,255,255,0.8); max-width: 200px; margin:0;">Share your link and earn exciting rewards.</p>
             </div>
-            <i class="ph ph-gift" style="font-size: 56px; color: rgba(255, 255, 255, 0.95); filter: drop-shadow(0 0 15px rgba(255,255,255,0.4)); margin-right: 10px;"></i>
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255, 255, 255, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i class="ph ph-gift" style="font-size: 22px; color: #fff;"></i>
+            </div>
         </div>
         <div style="margin-bottom:16px;">
             <div style="font-size:11px; opacity:0.8; font-weight:700; text-transform:uppercase; color:#fff; margin-bottom:2px;">Referral Balance</div>
@@ -178,7 +180,7 @@
 <section class="plan">
     <div class="jacket">
         <div class="action-card" data-action="buy-number" onclick="window.location.href='buy.html'">
-            <i class="ph ph-device-mobile action-icon"></i>
+            <i class="ph ph-sim-card action-icon"></i>
             <span>Buy Number</span>
         </div>
         <div class="action-card" data-action="sms-inbox" onclick="window.location.href='buy.html'">
@@ -190,7 +192,7 @@
             <span>Countries</span>
         </div>
         <div class="action-card" data-action="my-order" onclick="document.getElementById('recentActivity').scrollIntoView({behavior:'smooth'})">
-            <i class="ph ph-wallet action-icon"></i>
+            <i class="ph ph-receipt action-icon"></i>
             <span>Transactions</span>
         </div>
     </div>
@@ -200,7 +202,7 @@
   <div class="smile" style="padding: 0;">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border); padding: 16px 20px;">
         <div style="display:flex; align-items:center; gap: 12px;">
-            <i class="ph ph-chart-bar stat-icon" style="font-size: 20px;"></i>
+            <i class="ph ph-clock-counter-clockwise stat-icon" style="font-size: 20px;"></i>
             <h3 style="font-size: 15px; font-weight: 700; color: var(--text); margin:0;">Recent Activity</h3>
         </div>
         <button style="border: none; background: var(--border-light); padding: 6px 12px; border-radius: 50px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text);">
