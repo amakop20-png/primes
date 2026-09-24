@@ -762,33 +762,37 @@ async function handleBuyClick(country, product, btnEl) {
     console.log("[PURCHASE] Has auth token:", !!getAuthToken());
 
     try {
+        // Requirement 7: Clear old order ID & old OTP/SMS before purchasing
+        stopPolling('Resetting for new purchase');
+        currentOrderId = null;
+        currentOrderData = null;
+        localStorage.removeItem('currentOrderId');
+
+        // Reset modal UI immediately so old order data is never shown
+        setModalLoading(null);
+
         const response = await buyActivation(country, product, activeCurrency);
         console.log("[PURCHASE] Backend response:", response);
 
-        const order = response?.order || response?.data || response;
-        const orderId = response?.order?.id || order?.id || order?.orderId || order?.activationId;
-
-        console.log("[ORDER] Order ID:", orderId);
-        console.log("[OTP] Order ID:", orderId);
+        // Requirement 1: Get the exact NEW order ID from the backend response
+        const orderId = response?.order?.id || response?.id || response?.orderId || response?.data?.id || response?.activationId;
 
         if (!orderId) {
             throw new Error(response?.message || 'Server did not return a valid activation or order ID.');
         }
 
-        const phone = order?.phone || order?.phoneNumber || order?.number || response?.phone || '—';
-
-        console.log(`[Purchase] Order ID: ${orderId}`);
-        console.log(`[Purchase] Number: ${phone}`);
-
-        currentOrderId   = orderId;
-        currentOrderData = order;
-        localStorage.setItem('currentOrderId', String(orderId));
+        // Save the new order ID
+        currentOrderId = orderId;
+        localStorage.setItem("currentOrderId", String(orderId));
+        console.log("[ORDER] New order ID:", orderId);
+        console.log("[OTP] Order ID:", orderId);
 
         showToast('✅ Number purchased successfully! Opening order…', 'success');
 
         await loadWalletBalanceBuyPage();
 
-        openOrderModal(orderId, order);
+        // Requirement 2 & 3: Use the new order ID to fetch order, get number, and poll
+        openOrderModal(orderId);
     } catch (error) {
         console.error("[PURCHASE] Network/backend error:", error);
         console.error("[PURCHASE] Error status:", error?.status);
@@ -818,7 +822,7 @@ async function handleBuyClick(country, product, btnEl) {
    ORDER MODAL & DETAILS (Step 4 - Check Order)
    Uses: getOrder(orderId) from api.js
 ══════════════════════════════════════════ */
-async function openOrderModal(orderId, initialOrder = null) {
+async function openOrderModal(orderId) {
     if (!orderId) {
         console.error('[OTP] Missing order ID');
         return;
@@ -834,15 +838,13 @@ async function openOrderModal(orderId, initialOrder = null) {
     overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
 
+    // Clear old UI and show loading state with new order ID
     setModalLoading(orderId);
 
-    let order = initialOrder;
-    if (order) {
-        currentOrderData = order;
-        updateOrderUI(order);
-    }
-
+    // Keep the 5-minute activation timer
     startCountdown();
+
+    // Fetch and poll the order using order ID as the single source of truth
     startOrderPolling(orderId);
 }
 
@@ -874,6 +876,12 @@ function setModalLoading(orderId) {
         inboxList.style.display = 'none';
         inboxList.innerHTML = '';
     }
+    const cancelBtn = document.getElementById('btnCancelOrder');
+    const banBtn    = document.getElementById('btnBanOrder');
+    const finishBtn = document.getElementById('btnFinishOrder');
+    if (cancelBtn) cancelBtn.disabled = false;
+    if (banBtn)    banBtn.disabled    = false;
+    if (finishBtn) finishBtn.disabled = true;
 }
 
 function setModalError(msg) {
@@ -1246,55 +1254,80 @@ function startOrderPolling(orderId) {
 }
 
 async function checkOrder(orderId) {
+    if (!orderId) {
+        console.error("[OTP] Missing order ID for checkOrder");
+        return;
+    }
     if (isPollRequestInProgress) return;
     isPollRequestInProgress = true;
 
     try {
         const response = await getOrder(orderId);
 
-        // Normalize response so response.status and response.sms work seamlessly
-        // whether backend returns { order: { status, sms } } or { status, sms }
-        if (response && response.order) {
-            if (response.status === undefined) response.status = response.order.status;
-            if (response.sms === undefined) response.sms = response.order.sms;
-        } else if (response && response.status && !response.order) {
-            response.order = { ...response };
-        }
+        // Normalize response whether backend returns { order: { id, phone, status, sms } } or top-level properties
+        const orderData = response?.order || {};
+        const currentStatus = String(response?.status || orderData?.status || 'PENDING').toUpperCase();
+        const smsList = Array.isArray(response?.sms) ? response.sms : (Array.isArray(orderData?.sms) ? orderData.sms : []);
 
         console.log("[OTP] Order ID:", orderId);
         console.log("[OTP] API response:", response);
-        console.log("[OTP] Status:", response.status);
-        console.log("[OTP] SMS:", response.sms);
-        console.log("[OTP] SMS count:", response.sms?.length);
+        console.log("[OTP] Status:", currentStatus);
+        console.log("[OTP] SMS:", smsList);
+        console.log("[OTP] SMS count:", smsList.length);
 
-        const orderObj = response?.order || response;
-        if (orderObj) {
-            currentOrderData = orderObj;
-            updateOrderUI(orderObj);
+        // Requirement 3: Get the number from the order response
+        const phone = orderData?.phone || response?.phone || orderData?.phoneNumber || response?.phoneNumber || orderData?.number || response?.number;
+        if (phone && phone !== '—') {
+            const phoneEl = document.getElementById('modalPhone');
+            if (phoneEl) phoneEl.textContent = phone;
         }
 
-        const currentStatus = String(response?.status || orderObj?.status || '').toUpperCase();
-        const parsed = parseOrderSms(orderObj);
+        const activeId = orderData?.id || response?.id || orderId;
+        const orderIdEl = document.getElementById('modalOrderId');
+        if (orderIdEl) orderIdEl.textContent = '#' + activeId;
 
-        // ONLY stop polling and display OTP when a REAL SMS has actually arrived!
-        // A status of "RECEIVED" without an actual SMS/text/code must NOT stop polling.
+        // Keep currentOrderData synchronized
+        currentOrderData = {
+            ...orderData,
+            ...response,
+            id: activeId,
+            phone: phone || currentOrderData?.phone || '—',
+            status: currentStatus,
+            sms: smsList
+        };
+
+        const parsed = parseOrderSms(currentOrderData);
+
+        // Update UI
+        updateOrderUI(currentOrderData);
+
+        // Requirement 5 & 6:
+        // Only show "Code Received" when an actual SMS/code has been returned from order endpoint
         if (parsed.hasReceivedSms) {
-            console.log("[OTP] SMS received:", parsed);
+            console.log("[OTP] Real SMS code received for order ID:", orderId, parsed);
 
-            // Display the OTP
-            displayOTP(parsed.otp);
+            // Retrieve the actual code: if sms.code exists use it, or parsed.otp
+            const firstSms = smsList[0];
+            const smsCode = (firstSms && typeof firstSms === 'object' && firstSms.code) ? firstSms.code : parsed.otp;
+            const smsText = (firstSms && typeof firstSms === 'object' && firstSms.text) ? firstSms.text : (parsed.fullText || (typeof firstSms === 'string' ? firstSms : ''));
+            const smsSender = (firstSms && typeof firstSms === 'object' && firstSms.sender) ? firstSms.sender : parsed.sender;
 
-            // Display the complete SMS
-            if (parsed.fullText) {
-                displaySMS(parsed.fullText, parsed.sender);
+            if (smsCode) {
+                displayOTP(smsCode);
+            } else {
+                displayOTP('Code received');
             }
 
-            stopPolling('SMS code received');
+            // Also display the SMS text when available
+            if (smsText) {
+                displaySMS(smsText, smsSender);
+            }
+
+            stopPolling(`SMS code received for order ${orderId}`);
             return;
         }
 
-        // Terminal states: FINISHED, CANCELED, BANNED, TIMEOUT, EXPIRED
-        // Note: Only stop polling if terminal and no real SMS was received above
+        // Terminal failure / finished states (only if no SMS was received above)
         const terminalStates = ['FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
         if (terminalStates.includes(currentStatus)) {
             console.log(`[POLL] Terminal status reached: ${currentStatus}. Stopping polling.`);
