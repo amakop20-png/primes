@@ -23,10 +23,13 @@ let currentOrderData = null; // Full order object from backend
 
 let orderPollInterval = null; // Single active polling interval for the active order
 let countdownInterval = null; // Countdown timer interval
-let remainingTime    = 60;   // Remaining countdown time in seconds
+let remainingTime    = 300;  // 300 seconds / 5-minute countdown timeout
 let pollInterval     = null; // Reference for SMS polling
 let isBuying         = false; // Guard against double-click on Buy
 let isActionBusy     = false; // Guard against multiple finish/cancel/ban requests
+
+let allCountriesData = []; // Cached array of { key, name, prefix } from getCountries()
+const productsByCountryCache = new Map(); // Cache of products per country
 
 const POLL_INTERVAL_MS = 5000;
 function getConversionRate() {
@@ -228,13 +231,16 @@ async function loadCountries() {
             return '';
         }
 
-        const options = entries
-            .sort((a, b) => getCountryName(a[0], a[1]).localeCompare(getCountryName(b[0], b[1])))
-            .map(([key, info]) => {
-                const name = getCountryName(key, info);
-                const prefix = getCountryPrefix(info);
-                const prefixStr = prefix ? ` (${prefix})` : '';
-                return `<option value="${escapeHTML(key)}">${escapeHTML(name)}${escapeHTML(prefixStr)}</option>`;
+        allCountriesData = entries.map(([key, info]) => {
+            const name = getCountryName(key, info);
+            const prefix = getCountryPrefix(info);
+            return { key, name, prefix };
+        }).sort((a, b) => a.name.localeCompare(b.name));
+
+        const options = allCountriesData
+            .map(c => {
+                const prefixStr = c.prefix ? ` (${c.prefix})` : '';
+                return `<option value="${escapeHTML(c.key)}">${escapeHTML(c.name)}${escapeHTML(prefixStr)}</option>`;
             })
             .join('');
 
@@ -338,6 +344,23 @@ async function loadProducts(country) {
             })
             .filter(p => p.priceNGN >= 0);
 
+        productsByCountryCache.set(country, allProducts);
+
+        const serviceFilter = document.getElementById('serviceFilter');
+        if (serviceFilter) {
+            const currentVal = serviceFilter.value;
+            const uniqueServices = Array.from(new Set(allProducts.map(p => p.key))).sort();
+            const serviceOpts = ['<option value=""><i class="ph ph-device-mobile"></i> All Services</option>'];
+            uniqueServices.forEach(sKey => {
+                const prod = allProducts.find(p => p.key === sKey);
+                serviceOpts.push(`<option value="${escapeHTML(sKey)}">${escapeHTML(prod?.name || sKey)}</option>`);
+            });
+            serviceFilter.innerHTML = serviceOpts.join('');
+            if (currentVal && uniqueServices.includes(currentVal)) {
+                serviceFilter.value = currentVal;
+            }
+        }
+
         if (allProducts.length === 0) {
             showEmptyState(cardsGrid, 'No numbers available for this country right now.');
             return;
@@ -408,6 +431,248 @@ function renderProductCards(products) {
 function selectProduct(key) {
     selectedProduct = key;
     renderProductCards(allProducts);
+}
+
+async function selectCountry(countryKey, targetProductKey = null) {
+    if (!countryKey) return;
+    const countrySelect = document.getElementById('countryFilter');
+    if (countrySelect) {
+        countrySelect.value = countryKey;
+    }
+    selectedCountry = countryKey;
+    selectedProduct = targetProductKey || '';
+
+    // If cached, load immediately, else fetch from API
+    if (productsByCountryCache.has(countryKey)) {
+        allProducts = productsByCountryCache.get(countryKey);
+        renderProductCards(allProducts);
+        if (targetProductKey) {
+            selectProduct(targetProductKey);
+            const card = document.querySelector(`.card[data-product-key="${targetProductKey}"]`);
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    } else {
+        await loadProducts(countryKey);
+        if (targetProductKey) {
+            selectProduct(targetProductKey);
+            const card = document.querySelector(`.card[data-product-key="${targetProductKey}"]`);
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+}
+
+function handleSearchInput() {
+    const input = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('searchClearBtn');
+    const dropdown = document.getElementById('searchResultsDropdown');
+    const rawVal = input?.value || '';
+    const query = rawVal.trim().toLowerCase();
+
+    if (clearBtn) {
+        clearBtn.style.display = query ? 'block' : 'none';
+    }
+
+    if (!query) {
+        if (dropdown) {
+            dropdown.style.display = 'none';
+            dropdown.innerHTML = '';
+        }
+        if (selectedCountry && allProducts.length > 0) {
+            renderProductCards(allProducts);
+        } else if (!selectedCountry) {
+            showSelectCountryPrompt();
+        }
+        return;
+    }
+
+    // 1. If country is selected, filter product cards in real time
+    if (selectedCountry && allProducts.length > 0) {
+        renderProductCards(allProducts);
+    } else if (!selectedCountry) {
+        // If no country is selected yet, display matching countries in cards grid
+        renderCountrySearchCards(query);
+    }
+
+    // 2. Render live search results dropdown
+    renderSearchResultsDropdown(query);
+}
+
+function renderCountrySearchCards(query) {
+    const cardsGrid = document.getElementById('cardsGrid');
+    const resultCount = document.getElementById('resultCount');
+    if (!cardsGrid) return;
+
+    const cleanQ = query.replace(/^\+/, '');
+    const matched = allCountriesData.filter(c => {
+        return c.name.toLowerCase().includes(query) ||
+               c.key.toLowerCase().includes(query) ||
+               (c.prefix && (c.prefix.toLowerCase().includes(query) || c.prefix.replace('+', '').includes(cleanQ)));
+    });
+
+    if (resultCount) {
+        resultCount.textContent = `${matched.length} countr${matched.length === 1 ? 'y' : 'ies'} found for "${query}"`;
+    }
+
+    if (matched.length === 0) {
+        cardsGrid.innerHTML = `
+        <div class="state-box" style="grid-column:1/-1;">
+            <i class="ph ph-magnifying-glass"></i>
+            <p>No countries or numbers match "<strong>${escapeHTML(query)}</strong>".</p>
+            <span style="font-size:12px;color:var(--muted);">Try searching by country name (e.g. USA, Nigeria) or dial code (+1, +234).</span>
+        </div>`;
+        return;
+    }
+
+    cardsGrid.innerHTML = matched.slice(0, 12).map(c => `
+        <div class="card country-search-card" style="position:relative;cursor:pointer;" data-country-key="${escapeHTML(c.key)}">
+            <span class="card-flag" style="font-size:2rem;display:block;margin-bottom:6px;">🌍</span>
+            <div class="card-title" style="font-weight:800;font-size:15px;color:var(--text);">${escapeHTML(c.name)}</div>
+            <div class="card-meta">
+                <span style="font-size:13px;font-weight:700;color:var(--primary);">${c.prefix ? escapeHTML(c.prefix) : 'Available'}</span>
+                <span class="card-service-badge">Country</span>
+            </div>
+            <button
+                type="button"
+                class="btn btn-primary"
+                style="margin-top:12px;width:100%;padding:9px;border-radius:10px;font-size:13px;"
+                data-country-key="${escapeHTML(c.key)}"
+            >
+                View Numbers ➔
+            </button>
+        </div>
+    `).join('');
+}
+
+function renderSearchResultsDropdown(query) {
+    const dropdown = document.getElementById('searchResultsDropdown');
+    if (!dropdown) return;
+
+    const currency = getCurrency();
+    const symbol   = currency === 'USD' ? '$' : '₦';
+    const cleanQ   = query.replace(/^\+/, '');
+
+    // A. Match countries & dial codes from authoritative /api/countries
+    const matchedCountries = allCountriesData.filter(c => {
+        const nameMatch = c.name.toLowerCase().includes(query);
+        const keyMatch  = c.key.toLowerCase().includes(query);
+        const prefixMatch = c.prefix && (
+            c.prefix.toLowerCase().includes(query) ||
+            c.prefix.replace('+', '').includes(cleanQ)
+        );
+        return nameMatch || keyMatch || prefixMatch;
+    }).slice(0, 6);
+
+    // B. Match products in current country if loaded
+    let matchedCurrentProducts = [];
+    if (allProducts.length > 0) {
+        matchedCurrentProducts = allProducts.filter(p => {
+            return p.name.toLowerCase().includes(query) ||
+                   p.key.toLowerCase().includes(query) ||
+                   p.category.toLowerCase().includes(query);
+        }).slice(0, 8);
+    }
+
+    // C. Check if query matches a known country + product pattern (e.g. "usa whatsapp", "+1 telegram")
+    let crossMatchCountry = null;
+    let crossMatchProductKey = null;
+    for (const c of allCountriesData) {
+        const cName = c.name.toLowerCase();
+        const cKey = c.key.toLowerCase();
+        const cPref = (c.prefix || '').replace('+', '').toLowerCase();
+
+        if (query.startsWith(cName + ' ') || query.startsWith(cKey + ' ') || (cPref && query.startsWith('+' + cPref + ' ')) || (cPref && query.startsWith(cPref + ' '))) {
+            crossMatchCountry = c;
+            const remainder = query
+                .replace(cName, '')
+                .replace(cKey, '')
+                .replace('+' + cPref, '')
+                .replace(cPref, '')
+                .trim();
+            if (remainder) crossMatchProductKey = remainder;
+            break;
+        }
+    }
+
+    let html = '';
+
+    // If query matches a combined country + product
+    if (crossMatchCountry && crossMatchProductKey) {
+        const c = crossMatchCountry;
+        html += `
+        <div class="search-section-header">Direct Match</div>
+        <div class="search-item" data-action="select-country-product" data-country="${escapeHTML(c.key)}" data-product="${escapeHTML(crossMatchProductKey)}">
+            <div class="search-item-info">
+                <span class="search-item-flag">📱</span>
+                <div>
+                    <div class="search-item-title">${escapeHTML(crossMatchProductKey.toUpperCase())} in ${escapeHTML(c.name)}</div>
+                    <div class="search-item-subtitle">${c.prefix ? escapeHTML(c.prefix) + ' • ' : ''}Ready to purchase</div>
+                </div>
+            </div>
+            <div class="search-item-action">
+                <button type="button" class="btn btn-primary" style="padding:4px 10px;font-size:11px;border-radius:8px;">View & Buy</button>
+            </div>
+        </div>`;
+    }
+
+    // Render matching products from currently active country
+    if (matchedCurrentProducts.length > 0 && selectedCountry) {
+        const currentCountryObj = allCountriesData.find(c => c.key === selectedCountry);
+        const countryLabel = currentCountryObj ? `${currentCountryObj.name} (${currentCountryObj.prefix || ''})` : selectedCountry.toUpperCase();
+        html += `<div class="search-section-header">Available Numbers in ${escapeHTML(countryLabel)}</div>`;
+        matchedCurrentProducts.forEach(p => {
+            const displayPrice = currency === 'USD' ? p.priceUSD : p.priceNGN;
+            const priceStr = symbol + displayPrice.toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const stockLabel = p.qty > 0 ? `${p.qty} in stock` : 'In stock';
+            html += `
+            <div class="search-item" data-action="buy-product" data-country="${escapeHTML(selectedCountry)}" data-product="${escapeHTML(p.key)}">
+                <div class="search-item-info">
+                    <span class="search-item-flag">📱</span>
+                    <div>
+                        <div class="search-item-title">${escapeHTML(p.name)}</div>
+                        <div class="search-item-subtitle">${stockLabel} • ${escapeHTML(p.category)}</div>
+                    </div>
+                </div>
+                <div class="search-item-action">
+                    <span style="color:var(--text);font-weight:800;font-size:13px;margin-right:8px;">${priceStr}</span>
+                    <button type="button" class="btn btn-buy btn-sm" data-product-key="${escapeHTML(p.key)}" style="padding:4px 12px;font-size:12px;border-radius:8px;">🛒 Buy</button>
+                </div>
+            </div>`;
+        });
+    }
+
+    // Render matching countries / dial codes
+    if (matchedCountries.length > 0) {
+        html += `<div class="search-section-header">Matching Countries & Numbers (${matchedCountries.length})</div>`;
+        matchedCountries.forEach(c => {
+            const isCurrentlySelected = selectedCountry === c.key;
+            html += `
+            <div class="search-item" data-action="select-country" data-country="${escapeHTML(c.key)}">
+                <div class="search-item-info">
+                    <span class="search-item-flag">🌍</span>
+                    <div>
+                        <div class="search-item-title">${escapeHTML(c.name)} ${c.prefix ? `<span style="color:var(--primary);font-weight:700;">(${escapeHTML(c.prefix)})</span>` : ''}</div>
+                        <div class="search-item-subtitle">${isCurrentlySelected ? '✓ Currently selected' : 'Click to view available numbers'}</div>
+                    </div>
+                </div>
+                <div class="search-item-action">
+                    <span style="font-size:12px;color:var(--primary);font-weight:700;">Select ➔</span>
+                </div>
+            </div>`;
+        });
+    }
+
+    // If empty results
+    if (matchedCountries.length === 0 && matchedCurrentProducts.length === 0 && (!crossMatchCountry || !crossMatchProductKey)) {
+        html += `
+        <div style="padding:16px;text-align:center;color:var(--muted);font-size:13px;">
+            <div style="font-size:22px;margin-bottom:6px;">🔍</div>
+            <div style="font-weight:700;color:var(--text);margin-bottom:4px;">No matching results for "${escapeHTML(query)}"</div>
+            <div>Try searching by country name (e.g. <em>Nigeria</em>, <em>USA</em>), dial code (e.g. <em>+234</em>, <em>+1</em>), or select a country from the dropdown above.</div>
+        </div>`;
+    }
+
+    dropdown.innerHTML = html;
+    dropdown.style.display = 'block';
 }
 
 /* ══════════════════════════════════════════
@@ -524,8 +789,6 @@ async function handleBuyClick(country, product, btnEl) {
         await loadWalletBalanceBuyPage();
 
         openOrderModal(orderId, order);
-        startCountdown();
-        startOrderPolling(orderId);
     } catch (error) {
         console.error("[PURCHASE] Network/backend error:", error);
         console.error("[PURCHASE] Error status:", error?.status);
@@ -612,48 +875,8 @@ function setModalError(msg) {
     if (otpFullText) otpFullText.textContent = msg;
 }
 
-function updateOrderUI(order) {
-    if (!order) return;
-
-    const phone = order.phone || order.number || order.phone_number || '—';
-    const phoneEl = document.getElementById('modalPhone');
-    if (phoneEl) phoneEl.textContent = phone;
-
-    const orderId = order.id || order._id || order.orderId || currentOrderId || '—';
-    const orderIdEl = document.getElementById('modalOrderId');
-    if (orderIdEl) orderIdEl.textContent = '#' + orderId;
-
-    const expiresEl = document.getElementById('modalExpires');
-    if (expiresEl) {
-        const exp = order.expires || order.expiresAt || order.created_at;
-        expiresEl.textContent = exp ? new Date(exp).toLocaleTimeString() : '—';
-    }
-
-    const statusDot  = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    const statusMap  = {
-        PENDING:  { dot: 'pulse',    text: 'Waiting for SMS...',                                color: '#f59e0b' },
-        RECEIVED: { dot: 'received', text: 'SMS Received',                                      color: '#10b981' },
-        FINISHED: { dot: 'received', text: 'Order Completed',                                   color: '#10b981' },
-        CANCELED: { dot: '',         text: 'Order Cancelled',                                   color: '#ef4444' },
-        BANNED:   { dot: '',         text: 'Number Reported & Banned',                          color: '#ef4444' },
-        EXPIRED:  { dot: '',         text: 'Number Expired (No SMS Received)',                  color: '#ef4444' },
-        TIMEOUT:  { dot: '',         text: 'Order Timed Out (No SMS received from provider)',  color: '#ef4444' },
-    };
-
-    const currentStatus = String(order.status || 'PENDING').toUpperCase();
-    const s = statusMap[currentStatus] || { dot: '', text: currentStatus, color: '#888' };
-
-    if (statusDot) {
-        statusDot.className = 'dot ' + s.dot;
-        statusDot.style.background = s.color;
-    }
-    if (statusText) statusText.textContent = s.text;
-
-    const otpBox      = document.getElementById('smsOtpBox');
-    const otpCode     = document.getElementById('otpCode');
-    const otpFullText = document.getElementById('otpFullText');
-    const copyCodeBtn = document.getElementById('btnCopyCode');
+function parseOrderSms(order) {
+    if (!order) return { hasReceivedSms: false, otp: null, fullText: '', sender: '', smsTime: '', smsList: [] };
 
     const smsList = Array.isArray(order.sms)
         ? order.sms
@@ -687,6 +910,37 @@ function updateOrderUI(order) {
 
     const hasReceivedSms = (smsList.length > 0 && !!fullText) || !!otp;
 
+    return { hasReceivedSms, otp, fullText, sender, smsTime, smsList };
+}
+
+function updateOrderUI(order) {
+    if (!order) return;
+
+    const phone = order.phone || order.number || order.phone_number || '—';
+    const phoneEl = document.getElementById('modalPhone');
+    if (phoneEl) phoneEl.textContent = phone;
+
+    const orderId = order.id || order._id || order.orderId || currentOrderId || '—';
+    const orderIdEl = document.getElementById('modalOrderId');
+    if (orderIdEl) orderIdEl.textContent = '#' + orderId;
+
+    const expiresEl = document.getElementById('modalExpires');
+    if (expiresEl) {
+        const exp = order.expires || order.expiresAt || order.created_at;
+        expiresEl.textContent = exp ? new Date(exp).toLocaleTimeString() : '—';
+    }
+
+    const statusDot   = document.getElementById('statusDot');
+    const statusText  = document.getElementById('statusText');
+    const otpBox      = document.getElementById('smsOtpBox');
+    const otpCode     = document.getElementById('otpCode');
+    const otpFullText = document.getElementById('otpFullText');
+    const copyCodeBtn = document.getElementById('btnCopyCode');
+
+    const parsed = parseOrderSms(order);
+    const { hasReceivedSms, otp, fullText, sender, smsTime, smsList } = parsed;
+    const currentStatus = String(order.status || 'PENDING').toUpperCase();
+
     if (hasReceivedSms) {
         if (otpBox) {
             otpBox.classList.remove('code-waiting');
@@ -705,8 +959,8 @@ function updateOrderUI(order) {
             statusDot.className = 'dot received';
             statusDot.style.background = '#10b981';
         }
-        if (statusText && (currentStatus === 'PENDING' || currentStatus === 'RECEIVED')) {
-            statusText.textContent = 'SMS Received';
+        if (statusText) {
+            statusText.textContent = currentStatus === 'FINISHED' ? 'Order Completed' : 'SMS Received';
         }
     } else {
         if (otpBox) {
@@ -716,16 +970,42 @@ function updateOrderUI(order) {
         if (copyCodeBtn) {
             copyCodeBtn.style.display = 'none';
         }
+
         if (currentStatus === 'TIMEOUT' || currentStatus === 'EXPIRED') {
+            if (statusDot) {
+                statusDot.className = 'dot';
+                statusDot.style.background = '#ef4444';
+            }
+            if (statusText) {
+                statusText.textContent = currentStatus === 'TIMEOUT'
+                    ? 'Order Timed Out (No SMS received from provider)'
+                    : 'Number Expired (No SMS Received)';
+            }
             if (otpCode) otpCode.textContent = 'No code received';
             if (otpFullText) otpFullText.textContent = 'Activation window expired without receiving an SMS from provider.';
         } else if (currentStatus === 'CANCELED') {
+            if (statusDot) {
+                statusDot.className = 'dot';
+                statusDot.style.background = '#ef4444';
+            }
+            if (statusText) statusText.textContent = 'Order Cancelled';
             if (otpCode) otpCode.textContent = 'Order Cancelled';
             if (otpFullText) otpFullText.textContent = 'This number was cancelled before an SMS arrived.';
         } else if (currentStatus === 'BANNED') {
+            if (statusDot) {
+                statusDot.className = 'dot';
+                statusDot.style.background = '#ef4444';
+            }
+            if (statusText) statusText.textContent = 'Number Reported & Banned';
             if (otpCode) otpCode.textContent = 'Number Banned';
             if (otpFullText) otpFullText.textContent = 'Number was reported and banned.';
         } else {
+            // PENDING or RECEIVED (without SMS yet) -> active waiting
+            if (statusDot) {
+                statusDot.className = 'dot pulse';
+                statusDot.style.background = '#f59e0b';
+            }
+            if (statusText) statusText.textContent = 'Waiting for SMS...';
             if (otpCode) otpCode.textContent = 'Waiting for code...';
             if (otpFullText) otpFullText.textContent = 'Send your verification SMS to this number. Code will appear automatically.';
         }
@@ -754,13 +1034,11 @@ function updateOrderUI(order) {
     const banBtn    = document.getElementById('btnBanOrder');
     const finishBtn = document.getElementById('btnFinishOrder');
 
-    const isPending  = currentStatus === 'PENDING';
-    const isReceived = currentStatus === 'RECEIVED' || hasReceivedSms;
-    const isFinal    = currentStatus === 'FINISHED' || currentStatus === 'CANCELED' || currentStatus === 'BANNED' || currentStatus === 'EXPIRED' || currentStatus === 'TIMEOUT';
+    const isFinal = currentStatus === 'FINISHED' || currentStatus === 'CANCELED' || currentStatus === 'BANNED' || currentStatus === 'EXPIRED' || currentStatus === 'TIMEOUT';
 
-    if (cancelBtn) cancelBtn.disabled = !isPending && !isReceived;
+    if (cancelBtn) cancelBtn.disabled = isFinal || hasReceivedSms;
     if (banBtn)    banBtn.disabled    = isFinal;
-    if (finishBtn) finishBtn.disabled = !isReceived;
+    if (finishBtn) finishBtn.disabled = !hasReceivedSms;
 }
 
 function extractOTP(text) {
@@ -825,7 +1103,7 @@ let isPollRequestInProgress = false;
 function startCountdown() {
     clearInterval(countdownInterval);
 
-    remainingTime = 60;
+    remainingTime = 300;
     updateCountdown();
 
     countdownInterval = setInterval(() => {
@@ -836,17 +1114,55 @@ function startCountdown() {
         if (remainingTime <= 0) {
             clearInterval(countdownInterval);
             countdownInterval = null;
+
+            handleOrderTimeout();
         }
     }, 1000);
 }
 
 function updateCountdown() {
-    console.log("[TIMER] Countdown:", remainingTime);
     const timer = document.getElementById("countdown");
 
-    if (timer) {
-        timer.textContent = `${remainingTime}s`;
+    if (!timer) return;
+
+    const minutes = Math.floor(remainingTime / 60);
+    const seconds = remainingTime % 60;
+
+    timer.textContent =
+        `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function handleOrderTimeout() {
+    console.log('[TIMER] 5-minute timeout reached. Stopping polling.');
+    stopPolling('5-minute activation timeout reached');
+
+    const statusDot   = document.getElementById('statusDot');
+    const statusText  = document.getElementById('statusText');
+    const otpCode     = document.getElementById('otpCode');
+    const otpFullText = document.getElementById('otpFullText');
+    const finishBtn   = document.getElementById('btnFinishOrder');
+    const cancelBtn   = document.getElementById('btnCancelOrder');
+    const banBtn      = document.getElementById('btnBanOrder');
+
+    if (statusDot) {
+        statusDot.className = 'dot';
+        statusDot.style.background = '#ef4444';
     }
+    if (statusText) {
+        statusText.textContent = 'Order Timed Out (No SMS received)';
+    }
+    if (otpCode) {
+        otpCode.textContent = 'No code received';
+    }
+    if (otpFullText) {
+        otpFullText.textContent = 'The 5-minute activation window expired without receiving an SMS from the provider. You can cancel this number to receive a refund.';
+    }
+
+    if (finishBtn) finishBtn.disabled = true;
+    if (banBtn)    banBtn.disabled    = true;
+    if (cancelBtn) cancelBtn.disabled = false;
+
+    showToast('⏰ Activation timed out after 5 minutes. You can cancel this number to get a refund.', 'error');
 }
 
 function startOrderPolling(orderId) {
@@ -865,6 +1181,8 @@ function startOrderPolling(orderId) {
 }
 
 async function checkOrder(orderId) {
+    if (isPollRequestInProgress) return;
+    isPollRequestInProgress = true;
     console.log("[POLL] Checking order:", orderId);
     console.log("[OTP] Checking order:", orderId);
     try {
@@ -889,51 +1207,34 @@ async function checkOrder(orderId) {
             updateOrderUI(orderObj);
         }
 
-        const sms = response?.sms?.[0];
+        const parsed = parseOrderSms(orderObj);
 
-        if (response?.status === "RECEIVED" && (response?.sms?.length > 0 || sms)) {
-            console.log("[OTP] SMS received:", sms);
+        // If an SMS / OTP has arrived, display it and stop polling
+        if (parsed.hasReceivedSms) {
+            console.log("[OTP] SMS received:", parsed);
 
             // Display the OTP
-            displayOTP(sms?.code);
+            displayOTP(parsed.otp);
 
             // Display the complete SMS
-            displaySMS(sms?.text, sms?.sender);
+            displaySMS(parsed.fullText, parsed.sender);
 
-            clearInterval(orderPollInterval);
-            clearInterval(countdownInterval);
-
-            orderPollInterval = null;
-            countdownInterval = null;
-            return;
-        }
-
-        // Also handle case where SMS arrived while status is PENDING or other
-        if (sms && (sms.code || sms.text)) {
-            console.log("[OTP] SMS received:", sms);
-            displayOTP(sms.code);
-            displaySMS(sms.text, sms.sender);
-
-            clearInterval(orderPollInterval);
-            clearInterval(countdownInterval);
-
-            orderPollInterval = null;
-            countdownInterval = null;
+            stopPolling('SMS code received successfully');
             return;
         }
 
         // Only stop when the order reaches a final state
-        const currentStatus = String(response?.status || '').toUpperCase();
-        const terminalStates = ['RECEIVED', 'FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
+        // NOTE: 'RECEIVED' without SMS is NOT terminal; it continues polling!
+        const currentStatus = String(orderObj?.status || response?.status || '').toUpperCase();
+        const terminalStates = ['FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
         if (terminalStates.includes(currentStatus)) {
             console.log(`[POLL] Terminal status reached: ${currentStatus}. Stopping polling.`);
-            clearInterval(orderPollInterval);
-            clearInterval(countdownInterval);
-            orderPollInterval = null;
-            countdownInterval = null;
+            stopPolling(`Terminal status reached: ${currentStatus}`);
         }
     } catch (err) {
         console.error("[POLL] Error checking order:", err);
+    } finally {
+        isPollRequestInProgress = false;
     }
 }
 
@@ -1356,6 +1657,14 @@ function attachEventListeners() {
                 handleBuyClick(selectedCountry, key, buyBtn);
                 return;
             }
+            const countryCard = e.target.closest('[data-country-key]');
+            if (countryCard) {
+                const cKey = countryCard.dataset.countryKey;
+                if (cKey) {
+                    selectCountry(cKey);
+                    return;
+                }
+            }
             const card = e.target.closest('.card');
             if (card && card.dataset.productKey) {
                 selectProduct(card.dataset.productKey);
@@ -1369,8 +1678,67 @@ function attachEventListeners() {
     }
 
     const searchInput = document.getElementById('searchInput');
-    if (searchInput) searchInput.addEventListener('input', () => {
-        if (allProducts.length > 0) renderProductCards(allProducts);
+    const clearBtn = document.getElementById('searchClearBtn');
+    const searchDropdown = document.getElementById('searchResultsDropdown');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', handleSearchInput);
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value.trim()) handleSearchInput();
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (searchInput) {
+                searchInput.value = '';
+                handleSearchInput();
+                searchInput.focus();
+            }
+        });
+    }
+
+    if (searchDropdown) {
+        searchDropdown.addEventListener('click', async (e) => {
+            const buyBtn = e.target.closest('.btn-buy');
+            if (buyBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const key = buyBtn.dataset.productKey;
+                searchDropdown.style.display = 'none';
+                handleBuyClick(selectedCountry, key, buyBtn);
+                return;
+            }
+
+            const item = e.target.closest('.search-item');
+            if (!item) return;
+
+            const action = item.dataset.action;
+            const countryKey = item.dataset.country;
+            const productKey = item.dataset.product;
+
+            if (action === 'select-country') {
+                searchDropdown.style.display = 'none';
+                await selectCountry(countryKey);
+            } else if (action === 'buy-product') {
+                searchDropdown.style.display = 'none';
+                selectProduct(productKey);
+                const card = document.querySelector(`.card[data-product-key="${productKey}"]`);
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            } else if (action === 'select-country-product') {
+                searchDropdown.style.display = 'none';
+                await selectCountry(countryKey, productKey);
+            }
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-box-container')) {
+            const dropdown = document.getElementById('searchResultsDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        }
     });
 
     const serviceFilter = document.getElementById('serviceFilter');

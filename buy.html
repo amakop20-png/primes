@@ -48,6 +48,84 @@
       min-width: 180px;
     }
 
+    /* ── Search Bar & Dropdown ── */
+    .search-box-container {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .search-results-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      max-height: 380px;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      padding: 6px 0;
+    }
+
+    .search-section-header {
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--border-light);
+    }
+
+    .search-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .search-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-item:hover {
+      background: var(--border-light);
+    }
+
+    .search-item-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-item-flag {
+      font-size: 1.25rem;
+    }
+
+    .search-item-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .search-item-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .search-item-action {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     /* ── Loading Skeleton ── */
     .skeleton-card {
       background: var(--card-bg);
@@ -596,7 +674,7 @@
 
     @media (max-width: 480px) {
       .filter-bar { flex-direction: column; }
-      .filter-bar select, .filter-bar input { min-width: 100%; width: 100%; }
+      .filter-bar select, .filter-bar input, .search-box-container { min-width: 100%; width: 100%; }
       .sms-modal { padding: 24px 18px; }
     }
 
@@ -1136,7 +1214,11 @@
         <option value="activation"><i class="ph ph-lightning"></i> Activation (OTP)</option>
         <option value="hosting">🕐 Hosting (Long-term)</option>
       </select>
-      <input type="text" id="searchInput" placeholder="🔍 Search service...">
+      <div class="search-box-container">
+        <input type="text" id="searchInput" placeholder="🔍 Search number (+1, +234), country, or product (WhatsApp)..." autocomplete="off" style="width:100%; box-sizing:border-box; padding-right:32px;">
+        <button type="button" id="searchClearBtn" style="display:none; position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; padding:4px; line-height:1;" title="Clear search">✕</button>
+        <div id="searchResultsDropdown" class="search-results-dropdown" style="display:none;"></div>
+      </div>
     </div>
 
     <div class="result-count" id="resultCount"></div>
@@ -1185,7 +1267,7 @@
 
       <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:12px;">
         <span>Order: <strong id="modalOrderId">—</strong></span>
-        <span>Expires: <strong id="countdown" style="color:var(--primary);font-weight:700;">60s</strong> <span id="modalExpires" style="display:none;">—</span></span>
+        <span>Expires: <strong id="countdown" style="color:var(--primary);font-weight:700;">05:00</strong> <span id="modalExpires" style="display:none;">—</span></span>
       </div>
 
       <div class="sms-modal-actions">
@@ -1373,7 +1455,7 @@
 
   <script src="api.js?v=2.3"></script>
   <script src="ui-shared.js?v=2.3"></script>
-  <script src="buy.js?v=2.3"></script>
+  <script src="buy.js?v=2.5"></script>
   <!-- Announcement Modal -->
   <div id="announcementModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:10000; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
     <div style="background:var(--surface); border-radius:16px; padding:2rem; width:100%; max-width:450px; margin:1rem; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); animation:slideUp 0.3s ease; position:relative; overflow:hidden;">
