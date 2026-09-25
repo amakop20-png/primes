@@ -763,9 +763,10 @@ async function loadTransactions(page = 1, currency) {
             totalRechargeEl.textContent = symbol + displayRecharge.toLocaleString(isUSD ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
         const numbersPurchasedEl = document.getElementById('popupNumbersPurchased');
-        if (numbersPurchasedEl && numbersCount > 0) {
+        if (numbersPurchasedEl) {
             numbersPurchasedEl.textContent = String(numbersCount);
         }
+        updateVirtualNumbersStats(numbersCount);
 
         // Pagination controls
         if (paginEl) paginEl.style.display = 'flex';
@@ -783,29 +784,121 @@ async function loadTransactions(page = 1, currency) {
 /* ══════════════════════════════════════════
    DASHBOARD USER INFO
 ══════════════════════════════════════════ */
+function getReferralCode() {
+    const session = typeof getSession === 'function' ? getSession() : null;
+    if (session) {
+        if (session.referralCode) return String(session.referralCode).trim();
+        if (session.referral_code) return String(session.referral_code).trim();
+        if (session.refCode) return String(session.refCode).trim();
+        if (session.username) return 'REF-' + String(session.username).toUpperCase().trim();
+    }
+    const stored = localStorage.getItem('primes_referral_code');
+    if (stored) return stored;
+    return 'REF-NURASQ';
+}
+
+function copyReferralCode() {
+    const code = getReferralCode();
+    const btnText = document.getElementById('copyRefBtnText');
+    const icon = document.getElementById('copyRefIcon');
+
+    const handleSuccess = () => {
+        if (btnText) btnText.textContent = 'Copied!';
+        if (icon) icon.className = 'ph ph-check';
+        showToast('Referral code copied: ' + code, 'success');
+        setTimeout(() => {
+            if (btnText) btnText.textContent = 'Copy Code';
+            if (icon) icon.className = 'ph ph-copy';
+        }, 2200);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(handleSuccess).catch(() => {
+            fallbackClipboardCopy(code, handleSuccess);
+        });
+    } else {
+        fallbackClipboardCopy(code, handleSuccess);
+    }
+}
+
+function fallbackClipboardCopy(text, cb) {
+    try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (successful && typeof cb === 'function') {
+            cb();
+        } else {
+            showToast('Code: ' + text, 'info');
+        }
+    } catch (_) {
+        showToast('Code: ' + text, 'info');
+    }
+}
+
+window.getReferralCode = getReferralCode;
+window.copyReferralCode = copyReferralCode;
+
+function updateVirtualNumbersStats(numbersCount = null) {
+    // 1. Active Numbers
+    const activeEl = document.getElementById('dashActiveNumbers');
+    if (activeEl) {
+        const currentOrderId = localStorage.getItem('currentOrderId');
+        const activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
+        const count = (currentOrderId ? 1 : 0) + (Array.isArray(activeOrders) ? activeOrders.length : 0);
+        activeEl.textContent = String(count);
+    }
+
+    // 2. Total Numbers
+    const totalEl = document.getElementById('dashTotalNumbers');
+    if (totalEl) {
+        if (numbersCount !== null && numbersCount !== undefined) {
+            totalEl.textContent = String(numbersCount);
+        } else {
+            const popupCount = document.getElementById('popupNumbersPurchased')?.textContent;
+            if (popupCount && popupCount !== '0' && popupCount !== '—') {
+                totalEl.textContent = popupCount;
+            }
+        }
+    }
+
+    // 3. Available Numbers
+    const availEl = document.getElementById('dashAvailableNumbers');
+    if (availEl) {
+        availEl.textContent = '150+';
+    }
+}
+window.updateVirtualNumbersStats = updateVirtualNumbersStats;
+
 function renderUserInfo() {
-    const session     = getSession() || {};
+    const session      = getSession() || {};
     const displayName  = session.name || session.username || 'User';
     const displayEmail = session.email || '';
 
-    document.querySelectorAll('#dashboardUsername, #Username, .dropdown-name, .username').forEach(el => {
+    document.querySelectorAll('#dashboardUsername, #Username, #dropdown .dropdown-name, .username').forEach(el => {
         el.textContent = displayName;
     });
-    document.querySelectorAll('.dropdown-email').forEach(el => {
-        el.textContent = displayEmail;
+    document.querySelectorAll('#dropdown .dropdown-email, #profileEmail').forEach(el => {
+        if (displayEmail) el.textContent = displayEmail;
     });
 
-    // Referral code from username
-    if (session.username) {
-        const refCodeEl = document.getElementById('displayReferralCode');
-        if (refCodeEl) {
-            const domain = window.location.host || 'nurasq.com';
-            refCodeEl.textContent = domain + '/signup.html?ref=' + session.username;
-        }
+    // Populate authoritative referral code
+    const refCode = getReferralCode();
+    const refCodeEl = document.getElementById('displayReferralCode');
+    if (refCodeEl) {
+        refCodeEl.textContent = refCode;
     }
     
-    // Load referral balance
+    // Load referral balance & virtual numbers stats
     loadReferralBalance();
+    updateVirtualNumbersStats();
 }
 
 async function loadReferralBalance() {
@@ -1061,17 +1154,23 @@ async function handleAddFunds() {
 ══════════════════════════════════════════ */
 function initReferralCopy() {
     const copyBtn = document.getElementById('btnCopyReferral');
-    if (!copyBtn) return;
-    copyBtn.addEventListener('click', () => {
-        const session = getSession();
-        if (!session) return;
-        const link = window.location.origin + '/signup.html?ref=' + session.username;
-        navigator.clipboard.writeText(link).then(() => {
-            showToast('Referral link copied!', 'success');
-        }).catch(() => {
-            showToast('Link: ' + link, 'info');
+    if (copyBtn && !copyBtn._copyWired) {
+        copyBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            copyReferralCode();
         });
-    });
+        copyBtn._copyWired = true;
+    }
+
+    const codeSpan = document.getElementById('displayReferralCode');
+    if (codeSpan && !codeSpan._copyWired) {
+        codeSpan.style.cursor = 'pointer';
+        codeSpan.title = 'Click to copy referral code';
+        codeSpan.addEventListener('click', () => {
+            copyReferralCode();
+        });
+        codeSpan._copyWired = true;
+    }
 }
 
 /* ══════════════════════════════════════════

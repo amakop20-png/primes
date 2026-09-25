@@ -875,29 +875,23 @@ function renderProductCards(products) {
         const iconData     = getServiceBrandIcon(p.key, p.name);
 
         return `
-        <div class="card${isSelected ? ' selected' : ''}" data-product-key="${safeKey}">
-            <div class="card-top">
-                <div class="service-icon-badge ${iconData.className}">
-                    ${iconData.svg}
-                </div>
-                <div class="card-name-group">
-                    <span class="card-title">${escapeHTML(p.name)}</span>
-                    <span class="card-category-tag">${escapeHTML(p.category)}</span>
-                </div>
+        <div class="card${isSelected ? ' selected' : ''}" style="position:relative;cursor:pointer;" data-product-key="${safeKey}">
+            <div class="service-icon-badge ${iconData.className}">
+                ${iconData.svg}
             </div>
-            <div class="card-bottom">
-                <div class="card-price-info">
-                    <span class="card-price">${priceStr}</span>
-                    <span class="card-stock">${p.qty > 0 ? p.qty.toLocaleString() + ' in stock' : 'Available'}</span>
-                </div>
-                <button
-                    type="button"
-                    class="btn btn-buy"
-                    data-product-key="${safeKey}"
-                >
-                    <i class="ph ph-shopping-bag"></i> Buy Number
-                </button>
+            <div class="card-title">${escapeHTML(p.name)}</div>
+            <div class="card-meta">
+                <span class="card-stock">${p.qty > 0 ? p.qty.toLocaleString() + ' in stock' : 'In stock'}</span>
+                <span class="card-service-badge">${escapeHTML(p.category)}</span>
             </div>
+            <div class="card-price">${priceStr}</div>
+            <button
+                type="button"
+                class="btn btn-buy"
+                data-product-key="${safeKey}"
+            >
+                <i class="ph ph-shopping-bag"></i> Buy Now
+            </button>
         </div>`;
     }).join('');
 }

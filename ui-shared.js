@@ -190,7 +190,7 @@ function openSettings() {
     const phoneEl = document.getElementById('settingsPhone');
     if (nameEl)  nameEl.value  = session.name || session.username || '';
     if (emailEl) emailEl.value = session.email || '';
-    if (phoneEl) phoneEl.value = session.phone || '';
+    if (phoneEl) phoneEl.value = session.phone || session.phoneNumber || '';
 
     const currEl = document.getElementById('settingsCurrency');
     if (currEl && typeof getCurrency === 'function') currEl.value = getCurrency();
@@ -252,7 +252,7 @@ function switchSettingsTab(tab) {
     if (activeContent) activeContent.classList.add('active');
 }
 
-function saveProfileSettings() {
+async function saveProfileSettings() {
     console.log("[PROFILE] Saving profile...");
 
     const nameEl  = document.getElementById('settingsDisplayName');
@@ -266,26 +266,82 @@ function saveProfileSettings() {
     const session = getSession() || {};
     const displayName = name || session.name || session.username;
 
-    if (nameEl && !displayName) { 
+    if (!displayName) { 
         if (typeof showToast === 'function') showToast('Please enter your display name.', 'error'); 
         return; 
     }
 
-    try {
-        if (displayName) session.name = displayName;
-        if (email) session.email = email;
-        if (phone) session.phone = phone;
+    const saveBtn = document.getElementById('saveProfileBtn') || document.querySelector('#stab-profile .sbtn-primary');
+    const origText = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="ph ph-circle-notch ph-spin"></i> Saving...';
+    }
 
-        // Persist avatar if pending
+    try {
+        // 1. Update session object
+        session.name = displayName;
+        if (email) session.email = email;
+        if (phone) {
+            session.phone = phone;
+            session.phoneNumber = phone;
+        }
+
+        // 2. Persist avatar if pending
         if (pendingAvatarData) {
             localStorage.setItem('userAvatar', pendingAvatarData);
             session.avatar = pendingAvatarData;
             pendingAvatarData = null;
         }
 
+        // 3. Save session to localStorage
         localStorage.setItem('primes_session', JSON.stringify(session));
 
+        // 4. Sync with primes_users (used across admin & records)
+        try {
+            const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
+            const userEmail = (session.email || '').toLowerCase();
+            let matched = false;
+            for (let u of users) {
+                if ((u.email && u.email.toLowerCase() === userEmail) || (u.name && u.name === session.name) || (u.username && u.username === session.username)) {
+                    u.name = displayName;
+                    if (email) u.email = email;
+                    if (phone) u.phone = phone;
+                    if (session.avatar) u.avatar = session.avatar;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched && (userEmail || displayName)) {
+                users.unshift({
+                    name: displayName,
+                    email: userEmail || `${session.username || 'user'}@davessocial.com`,
+                    phone: phone || '—',
+                    balance: String(session.balance || 0),
+                    createdAt: new Date().toISOString()
+                });
+            }
+            localStorage.setItem('primes_users', JSON.stringify(users));
+        } catch (_) {}
+
+        // 5. Attempt API request to backend (suppress redirect and handle gracefully)
+        if (typeof apiRequest === 'function' && typeof getAuthToken === 'function' && getAuthToken()) {
+            try {
+                await apiRequest('/api/user/profile', {
+                    method: 'PUT',
+                    body: JSON.stringify({ name: displayName, email, phone }),
+                    suppressAuthRedirect: true
+                });
+            } catch (apiErr) {
+                console.warn('[PROFILE] Backend API profile endpoint status:', apiErr.status || apiErr.message);
+            }
+        }
+
+        // 6. Update all UI elements across headers, dropdowns, and dashboard
         updateProfileUI();
+        if (typeof renderUserInfo === 'function') {
+            renderUserInfo();
+        }
 
         console.log("[PROFILE] Profile saved successfully");
         if (typeof showToast === 'function') {
@@ -295,6 +351,11 @@ function saveProfileSettings() {
         console.error("[PROFILE] Error saving profile:", err);
         if (typeof showToast === 'function') {
             showToast('Failed to save profile: ' + (err.message || 'Storage error'), 'error');
+        }
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = origText || '<i class="ph ph-floppy-disk"></i> Save Profile';
         }
     }
 }

@@ -3937,147 +3937,250 @@ body.dark-theme .brand-paypal { color: #38bdf8; background: rgba(56, 189, 248, 0
 
 /* Compact Cards Grid */
 .cards-grid {
+/* Compact Cards Grid - Restored to Previous Preferred Pattern */
+.cards-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
   margin-bottom: 24px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 768px) {
   .cards-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
   }
 }
 
 @media (max-width: 480px) {
   .cards-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
   }
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
+  border-radius: 16px;
+  padding: 20px 16px 16px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  align-items: center;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   box-sizing: border-box;
-  min-height: 105px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  min-height: 200px;
 }
 
 .card:hover {
   border-color: var(--primary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.08);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
 }
 
 .card.selected {
   border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 4%, var(--surface));
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
 }
 
-.card-top {
+.card .service-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.card-name-group {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
-}
-
-.card-category-tag {
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: capitalize;
-  line-height: 1;
-}
-
-.card-bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-light);
-}
-
-.card-price-info {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.card-price {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--primary);
-}
-
-.card-stock {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.btn-buy {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
-  font-family: inherit;
+  justify-content: center;
+  margin: 0 auto 12px;
   flex-shrink: 0;
 }
 
+.card .service-icon-badge svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  line-height: 1.2;
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  width: 100%;
+}
+
+.card-service-badge {
+  display: inline-block;
+  background: var(--primary-light);
+  color: var(--primary);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.card-price {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 4px 0 12px;
+  line-height: 1.1;
+}
+
+.btn-buy {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  font-family: inherit;
+  margin-top: auto;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
+}
+
 .btn-buy:hover {
-  background: #6d28d9;
-  transform: scale(1.02);
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
 }
 
 .btn-buy:active {
   transform: scale(0.98);
 }
 
-.service-icon-badge {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+/* ══════════════════════════════════════════════════════════════════
+   VIRTUAL NUMBERS STAT CARDS (DASHBOARD)
+══════════════════════════════════════════════════════════════════ */
+.vnum-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 860px) {
+  .vnum-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (max-width: 520px) {
+  .vnum-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.vnum-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+.vnum-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.09);
+}
+
+.vnum-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.vnum-card-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: capitalize;
+  letter-spacing: 0.2px;
+}
+
+.vnum-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 17px;
   flex-shrink: 0;
 }
 
-.service-icon-badge svg {
-  width: 18px;
-  height: 18px;
-  display: block;
+.vnum-card-icon.active {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
+
+.vnum-card-icon.total {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.vnum-card-icon.available {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
+.vnum-card-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.vnum-card-sub {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+/* Referral code copy button */
+.btn-copy-ref-badge:hover {
+  background: rgba(255, 255, 255, 0.35) !important;
+}
+
+.btn-copy-ref-badge:active {
+  transform: scale(0.97);
+}
+
 
