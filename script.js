@@ -117,43 +117,40 @@ document.addEventListener('keydown', function(e) {
 /* ══════════════════════════════════════════
    TOAST NOTIFICATION
 ══════════════════════════════════════════ */
+let toastDismissTimeout = null;
+
 function showToast(message, type = 'success') {
-    const notificationContainer = document.getElementById('toast-container') || (() => {
-        const div = document.createElement('div');
-        div.id = 'toast-container';
-        div.style.cssText = 'position:fixed;top:24px;right:24px;z-index:10000;display:flex;flex-direction:column;gap:8px;font-family:"Poppins",sans-serif;';
-        document.body.appendChild(div);
-        return div;
-    })();
-
-    const toastEl = document.createElement('div');
-    const colors  = { success: '#10B981', error: '#EF4444', info: '#3B82F6', warning: '#F59E0B' };
-
-    if (!document.getElementById('toast-keyframes')) {
-        const style = document.createElement('style');
-        style.id = 'toast-keyframes';
-        style.textContent = `
-            @keyframes slideIn  { from { transform: translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
-            @keyframes fadeOut  { to   { transform: translateX(120%); opacity:0; } }
-        `;
-        document.head.appendChild(style);
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
     }
 
-    toastEl.style.cssText = `
-        background:var(--surface,#fff);color:var(--text,#111);padding:12px 20px;
-        border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);
-        border-left:4px solid ${colors[type] || colors.success};
-        font-size:14px;font-weight:600;display:flex;align-items:center;gap:10px;
-        animation:slideIn 0.3s ease forwards;min-width:250px;user-select:none;
-    `;
-    const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
-    toastEl.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
-    notificationContainer.appendChild(toastEl);
+    if (toastDismissTimeout) {
+        clearTimeout(toastDismissTimeout);
+        toastDismissTimeout = null;
+    }
 
-    setTimeout(() => {
-        toastEl.style.animation = 'fadeOut 0.3s ease forwards';
-        setTimeout(() => toastEl.remove(), 300);
-    }, 3500);
+    const icons = {
+        success: '<i class="ph ph-check-circle" style="color:#10b981;font-size:16px;"></i>',
+        error:   '<i class="ph ph-x-circle" style="color:#ef4444;font-size:16px;"></i>',
+        info:    '<i class="ph ph-info" style="color:#3b82f6;font-size:16px;"></i>',
+        warning: '<i class="ph ph-warning" style="color:#f59e0b;font-size:16px;"></i>'
+    };
+
+    container.innerHTML = `
+        <div class="compact-toast toast-${type}">
+            ${icons[type] || icons.info}
+            <span class="toast-text">${escapeHTML(message)}</span>
+        </div>
+    `;
+
+    container.classList.add('show');
+
+    toastDismissTimeout = setTimeout(() => {
+        container.classList.remove('show');
+    }, 2200);
 }
 
 /* ══════════════════════════════════════════
@@ -232,33 +229,33 @@ function toggleCurrency() {
    WALLET BALANCE PRIVACY / HIDE BALANCE
 ══════════════════════════════════════════ */
 const BALANCE_MASK = '••••••••';
+let balanceVisible = localStorage.getItem('primes_balance_hidden') !== 'true';
 
 function isBalanceHidden() {
-    return localStorage.getItem('primes_balance_hidden') === 'true';
+    return !balanceVisible;
 }
 
 function setBalanceHidden(hidden) {
+    balanceVisible = !hidden;
     localStorage.setItem('primes_balance_hidden', hidden ? 'true' : 'false');
 }
 
 function toggleBalancePrivacy() {
-    const willHide = !isBalanceHidden();
-    setBalanceHidden(willHide);
+    balanceVisible = !balanceVisible;
+    localStorage.setItem('primes_balance_hidden', balanceVisible ? 'false' : 'true');
     updateBalancePrivacyDisplay();
-    if (typeof showToast === 'function') {
-        showToast(willHide ? '🙈 Wallet balance hidden' : '👁️ Wallet balance visible', 'info');
-    }
+    showToast(balanceVisible ? 'Wallet balance visible' : 'Wallet balance hidden', 'success');
 }
 window.toggleBalancePrivacy = toggleBalancePrivacy;
 window.isBalanceHidden = isBalanceHidden;
 
 function updateBalancePrivacyDisplay() {
-    const hidden = isBalanceHidden();
+    const isHidden = !balanceVisible;
     const curr   = getCurrency();
     const isUSD  = curr === 'USD';
     const rate   = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
 
-    const ngnAmount = cachedNgnBalance;
+    const ngnAmount = cachedNgnBalance || 0;
     const usdAmount = ngnAmount / rate;
 
     const formattedNGN = '₦' + ngnAmount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -268,61 +265,61 @@ function updateBalancePrivacyDisplay() {
     // 1. Available Balance (Hero Card)
     const balPrimaryEl = document.getElementById('displayBalanceNGN');
     if (balPrimaryEl) {
-        balPrimaryEl.textContent = hidden ? BALANCE_MASK : primaryFormatted;
-        balPrimaryEl.classList.toggle('balance-masked', hidden);
+        balPrimaryEl.textContent = isHidden ? BALANCE_MASK : primaryFormatted;
+        balPrimaryEl.classList.toggle('balance-masked', isHidden);
     }
 
     // 2. Secondary Balance (Hero Card)
     const balSecondaryEl = document.getElementById('displayBalanceUSD');
     if (balSecondaryEl) {
-        if (hidden) {
+        if (isHidden) {
             balSecondaryEl.textContent = isUSD
                 ? `USD Equivalent · (₦${rate.toLocaleString()} = $1.00)`
-                : `NGN Account · Approx: ${BALANCE_MASK}`;
+                : `Approx. ${BALANCE_MASK}`;
         } else {
             balSecondaryEl.textContent = isUSD
                 ? `USD Equivalent · (₦${rate.toLocaleString()} = $1.00)`
-                : `NGN Account · Approx: ${formattedUSD}`;
+                : `Approx. ${formattedUSD}`;
         }
     }
 
     // 3. NGN Balance Card
     const cardNgnEl = document.getElementById('cardBalanceNGN');
     if (cardNgnEl) {
-        cardNgnEl.textContent = hidden ? BALANCE_MASK : formattedNGN;
-        cardNgnEl.classList.toggle('balance-masked', hidden);
+        cardNgnEl.textContent = isHidden ? BALANCE_MASK : formattedNGN;
+        cardNgnEl.classList.toggle('balance-masked', isHidden);
     }
 
     // 4. USD Balance Card
     const cardUsdEl = document.getElementById('cardBalanceUSD');
     if (cardUsdEl) {
-        cardUsdEl.textContent = hidden ? BALANCE_MASK : formattedUSD;
-        cardUsdEl.classList.toggle('balance-masked', hidden);
+        cardUsdEl.textContent = isHidden ? BALANCE_MASK : formattedUSD;
+        cardUsdEl.classList.toggle('balance-masked', isHidden);
     }
 
     // 5. Popup Balance Modal
     const popBalEl = document.getElementById('popupBalanceAmount');
     if (popBalEl) {
-        popBalEl.textContent = hidden ? BALANCE_MASK : primaryFormatted;
-        popBalEl.classList.toggle('balance-masked', hidden);
+        popBalEl.textContent = isHidden ? BALANCE_MASK : primaryFormatted;
+        popBalEl.classList.toggle('balance-masked', isHidden);
     }
 
     const popNgnEl = document.getElementById('popupBalanceNGN');
     if (popNgnEl) {
-        popNgnEl.textContent = hidden ? BALANCE_MASK : formattedNGN;
-        popNgnEl.classList.toggle('balance-masked', hidden);
+        popNgnEl.textContent = isHidden ? BALANCE_MASK : formattedNGN;
+        popNgnEl.classList.toggle('balance-masked', isHidden);
     }
 
     const popUsdEl = document.getElementById('popupBalanceUSD');
     if (popUsdEl) {
-        popUsdEl.textContent = hidden ? BALANCE_MASK : formattedUSD;
-        popUsdEl.classList.toggle('balance-masked', hidden);
+        popUsdEl.textContent = isHidden ? BALANCE_MASK : formattedUSD;
+        popUsdEl.classList.toggle('balance-masked', isHidden);
     }
 
     // 6. Referral Balance
     const refBalEl = document.getElementById('displayReferralBalance');
     if (refBalEl) {
-        if (hidden) {
+        if (isHidden) {
             refBalEl.textContent = BALANCE_MASK;
             refBalEl.classList.add('balance-masked');
         } else {
@@ -339,8 +336,8 @@ function updateBalancePrivacyDisplay() {
     }
 
     // 7. Update all eye toggle buttons and icons
-    const ariaLabel = hidden ? 'Show wallet balance' : 'Hide wallet balance';
-    const iconClass = hidden ? 'ph ph-eye-slash' : 'ph ph-eye';
+    const ariaLabel = isHidden ? 'Show wallet balance' : 'Hide wallet balance';
+    const iconClass = isHidden ? 'ph ph-eye-slash' : 'ph ph-eye';
 
     document.querySelectorAll('#toggleBalancePrivacyBtn, .btn-balance-privacy, .btn-balance-privacy-sm').forEach(btn => {
         btn.setAttribute('aria-label', ariaLabel);

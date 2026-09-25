@@ -1179,148 +1179,110 @@
   <div class="overlay" id="overlay"></div>
 
   <!-- Main Content -->
-  <div class="container">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+  <div class="container buy-container">
+    <!-- Header & Wallet Pill Row -->
+    <div class="buy-header-row">
       <div>
-        <h2 class="section-title" style="margin-bottom:4px;">Virtual Numbers &amp; SMS</h2>
-        <p class="section-sub" style="margin-bottom:0;">Real phone numbers from 150+ countries — instant OTP verification delivery</p>
+        <h2 class="buy-page-title">Buy Number</h2>
+        <p class="buy-page-sub">Search and select a country and service to receive instant SMS</p>
       </div>
-    </div>
-
-    <!-- Balance Bar -->
-    <div id="balanceBar" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; margin-top:4px;">
-      <div style="display:flex; align-items:center; gap:8px; background:var(--primary-light); border-radius:12px; padding:10px 16px; font-size:13px; font-weight:700; color:var(--primary);">
+      <div class="buy-wallet-pill">
         <i class="ph ph-wallet"></i>
-        <span>Your Wallet: <span id="buyWalletBalance">Loading...</span></span>
-        <button type="button" class="btn-balance-privacy-sm" id="toggleBuyBalancePrivacyBtn" onclick="toggleBalancePrivacy()" aria-label="Hide wallet balance" title="Hide wallet balance" style="background:transparent;border:none;color:var(--primary);margin-left:2px;cursor:pointer;">
+        <span>Wallet: <strong id="buyWalletBalance">Loading...</strong></span>
+        <button type="button" class="btn-balance-privacy-sm" id="toggleBuyBalancePrivacyBtn" aria-label="Hide wallet balance" title="Hide wallet balance">
           <i class="ph ph-eye" id="buyBalancePrivacyIcon"></i>
         </button>
-        <a href="dashboard.html" style="margin-left:8px; font-size:11px; color:var(--primary); text-decoration:underline; opacity:0.8;">Add Funds</a>
-      </div>
-      <div id="fivesimBalanceBox" style="display:flex; align-items:center; gap:8px; background:#fef9ee; border:1px solid #fde68a; border-radius:12px; padding:10px 16px; font-size:13px; font-weight:700; color:#92400e;">
-        <i class="ph ph-check-circle"></i>
-        <span>Service Status: <span id="fivesimBalance">checking...</span></span>
+        <a href="dashboard.html" class="pill-add-funds">Add Funds</a>
       </div>
     </div>
 
-    <!-- Active Virtual Numbers Section -->
-    <div id="activeNumbersSection" style="display:none; margin-bottom:24px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.03);">
-      <h3 style="margin-top:0; margin-bottom:14px; font-size:15px; font-weight:800; display:flex; align-items:center; gap:8px;">
-        <span style="display:inline-block; width:8px; height:8px; background:#16a34a; border-radius:50%; animation:pulse 1.5s infinite;"></span>
+    <!-- Active Virtual Numbers Section (if active orders exist) -->
+    <div id="activeNumbersSection" style="display:none; margin-bottom:16px;" class="active-orders-box">
+      <h3 style="margin:0 0 10px; font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px;">
+        <span class="pulse-dot"></span>
         Active Virtual Numbers (OTP waiting)
       </h3>
-      <div id="activeNumbersGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-        <!-- Active Order Cards injected here -->
-      </div>
+      <div id="activeNumbersGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;"></div>
     </div>
 
-    <!-- Dedicated Section Tabs -->
-    <div class="buy-section-tabs" id="buySectionTabs">
-      <button type="button" class="buy-tab-btn active" id="tabCountriesBtn" onclick="switchBuyTab('countries')">
-        <i class="ph ph-globe"></i>
-        <span>1. Countries</span>
-        <span class="buy-tab-badge" id="countriesCountBadge">...</span>
-      </button>
-      <button type="button" class="buy-tab-btn" id="tabProductsBtn" onclick="switchBuyTab('products')">
-        <i class="ph ph-sim-card"></i>
-        <span>2. Products / Numbers</span>
-        <span class="buy-tab-status" id="activeCountryPill">No country selected</span>
-      </button>
-    </div>
-
-    <!-- ══ 1. SEPARATE COUNTRIES SECTION ══ -->
-    <div id="countriesSection" class="buy-page-section">
-      <div class="section-banner">
-        <div>
-          <h2 class="section-title" style="font-size:1.25rem;"><i class="ph ph-globe"></i> Supported Countries</h2>
-          <p class="section-sub" style="margin-bottom:0;">Search and filter 150+ countries to see available virtual numbers and services</p>
-        </div>
-        <div class="country-stats-pill" id="countriesStatsPill">150+ Regions</div>
-      </div>
-
-      <!-- Dedicated Country Search Bar -->
-      <div class="country-search-bar">
-        <div class="search-box-wrap">
-          <i class="ph ph-magnifying-glass search-icon"></i>
-          <input
-            type="text"
-            id="countrySearchInput"
-            placeholder="🔍 Search countries by name (e.g. United States, Nigeria, United Kingdom) or dial code (+1, +234)..."
-            autocomplete="off"
-          />
-          <button type="button" id="countrySearchClearBtn" class="search-clear-btn" style="display:none;" title="Clear search">✕</button>
-        </div>
-        <div class="search-helper-meta" id="countrySearchCount">
-          Loading countries…
-        </div>
-      </div>
-
-      <!-- Dedicated Country Cards Grid -->
-      <div class="country-grid" id="countryCardsGrid">
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
-        <div class="skeleton-card"></div>
-      </div>
-    </div>
-
-    <!-- ══ 2. SEPARATE PRODUCTS / NUMBERS SECTION ══ -->
-    <div id="productsSection" class="buy-page-section" style="display:none;">
-      <!-- Active Country Header Banner -->
-      <div class="active-country-banner" id="activeCountryBanner">
-        <div class="acb-left">
-          <span class="acb-flag" id="activeCountryFlag">🌍</span>
-          <div>
-            <div class="acb-label">Currently Selected Country</div>
-            <div class="acb-name" id="activeCountryTitle">Select a country first</div>
+    <!-- ══ COMPACT BUY NUMBER CONTROLS ══ -->
+    <div class="buy-controls-panel">
+      <!-- 1. Country Selection Controls -->
+      <div class="control-row">
+        <div class="control-col-search">
+          <div class="compact-input-wrap">
+            <i class="ph ph-magnifying-glass input-icon"></i>
+            <input
+              type="text"
+              id="countrySearchInput"
+              placeholder="Search countries (e.g. United States, Nigeria, UK)..."
+              autocomplete="off"
+            />
+            <button type="button" id="countrySearchClearBtn" class="compact-clear-btn" style="display:none;" title="Clear">✕</button>
           </div>
         </div>
-        <button type="button" class="btn-change-country" onclick="switchBuyTab('countries')">
-          <i class="ph ph-arrows-clockwise"></i> Change Country
-        </button>
-      </div>
-
-      <!-- Dedicated Product Search & Filters -->
-      <div class="product-filter-bar">
-        <div class="search-box-wrap" style="flex: 2; min-width: 260px;">
-          <i class="ph ph-magnifying-glass search-icon"></i>
-          <input
-            type="text"
-            id="productSearchInput"
-            placeholder="🔍 Search products / numbers (e.g. WhatsApp, Telegram, Instagram, Facebook, TikTok, Google, Signal)..."
-            autocomplete="off"
-          />
-          <button type="button" id="productSearchClearBtn" class="search-clear-btn" style="display:none;" title="Clear search">✕</button>
+        <div class="control-col-select">
+          <div class="compact-select-wrap">
+            <i class="ph ph-globe select-icon"></i>
+            <select id="countryFilter" class="buy-control-select">
+              <option value="">Select a Country</option>
+            </select>
+          </div>
         </div>
-
-        <select id="serviceFilter" class="buy-select" style="max-width: 220px;">
-          <option value=""><i class="ph ph-device-mobile"></i> All Services</option>
-        </select>
-
-        <select id="typeFilter" class="buy-select" style="max-width: 190px;">
-          <option value="activation"><i class="ph ph-lightning"></i> Activation (OTP)</option>
-          <option value="hosting">🕐 Hosting (Long-term)</option>
-        </select>
-
-        <!-- Hidden elements for backward compatibility -->
-        <input type="hidden" id="searchInput" />
-        <select id="countryFilter" style="display:none;"></select>
-        <select id="operatorFilter" style="display:none;"><option value="any">Any Operator</option></select>
       </div>
 
-      <div class="result-count" id="resultCount"></div>
-
-      <!-- Products Grid -->
-      <div class="cards" id="cardsGrid">
-        <div class="state-box" style="grid-column:1/-1;">
-          <i class="ph ph-globe"></i>
-          <p>Select a country to see available numbers.</p>
-          <button type="button" class="btn-select-country-cta" onclick="switchBuyTab('countries')" style="margin-top:14px;padding:10px 22px;border-radius:12px;background:var(--primary);color:#fff;border:none;font-weight:700;cursor:pointer;">
-            Browse Countries &rarr;
-          </button>
+      <!-- 2. Product Search & Filter Controls -->
+      <div class="control-row">
+        <div class="control-col-search">
+          <div class="compact-input-wrap">
+            <i class="ph ph-magnifying-glass input-icon"></i>
+            <input
+              type="text"
+              id="productSearchInput"
+              placeholder="Search services (WhatsApp, Telegram, Google, etc.)..."
+              autocomplete="off"
+            />
+            <button type="button" id="productSearchClearBtn" class="compact-clear-btn" style="display:none;" title="Clear">✕</button>
+          </div>
+        </div>
+        <div class="control-col-select">
+          <div class="compact-select-wrap">
+            <i class="ph ph-funnel select-icon"></i>
+            <select id="typeFilter" class="buy-control-select">
+              <option value="">All Services</option>
+              <option value="activation">Activation (OTP)</option>
+              <option value="rental">Rental</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Hidden compatibility elements -->
+    <input type="hidden" id="searchInput" />
+    <select id="serviceFilter" style="display:none;"></select>
+    <select id="operatorFilter" style="display:none;"><option value="any">Any Operator</option></select>
+    <div id="countriesSection" style="display:none;"><div id="countryCardsGrid"></div></div>
+    <div id="productsSection" style="display:none;"></div>
+    <span id="fivesimBalance" style="display:none;">Online</span>
+
+    <!-- Available Products Section -->
+    <div class="products-section-wrap">
+      <div class="products-bar-header">
+        <div class="products-bar-title">
+          <span>Available Products</span>
+          <span class="active-country-tag" id="activeCountryPill" style="display:none;"></span>
+        </div>
+        <div class="result-count-label" id="resultCount">Select a country to view available services</div>
+      </div>
+
+      <!-- Compact Cards Grid -->
+      <div class="cards-grid" id="cardsGrid">
+        <div class="state-box" style="grid-column:1/-1;">
+          <i class="ph ph-globe"></i>
+          <p>Please select a country above to view available numbers.</p>
+        </div>
+      </div>
   </div>
 
   <!-- SMS / Number Modal -->

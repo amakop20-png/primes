@@ -157,17 +157,14 @@
           </div>
           <div class="whero-amount-row">
             <div class="whero-amount" id="displayBalanceNGN" style="margin-bottom:0;">₦0.00</div>
-            <button type="button" class="btn-balance-privacy" id="toggleBalancePrivacyBtn" onclick="toggleBalancePrivacy()" aria-label="Hide wallet balance" title="Hide wallet balance">
+            <button type="button" class="btn-balance-privacy" id="toggleBalancePrivacyBtn" aria-label="Hide wallet balance" title="Hide wallet balance">
               <i class="ph ph-eye" id="balancePrivacyIcon"></i>
             </button>
           </div>
-          <div class="whero-sub" id="displayBalanceUSD">NGN Account · Approx: $0.00</div>
+          <div class="whero-sub" id="displayBalanceUSD">Approx. $0.00</div>
           <div class="whero-buttons">
-            <button type="button" class="btn-hero-solid" id="addFundsBtn" onclick="openDepositModal()">
-              <i class="ph ph-plus-circle"></i> Add Funds
-            </button>
             <button type="button" class="btn-hero-outline" id="openPopup">
-              <i class="ph ph-list-bullets"></i> View Details
+              <i class="ph ph-file-text"></i> View Details
             </button>
           </div>
         </div>
@@ -176,13 +173,13 @@
         <div class="wallet-stat-card">
           <div class="wstat-top">
             <div class="wstat-label">
-              <span class="wstat-flag">🇳🇬</span>
+              <span class="wstat-curr-pill">NGN</span>
               <span>NGN Balance</span>
             </div>
             <span class="wstat-badge badge-settlement">Settlement</span>
           </div>
           <div class="wstat-amount" id="cardBalanceNGN">₦0.00</div>
-          <div class="wstat-sub">Primary local settlement account balance for all services & orders</div>
+          <div class="wstat-sub">Primary local settlement account balance for all services &amp; orders</div>
           <div class="wstat-actions">
             <button type="button" class="btn-wstat-link" onclick="openDepositModal()">
               <i class="ph ph-credit-card"></i> Deposit NGN
@@ -197,7 +194,7 @@
         <div class="wallet-stat-card">
           <div class="wstat-top">
             <div class="wstat-label">
-              <span class="wstat-flag">🇺🇸</span>
+              <span class="wstat-curr-pill">USD</span>
               <span>USD Balance</span>
             </div>
             <span class="wstat-badge badge-usd">Converted</span>
@@ -339,11 +336,11 @@
         <!-- Dual Currency Overview -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px 14px;">
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">
-            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">🇳🇬 NGN Balance</div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><span class="wstat-curr-pill">NGN</span> Settlement Balance</div>
             <div style="font-size:18px;font-weight:800;color:var(--text);" id="popupBalanceNGN">₦0.00</div>
           </div>
           <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">
-            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">🇺🇸 USD Balance</div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;display:flex;align-items:center;gap:6px;"><span class="wstat-curr-pill">USD</span> Converted Balance</div>
             <div style="font-size:18px;font-weight:800;color:var(--text);" id="popupBalanceUSD">$0.00</div>
           </div>
         </div>

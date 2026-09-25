@@ -317,11 +317,6 @@ async function loadCountries() {
         const statsPill = document.getElementById('countriesStatsPill');
         if (statsPill) statsPill.textContent = `${allCountriesData.length} Countries`;
         const countMeta = document.getElementById('countrySearchCount');
-        if (countMeta) countMeta.textContent = `Showing all ${allCountriesData.length} countries`;
-
-        // Render dedicated Country Grid
-        renderCountryCards(allCountriesData);
-
         const options = allCountriesData
             .map(c => {
                 const prefixStr = c.prefix ? ` (${c.prefix})` : '';
@@ -329,8 +324,20 @@ async function loadCountries() {
             })
             .join('');
 
-        select.innerHTML = '<option value="">🌍 Select a Country</option>' + options;
+        select.innerHTML = '<option value="">Select a Country</option>' + options;
         select.disabled  = false;
+
+        // If a country was previously selected or requested via URL, load it
+        if (selectedCountry) {
+            select.value = selectedCountry;
+            await selectCountry(selectedCountry);
+        } else if (allCountriesData.length > 0) {
+            const defaultCountry = allCountriesData.find(c => c.key === 'nigeria' || c.key === 'usa') || allCountriesData[0];
+            if (defaultCountry) {
+                select.value = defaultCountry.key;
+                await selectCountry(defaultCountry.key);
+            }
+        }
     } catch (err) {
         console.error('loadCountries error:', err);
         select.innerHTML = '<option value="">⚠ Failed to load countries. Refresh page to retry.</option>';
@@ -433,16 +440,22 @@ function renderCountryCards(countries) {
 function handleCountrySearch() {
     const input = document.getElementById('countrySearchInput');
     const clearBtn = document.getElementById('countrySearchClearBtn');
-    const countEl = document.getElementById('countrySearchCount');
+    const select = document.getElementById('countryFilter');
     const query = (input?.value || '').trim().toLowerCase();
 
     if (clearBtn) {
-        clearBtn.style.display = query ? 'flex' : 'none';
+        clearBtn.style.display = query ? 'inline-flex' : 'none';
     }
 
+    if (!select) return;
+
     if (!query) {
-        if (countEl) countEl.textContent = `Showing all ${allCountriesData.length} countries`;
-        renderCountryCards(allCountriesData);
+        const opts = allCountriesData.map(c => {
+            const prefixStr = c.prefix ? ` (${c.prefix})` : '';
+            return `<option value="${escapeHTML(c.key)}">${escapeHTML(c.name)}${escapeHTML(prefixStr)}</option>`;
+        }).join('');
+        select.innerHTML = '<option value="">Select a Country</option>' + opts;
+        if (selectedCountry) select.value = selectedCountry;
         return;
     }
 
@@ -457,11 +470,19 @@ function handleCountrySearch() {
         return nameMatch || keyMatch || prefixMatch;
     });
 
-    if (countEl) {
-        countEl.textContent = `${filtered.length} countr${filtered.length === 1 ? 'y' : 'ies'} found for "${escapeHTML(query)}"`;
-    }
+    const opts = filtered.map(c => {
+        const prefixStr = c.prefix ? ` (${c.prefix})` : '';
+        return `<option value="${escapeHTML(c.key)}">${escapeHTML(c.name)}${escapeHTML(prefixStr)}</option>`;
+    }).join('');
 
-    renderCountryCards(filtered);
+    select.innerHTML = `<option value="">Matches (${filtered.length})</option>` + opts;
+
+    if (filtered.length === 1 && query.length >= 2) {
+        select.value = filtered[0].key;
+        selectCountry(filtered[0].key);
+    } else if (selectedCountry && filtered.some(c => c.key === selectedCountry)) {
+        select.value = selectedCountry;
+    }
 }
 
 /* ══════════════════════════════════════════
@@ -854,23 +875,29 @@ function renderProductCards(products) {
         const iconData     = getServiceBrandIcon(p.key, p.name);
 
         return `
-        <div class="card${isSelected ? ' selected' : ''}" style="position:relative;cursor:pointer;" data-product-key="${safeKey}">
-            <div class="service-icon-badge ${iconData.className}">
-                ${iconData.svg}
+        <div class="card${isSelected ? ' selected' : ''}" data-product-key="${safeKey}">
+            <div class="card-top">
+                <div class="service-icon-badge ${iconData.className}">
+                    ${iconData.svg}
+                </div>
+                <div class="card-name-group">
+                    <span class="card-title">${escapeHTML(p.name)}</span>
+                    <span class="card-category-tag">${escapeHTML(p.category)}</span>
+                </div>
             </div>
-            <div class="card-title" style="font-weight:800;font-size:15px;color:var(--text);text-align:center;">${escapeHTML(p.name)}</div>
-            <div class="card-meta">
-                <span style="font-size:12px;color:var(--muted);">${p.qty > 0 ? p.qty.toLocaleString() + ' in stock' : 'In stock'}</span>
-                <span class="card-service-badge">${escapeHTML(p.category)}</span>
+            <div class="card-bottom">
+                <div class="card-price-info">
+                    <span class="card-price">${priceStr}</span>
+                    <span class="card-stock">${p.qty > 0 ? p.qty.toLocaleString() + ' in stock' : 'Available'}</span>
+                </div>
+                <button
+                    type="button"
+                    class="btn btn-buy"
+                    data-product-key="${safeKey}"
+                >
+                    <i class="ph ph-shopping-bag"></i> Buy Number
+                </button>
             </div>
-            <div class="card-price" style="text-align:center;">${priceStr}</div>
-            <button
-                type="button"
-                class="btn btn-buy"
-                data-product-key="${safeKey}"
-            >
-                <i class="ph ph-shopping-bag"></i> Buy Now
-            </button>
         </div>`;
     }).join('');
 }
@@ -901,19 +928,10 @@ async function selectCountry(countryKey, targetProductKey = null) {
     const acFlag = document.getElementById('activeCountryFlag');
     const acTitle = document.getElementById('activeCountryTitle');
     const acPill = document.getElementById('activeCountryPill');
-
-    if (acFlag)  acFlag.textContent  = flag;
-    if (acTitle) acTitle.textContent = `${countryName}${countryPrefix}`;
     if (acPill) {
-        acPill.textContent = `${countryName}`;
-        acPill.classList.add('selected');
+        acPill.textContent = `${countryName}${countryPrefix}`;
+        acPill.style.display = 'inline-flex';
     }
-
-    // Re-render country cards so selected badge shows
-    renderCountryCards(allCountriesData);
-
-    // Automatically switch to Products tab
-    switchBuyTab('products');
 
     // If cached, load immediately, else fetch from API
     if (productsByCountryCache.has(countryKey)) {
