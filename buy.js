@@ -55,7 +55,7 @@ function escapeHTML(str) {
 /* ══════════════════════════════════════════
    INIT
 ══════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Auth guard — redirect if no token
     if (!requireAuth()) return;
 
@@ -71,8 +71,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderUserInfo();
     loadWalletBalanceBuyPage();
-    loadCountries();
     attachEventListeners();
+
+    // Check URL parameters for tab and country
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    const countryParam = urlParams.get('country');
+
+    try {
+        await loadCountries();
+    } catch (e) {
+        console.error('Initial country load failed:', e);
+    }
+
+    if (countryParam) {
+        await selectCountry(countryParam);
+    } else if (tabParam === 'products') {
+        switchBuyTab('products');
+    } else {
+        switchBuyTab(tabParam || 'countries');
+    }
 
     // Restore any in-progress order from previous session
     const savedOrderId = localStorage.getItem('currentOrderId');
@@ -237,6 +255,17 @@ async function loadCountries() {
             return { key, name, prefix };
         }).sort((a, b) => a.name.localeCompare(b.name));
 
+        // Update Countries Header Badges
+        const countBadge = document.getElementById('countriesCountBadge');
+        if (countBadge) countBadge.textContent = String(allCountriesData.length);
+        const statsPill = document.getElementById('countriesStatsPill');
+        if (statsPill) statsPill.textContent = `${allCountriesData.length} Countries`;
+        const countMeta = document.getElementById('countrySearchCount');
+        if (countMeta) countMeta.textContent = `Showing all ${allCountriesData.length} countries`;
+
+        // Render dedicated Country Grid
+        renderCountryCards(allCountriesData);
+
         const options = allCountriesData
             .map(c => {
                 const prefixStr = c.prefix ? ` (${c.prefix})` : '';
@@ -250,9 +279,201 @@ async function loadCountries() {
         console.error('loadCountries error:', err);
         select.innerHTML = '<option value="">⚠ Failed to load countries. Refresh page to retry.</option>';
         select.disabled  = false;
+        const grid = document.getElementById('countryCardsGrid');
+        if (grid) {
+            grid.innerHTML = `
+            <div class="state-box" style="grid-column:1/-1;">
+                <i class="ph ph-warning-circle"></i>
+                <p>Unable to load countries. Backend may be waking up.</p>
+                <button type="button" class="btn btn-primary" onclick="loadCountries()" style="margin-top:10px;padding:8px 18px;border-radius:10px;">Retry</button>
+            </div>`;
+        }
         showToast('Unable to load countries. Backend may be waking up, please retry.', 'error');
     }
 }
+
+/* ══════════════════════════════════════════
+   COUNTRY FLAGS (Standard ISO regional indicator conversion)
+══════════════════════════════════════════ */
+function getCountryFlagEmoji(countryKey) {
+    if (!countryKey) return '🌍';
+    const key = String(countryKey).toLowerCase();
+    const isoMap = {
+        usa: 'US', us: 'US', unitedstates: 'US', america: 'US',
+        russia: 'RU', ukraine: 'UA', kazakhstan: 'KZ', china: 'CN',
+        philippines: 'PH', myanmar: 'MM', indonesia: 'ID', malaysia: 'MY',
+        kenya: 'KE', tanzania: 'TZ', vietnam: 'VN', kyrgyzstan: 'KG',
+        israel: 'IL', hongkong: 'HK', poland: 'PL', england: 'GB', uk: 'GB',
+        greatbritain: 'GB', unitedkingdom: 'GB', madagascar: 'MG', congo: 'CG',
+        nigeria: 'NG', macao: 'MO', egypt: 'EG', india: 'IN', ireland: 'IE',
+        cambodia: 'KH', laos: 'LA', haiti: 'HT', ivorycoast: 'CI', gambia: 'GM',
+        serbia: 'RS', yemen: 'YE', southafrica: 'ZA', romania: 'RO', colombia: 'CO',
+        estonia: 'EE', azerbaijan: 'AZ', canada: 'CA', morocco: 'MA', ghana: 'GH',
+        argentina: 'AR', uzbekistan: 'UZ', cameroon: 'CM', chad: 'TD',
+        germany: 'DE', lithuania: 'LT', croatia: 'HR', sweden: 'SE',
+        iraq: 'IQ', netherlands: 'NL', latvia: 'LV', austria: 'AT',
+        belarus: 'BY', thailand: 'TH', saudiarabia: 'SA', mexico: 'MX',
+        taiwan: 'TW', spain: 'ES', iran: 'IR', algeria: 'DZ', slovenia: 'SI',
+        bangladesh: 'BD', senegal: 'SN', turkey: 'TR', czech: 'CZ',
+        srilanka: 'LK', peru: 'PE', pakistan: 'PK', newzealand: 'NZ',
+        brazil: 'BR', afghanistan: 'AF', uganda: 'UG', angola: 'AO',
+        cyprus: 'CY', france: 'FR', belgium: 'BE', bulgaria: 'BG',
+        hungary: 'HU', moldova: 'MD', italy: 'IT', paraguay: 'PY',
+        tunisia: 'TN', uae: 'AE', zimbabwe: 'ZW', kuwait: 'KW',
+        portugal: 'PT', denmark: 'DK', singapore: 'SG', qatar: 'QA',
+        greece: 'GR', jordan: 'JO', georgia: 'GE', armenia: 'AM',
+        finland: 'FI', norway: 'NO', australia: 'AU', japan: 'JP',
+        korea: 'KR', southkorea: 'KR', chile: 'CL', ecuador: 'EC'
+    };
+
+    const code = (isoMap[key] || key.slice(0, 2)).toUpperCase();
+    if (code.length === 2 && /^[A-Z]{2}$/.test(code)) {
+        const codePoints = [...code].map(c => 127397 + c.charCodeAt(0));
+        try {
+            return String.fromCodePoint(...codePoints);
+        } catch (_) {}
+    }
+    return '🌍';
+}
+
+/* ══════════════════════════════════════════
+   1. DEDICATED COUNTRY CARDS & SEARCH
+══════════════════════════════════════════ */
+function renderCountryCards(countries) {
+    const grid = document.getElementById('countryCardsGrid');
+    if (!grid) return;
+
+    if (!countries || countries.length === 0) {
+        grid.innerHTML = `
+        <div class="state-box" style="grid-column:1/-1;">
+            <i class="ph ph-magnifying-glass"></i>
+            <p>No countries match your search.</p>
+            <span style="font-size:12px;color:var(--muted);">Try typing another country name or dialing code.</span>
+        </div>`;
+        return;
+    }
+
+    grid.innerHTML = countries.map(c => {
+        const flag = getCountryFlagEmoji(c.key);
+        const prefixStr = c.prefix ? escapeHTML(c.prefix) : 'Global';
+        const isSelected = selectedCountry === c.key;
+
+        return `
+        <div class="country-card${isSelected ? ' is-selected' : ''}" data-country-key="${escapeHTML(c.key)}">
+            <div class="country-card-header">
+                <div class="country-flag-box" title="${escapeHTML(c.name)}">${flag}</div>
+                <span class="country-dial-badge">${prefixStr}</span>
+            </div>
+            <div class="country-card-name" title="${escapeHTML(c.name)}">${escapeHTML(c.name)}</div>
+            <div class="country-card-meta">${isSelected ? '✓ Currently Selected' : 'Instant OTP Delivery'}</div>
+            <button type="button" class="btn-select-country" data-country-key="${escapeHTML(c.key)}">
+                <span>${isSelected ? 'Selected' : 'Select Country'}</span>
+                <i class="ph ph-arrow-right"></i>
+            </button>
+        </div>`;
+    }).join('');
+}
+
+function handleCountrySearch() {
+    const input = document.getElementById('countrySearchInput');
+    const clearBtn = document.getElementById('countrySearchClearBtn');
+    const countEl = document.getElementById('countrySearchCount');
+    const query = (input?.value || '').trim().toLowerCase();
+
+    if (clearBtn) {
+        clearBtn.style.display = query ? 'flex' : 'none';
+    }
+
+    if (!query) {
+        if (countEl) countEl.textContent = `Showing all ${allCountriesData.length} countries`;
+        renderCountryCards(allCountriesData);
+        return;
+    }
+
+    const cleanQ = query.replace(/^\+/, '');
+    const filtered = allCountriesData.filter(c => {
+        const nameMatch = c.name.toLowerCase().includes(query);
+        const keyMatch  = c.key.toLowerCase().includes(query);
+        const prefixMatch = c.prefix && (
+            c.prefix.toLowerCase().includes(query) ||
+            c.prefix.replace('+', '').includes(cleanQ)
+        );
+        return nameMatch || keyMatch || prefixMatch;
+    });
+
+    if (countEl) {
+        countEl.textContent = `${filtered.length} countr${filtered.length === 1 ? 'y' : 'ies'} found for "${escapeHTML(query)}"`;
+    }
+
+    renderCountryCards(filtered);
+}
+
+/* ══════════════════════════════════════════
+   2. DEDICATED PRODUCT SEARCH & TAB SWITCH
+══════════════════════════════════════════ */
+function handleProductSearch() {
+    const input = document.getElementById('productSearchInput');
+    const clearBtn = document.getElementById('productSearchClearBtn');
+    const query = (input?.value || '').trim().toLowerCase();
+
+    if (clearBtn) {
+        clearBtn.style.display = query ? 'flex' : 'none';
+    }
+
+    // Keep hidden input in sync for compatibility
+    const legacyInput = document.getElementById('searchInput');
+    if (legacyInput) legacyInput.value = input?.value || '';
+
+    if (allProducts && allProducts.length > 0) {
+        renderProductCards(allProducts);
+    }
+}
+
+function switchBuyTab(tab) {
+    const countriesSec  = document.getElementById('countriesSection');
+    const productsSec   = document.getElementById('productsSection');
+    const tabCountries  = document.getElementById('tabCountriesBtn');
+    const tabProducts   = document.getElementById('tabProductsBtn');
+    const sideCountries = document.getElementById('sidebarCountriesLink');
+    const sideProducts  = document.getElementById('sidebarProductsLink');
+
+    if (tab === 'countries') {
+        if (countriesSec) countriesSec.style.display = 'block';
+        if (productsSec)  productsSec.style.display  = 'none';
+        if (tabCountries) tabCountries.classList.add('active');
+        if (tabProducts)  tabProducts.classList.remove('active');
+        if (sideCountries) sideCountries.classList.add('active');
+        if (sideProducts)  sideProducts.classList.remove('active');
+
+        // Focus search if user switched to countries
+        const cSearch = document.getElementById('countrySearchInput');
+        if (cSearch && !cSearch.value) {
+            setTimeout(() => cSearch.focus(), 80);
+        }
+    } else {
+        if (countriesSec) countriesSec.style.display = 'none';
+        if (productsSec)  productsSec.style.display  = 'block';
+        if (tabProducts)  tabProducts.classList.add('active');
+        if (tabCountries) tabCountries.classList.remove('active');
+        if (sideProducts)  sideProducts.classList.add('active');
+        if (sideCountries) sideCountries.classList.remove('active');
+
+        // If no country is selected, prompt user
+        if (!selectedCountry) {
+            showSelectCountryPrompt();
+        } else if (allProducts && allProducts.length > 0) {
+            renderProductCards(allProducts);
+        }
+    }
+
+    // Update URL param without page reload
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        window.history.replaceState({}, '', url.toString());
+    } catch (_) {}
+}
+window.switchBuyTab = switchBuyTab;
 
 function onCountryChange() {
     const select = document.getElementById('countryFilter');
@@ -264,7 +485,172 @@ function onCountryChange() {
         return;
     }
 
-    loadProducts(selectedCountry);
+    selectCountry(selectedCountry);
+}
+
+/* ══════════════════════════════════════════
+   3. REAL SERVICE BRAND ICONS
+══════════════════════════════════════════ */
+function getServiceBrandIcon(key, name) {
+    const raw = ((key || '') + ' ' + (name || '')).toLowerCase();
+
+    // 1. WhatsApp
+    if (raw.includes('whatsapp') || raw === 'wa') {
+        return {
+            className: 'brand-whatsapp',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.82 11.82 0 00-3.48-8.413Z"/></svg>`
+        };
+    }
+
+    // 2. Telegram
+    if (raw.includes('telegram') || raw === 'tg') {
+        return {
+            className: 'brand-telegram',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.197 1.006.128.832.946z"/></svg>`
+        };
+    }
+
+    // 3. Instagram
+    if (raw.includes('instagram') || raw === 'ig') {
+        return {
+            className: 'brand-instagram',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>`
+        };
+    }
+
+    // 4. Facebook
+    if (raw.includes('facebook') || raw === 'fb') {
+        return {
+            className: 'brand-facebook',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`
+        };
+    }
+
+    // 5. TikTok
+    if (raw.includes('tiktok')) {
+        return {
+            className: 'brand-tiktok',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.24 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>`
+        };
+    }
+
+    // 6. Google / Gmail / YouTube
+    if (raw.includes('google') || raw.includes('gmail') || raw === 'go') {
+        return {
+            className: 'brand-google',
+            svg: `<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.27-2.09 3.665-5.17 3.665-9.12z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.27v3.13C3.25 21.3 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.57H1.27C.46 8.2 0 10.05 0 12s.46 3.8 1.27 5.43l4.01-3.14z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.25 2.7 1.27 6.57l4.01 3.14c.95-2.83 3.6-4.96 6.72-4.96z"/></svg>`
+        };
+    }
+
+    // 7. Signal
+    if (raw.includes('signal')) {
+        return {
+            className: 'brand-signal',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2.086 21.08a.75.75 0 00.94.94l3.912-1.352A9.96 9.96 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 1.5c4.694 0 8.5 3.806 8.5 8.5s-3.806 8.5-8.5 8.5a8.47 8.47 0 01-4.148-1.08.75.75 0 00-.535-.078l-3.082 1.065 1.065-3.082a.75.75 0 00-.078-.535A8.47 8.47 0 013.5 12c0-4.694 3.806-8.5 8.5-8.5zm-3.25 7a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5zm3.25 0a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5zm3.25 0a1.25 1.25 0 100 2.5 1.25 1.25 0 000-2.5z"/></svg>`
+        };
+    }
+
+    // 8. Twitter / X
+    if (raw.includes('twitter') || raw === 'x' || raw.includes('tweet')) {
+        return {
+            className: 'brand-twitter',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`
+        };
+    }
+
+    // 9. Discord
+    if (raw.includes('discord')) {
+        return {
+            className: 'brand-discord',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.894.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>`
+        };
+    }
+
+    // 10. Snapchat
+    if (raw.includes('snapchat') || raw === 'snap') {
+        return {
+            className: 'brand-snapchat',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.206.75c-4.457 0-7.397 3.197-7.397 6.822 0 1.55.617 3.327 1.488 4.417.207.26.23.454.09.73-.178.353-.695.733-1.378 1.037-.417.185-.758.374-.758.625 0 .428.618.736 1.637.893.284.044.479.167.57.36.14.298-.057.876-.893 1.633-.944.854-1.288 1.572-1.288 2.122 0 .807.728 1.42 2.378 1.42.535 0 1.134-.067 1.838-.21.436-.09.77-.024 1.01.211.58.572 1.492 1.44 2.703 1.44 1.216 0 2.13-.873 2.71-1.445.24-.236.574-.3 1.012-.211.7.143 1.3.21 1.834.21 1.65 0 2.377-.613 2.377-1.42 0-.55-.343-1.268-1.287-2.122-.836-.757-1.033-1.335-.893-1.633.09-.193.285-.316.57-.36 1.018-.157 1.636-.465 1.636-.893 0-.251-.34-.44-.758-.625-.683-.304-1.2-.684-1.378-1.037-.14-.276-.117-.47.09-.73.871-1.09 1.488-2.867 1.488-4.417 0-3.625-2.94-6.822-7.398-6.822z"/></svg>`
+        };
+    }
+
+    // 11. Netflix
+    if (raw.includes('netflix')) {
+        return {
+            className: 'brand-netflix',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5.398 0v24c1.17-.469 2.338-.937 3.51-1.406V0zm11.704 0v24c-1.17-.469-2.338-.937-3.51-1.406V0zM8.908 0l6.194 22.594c-.958-.383-1.916-.767-2.875-1.15L8.908 5.766z"/></svg>`
+        };
+    }
+
+    // 12. Spotify
+    if (raw.includes('spotify')) {
+        return {
+            className: 'brand-spotify',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>`
+        };
+    }
+
+    // 13. Amazon
+    if (raw.includes('amazon')) {
+        return {
+            className: 'brand-amazon',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.918 18.064c-3.774 2.766-8.794 4.22-13.628 1.488-.344-.195-.038-.57.34-.418 4.49 1.83 9.424.93 13.064-1.42.414-.268.69.183.224.35m1.34-1.205c-.244-.316-1.597-.15-2.21-.077-.184.022-.213-.134-.047-.253 1.077-.775 2.847-.552 3.056-.289.21.263-.056 2.05-1.08 2.894-.158.13-.308.06-.237-.11.233-.56.762-1.848.518-2.165M23.076 10.975c-.328-.423-.846-.665-1.517-.704-1.018-.06-2.13.355-3.085 1.134v-1.04H16.03v10.02h2.444v-5.263c.69-.536 1.353-.8 1.94-.766.452.025.753.22 1.02.668.27.447.377 1.132.377 2.127v3.234h2.443v-3.743c0-1.47-.23-2.617-.687-3.376-.456-.76-1.127-1.144-1.99-1.15-1.03-.008-2.02.463-2.903 1.385l.088-.415h-2.444v.93c.96-.867 2.056-1.328 3.23-1.328.665 0 1.25.137 1.72.4.47.263.81.65 1.002 1.14.37-.478.85-.85 1.405-1.096.556-.247 1.18-.37 1.83-.36 1.15.018 2.05.378 2.65 1.054.6.677.89 1.64.89 2.834v5.867H26.37v-6.23c0-.986-.145-1.745-.436-2.235-.29-.49-.75-.74-1.36-.74-.75 0-1.45.334-2.04.98-.59.645-.9 1.494-.9 2.5v5.715h-2.44V10.975z"/></svg>`
+        };
+    }
+
+    // 14. Apple
+    if (raw.includes('apple')) {
+        return {
+            className: 'brand-apple',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.4c.64-.78 1.08-1.86.96-2.95-1 .04-2.14.67-2.81 1.45-.59.68-1.1 1.78-.96 2.84 1.12.09 2.19-.57 2.81-1.34z"/></svg>`
+        };
+    }
+
+    // 15. Microsoft
+    if (raw.includes('microsoft') || raw.includes('ms')) {
+        return {
+            className: 'brand-microsoft',
+            svg: `<svg viewBox="0 0 24 24"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#00a4ef" d="M1 13h10v10H1z"/><path fill="#7fba00" d="M13 1h10v10H13z"/><path fill="#ffb900" d="M13 13h10v10H13z"/></svg>`
+        };
+    }
+
+    // 16. LinkedIn
+    if (raw.includes('linkedin')) {
+        return {
+            className: 'brand-linkedin',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>`
+        };
+    }
+
+    // 17. Tinder
+    if (raw.includes('tinder')) {
+        return {
+            className: 'brand-tinder',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.827 2.046c-.328.618-.466 1.424-.466 2.197 0 2.222 1.666 4.04 3.864 4.04 1.34 0 2.502-.638 3.23-1.636.326.96.486 2.02.486 3.14 0 5.405-4.444 9.787-9.92 9.787C4.545 19.574.1 15.192.1 9.787c0-2.883 1.258-5.467 3.252-7.24.478 1.442 1.543 2.656 2.94 3.32-.475-1.554-.378-3.388.358-4.996C8.807.135 11.233.02 12.827 2.046z"/></svg>`
+        };
+    }
+
+    // 18. OpenAI / ChatGPT
+    if (raw.includes('openai') || raw.includes('chatgpt')) {
+        return {
+            className: 'brand-openai',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 00-.516-4.91 6.046 6.046 0 00-6.51-2.9A6.065 6.065 0 004.981 4.18a5.985 5.985 0 00-3.998 2.9 6.046 6.046 0 00.743 7.097 5.98 5.98 0 00.51 4.911 6.051 6.051 0 006.515 2.9A5.985 5.985 0 0013.26 24a6.056 6.056 0 005.771-4.205 5.99 5.99 0 003.997-2.9 6.056 6.056 0 00-.746-7.074zm-9.022 12.608a4.475 4.475 0 01-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 00.392-.681v-6.737l2.02 1.168a.071.071 0 01.038.052v5.583a4.504 4.504 0 01-4.494 4.494zM3.6 18.304a4.47 4.47 0 01-.535-3.014l.142.085 4.783 2.759a.771.771 0 00.78 0l5.843-3.369v2.332a.08.08 0 01-.033.062L9.74 19.95a4.5 4.5 0 01-6.14-1.646zm-1.57-9.3a4.485 4.485 0 012.342-1.974v5.679a.792.792 0 00.39.682l5.844 3.37-2.02 1.168a.076.076 0 01-.071 0l-4.83-2.786A4.504 4.504 0 012.03 9.004zm15.656 3.125l-5.844-3.37 2.02-1.168a.076.076 0 01.071 0l4.83 2.791a4.494 4.494 0 01-.674 8.105v-5.676a.79.79 0 00-.403-.682zm2.715-3.023l-.142-.086-4.782-2.758a.775.775 0 00-.781 0l-5.843 3.369V7.3a.08.08 0 01.033-.062L14.26 4.05a4.5 4.5 0 016.14 1.646 4.473 4.473 0 01.536 3.014zM8.33 13.5l2.457-1.417 2.457 1.419v2.834l-2.457 1.417-2.457-1.417V13.5z"/></svg>`
+        };
+    }
+
+    // 19. PayPal
+    if (raw.includes('paypal')) {
+        return {
+            className: 'brand-paypal',
+            svg: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.82.876 4.965-.03.14-.07.29-.115.44-.73 3.68-3.18 5.75-6.666 5.75H9.684l-1.39 7.02c-.062.39-.398.67-.79.67z"/></svg>`
+        };
+    }
+
+    // Default professional device/SMS verification icon
+    return {
+        className: 'brand-default',
+        svg: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`
+    };
 }
 
 /* ══════════════════════════════════════════
@@ -379,7 +765,9 @@ async function loadProducts(country) {
 
 function renderProductCards(products) {
     const cardsGrid     = document.getElementById('cardsGrid');
-    const searchInput   = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const pSearchInput  = document.getElementById('productSearchInput')?.value.toLowerCase() || '';
+    const legacySearch  = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const searchInput   = pSearchInput || legacySearch;
     const serviceFilter = document.getElementById('serviceFilter')?.value || '';
     const typeFilter    = document.getElementById('typeFilter')?.value || '';
     const resultCount   = document.getElementById('resultCount');
@@ -407,16 +795,19 @@ function renderProductCards(products) {
         const priceStr     = symbol + displayPrice.toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const isSelected   = selectedProduct === p.key;
         const safeKey      = escapeHTML(p.key);
+        const iconData     = getServiceBrandIcon(p.key, p.name);
 
         return `
         <div class="card${isSelected ? ' selected' : ''}" style="position:relative;cursor:pointer;" data-product-key="${safeKey}">
-            <div class="card-icon-badge"><i class="ph ph-sim-card"></i></div>
-            <div class="card-title" style="font-weight:800;font-size:15px;color:var(--text);">${escapeHTML(p.name)}</div>
+            <div class="service-icon-badge ${iconData.className}">
+                ${iconData.svg}
+            </div>
+            <div class="card-title" style="font-weight:800;font-size:15px;color:var(--text);text-align:center;">${escapeHTML(p.name)}</div>
             <div class="card-meta">
-                <span style="font-size:12px;color:var(--muted);">${p.qty > 0 ? p.qty.toLocaleString() + ' available' : 'In stock'}</span>
+                <span style="font-size:12px;color:var(--muted);">${p.qty > 0 ? p.qty.toLocaleString() + ' in stock' : 'In stock'}</span>
                 <span class="card-service-badge">${escapeHTML(p.category)}</span>
             </div>
-            <div class="card-price">${priceStr}</div>
+            <div class="card-price" style="text-align:center;">${priceStr}</div>
             <button
                 type="button"
                 class="btn btn-buy"
@@ -435,12 +826,38 @@ function selectProduct(key) {
 
 async function selectCountry(countryKey, targetProductKey = null) {
     if (!countryKey) return;
+    selectedCountry = countryKey;
+    selectedProduct = targetProductKey || '';
+
+    // Update select dropdown for compatibility
     const countrySelect = document.getElementById('countryFilter');
     if (countrySelect) {
         countrySelect.value = countryKey;
     }
-    selectedCountry = countryKey;
-    selectedProduct = targetProductKey || '';
+
+    // Find country details
+    const countryObj = allCountriesData.find(c => c.key === countryKey);
+    const countryName = countryObj ? countryObj.name : countryKey.toUpperCase();
+    const countryPrefix = countryObj?.prefix ? ` (${countryObj.prefix})` : '';
+    const flag = getCountryFlagEmoji(countryKey);
+
+    // Update Active Country banner
+    const acFlag = document.getElementById('activeCountryFlag');
+    const acTitle = document.getElementById('activeCountryTitle');
+    const acPill = document.getElementById('activeCountryPill');
+
+    if (acFlag)  acFlag.textContent  = flag;
+    if (acTitle) acTitle.textContent = `${countryName}${countryPrefix}`;
+    if (acPill) {
+        acPill.textContent = `${countryName}`;
+        acPill.classList.add('selected');
+    }
+
+    // Re-render country cards so selected badge shows
+    renderCountryCards(allCountriesData);
+
+    // Automatically switch to Products tab
+    switchBuyTab('products');
 
     // If cached, load immediately, else fetch from API
     if (productsByCountryCache.has(countryKey)) {
@@ -460,6 +877,7 @@ async function selectCountry(countryKey, targetProductKey = null) {
         }
     }
 }
+window.selectCountry = selectCountry;
 
 function handleSearchInput() {
     const input = document.getElementById('searchInput');
@@ -1712,12 +2130,18 @@ function showSelectCountryPrompt() {
     const cardsGrid = document.getElementById('cardsGrid');
     if (!cardsGrid) return;
     cardsGrid.innerHTML = `
-        <div class="state-box" style="grid-column:1/-1;">
-            <i class="ph ph-globe"></i>
-            <p>Select a country above to see available numbers.</p>
+        <div class="state-box" style="grid-column:1/-1;padding:48px 24px;text-align:center;">
+            <div style="width:64px;height:64px;border-radius:50%;background:rgba(124,58,237,0.1);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;color:var(--primary);font-size:32px;">
+                <i class="ph ph-globe"></i>
+            </div>
+            <h3 style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;">Choose a Country</h3>
+            <p style="color:var(--muted);max-width:380px;margin:0 auto 18px;font-size:14px;line-height:1.5;">Select a country first to view available phone numbers and activation services.</p>
+            <button type="button" class="btn btn-primary" onclick="switchBuyTab('countries')" style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:12px;font-weight:700;">
+                <i class="ph ph-magnifying-glass"></i> Browse Countries
+            </button>
         </div>`;
     const resultCount = document.getElementById('resultCount');
-    if (resultCount) resultCount.textContent = '';
+    if (resultCount) resultCount.textContent = 'Select a country to view products';
     allProducts = [];
 }
 
@@ -1744,6 +2168,56 @@ function showErrorState(grid, msg) {
    when loadCountries() runs more than once (initial load, retry-click).
 ══════════════════════════════════════════ */
 function attachEventListeners() {
+    // Top Tabs: Countries vs Products
+    const tabCountriesBtn = document.getElementById('tabCountriesBtn');
+    const tabProductsBtn  = document.getElementById('tabProductsBtn');
+    if (tabCountriesBtn) tabCountriesBtn.addEventListener('click', () => switchBuyTab('countries'));
+    if (tabProductsBtn)  tabProductsBtn.addEventListener('click',  () => switchBuyTab('products'));
+
+    // Dedicated Country Search
+    const countrySearchInput = document.getElementById('countrySearchInput');
+    const countryClearBtn    = document.getElementById('countrySearchClearBtn');
+    if (countrySearchInput) {
+        countrySearchInput.addEventListener('input', handleCountrySearch);
+    }
+    if (countryClearBtn) {
+        countryClearBtn.addEventListener('click', () => {
+            if (countrySearchInput) {
+                countrySearchInput.value = '';
+                handleCountrySearch();
+                countrySearchInput.focus();
+            }
+        });
+    }
+
+    // Dedicated Country Cards Grid Click Delegation
+    const countryCardsGrid = document.getElementById('countryCardsGrid');
+    if (countryCardsGrid) {
+        countryCardsGrid.addEventListener('click', (e) => {
+            const card = e.target.closest('[data-country-key]');
+            if (card) {
+                const cKey = card.dataset.countryKey;
+                if (cKey) selectCountry(cKey);
+            }
+        });
+    }
+
+    // Dedicated Product Search
+    const productSearchInput = document.getElementById('productSearchInput');
+    const productClearBtn    = document.getElementById('productSearchClearBtn');
+    if (productSearchInput) {
+        productSearchInput.addEventListener('input', handleProductSearch);
+    }
+    if (productClearBtn) {
+        productClearBtn.addEventListener('click', () => {
+            if (productSearchInput) {
+                productSearchInput.value = '';
+                handleProductSearch();
+                productSearchInput.focus();
+            }
+        });
+    }
+
     const currencySwitch = document.getElementById('currencySwitch');
     if (currencySwitch) currencySwitch.addEventListener('click', toggleBuyCurrency);
 

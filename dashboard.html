@@ -89,17 +89,20 @@
       <a href="dashboard.html" class="active">
         <span><i class="ph ph-squares-four"></i> Dashboard</span>
       </a>
-      <a href="#" id="sidebarWalletBtn">
+      <a href="#" id="sidebarWalletBtn" onclick="document.getElementById('walletOverviewSection')?.scrollIntoView({behavior:'smooth'}); return false;">
         <span><i class="ph ph-wallet"></i> Wallet</span>
+      </a>
+      <a href="buy.html?tab=countries">
+        <span><i class="ph ph-globe"></i> Countries</span>
+      </a>
+      <a href="buy.html?tab=products">
+        <span><i class="ph ph-sim-card"></i> Buy Number</span>
       </a>
       <a href="#recentActivity" id="sidebarActivityBtn">
         <span><i class="ph ph-clock-counter-clockwise"></i> Activity</span>
       </a>
       <a href="#" id="sidebarSettingsBtn">
         <span><i class="ph ph-gear"></i> Settings</span>
-      </a>
-      <a href="buy.html">
-        <span><i class="ph ph-sim-card"></i> Buy Number</span>
       </a>
     </div>
 
@@ -119,40 +122,103 @@
         <p>Manage your wallet and account activities.</p>
     </div>
 
-    <!-- Wallet Section -->
-    <section class="wallet-section" style="margin-bottom: 28px;">
-      <!-- Balance Card -->
-      <div class="activities-card wallet-card" style="max-width: 700px; padding: 32px;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
-            <div style="display:flex; align-items:center; gap: 8px;">
-                <i class="ph ph-wallet" style="font-size: 18px; opacity: 0.9;"></i>
-                <span style="font-size: 13px; font-weight: 700; opacity: 0.9; letter-spacing: 0.5px;">WALLET BALANCE</span>
-            </div>
-            <button onclick="loadWalletBalance(); loadTransactions(1);" title="Refresh Balance" style="background:none; border:none; color:#fff; cursor:pointer; opacity: 0.9; font-size:16px;">
-                <i class="ph ph-arrows-clockwise"></i>
-            </button>
+    <!-- Wallet Overview Section -->
+    <section class="wallet-overview-section" id="walletOverviewSection">
+      <div class="wallet-overview-header">
+        <div class="wallet-overview-title-wrap">
+          <div class="wallet-title-icon-box">
+            <i class="ph ph-wallet"></i>
+          </div>
+          <div>
+            <h2 class="wallet-overview-title">Wallet Overview</h2>
+            <p class="wallet-overview-sub">Available balance, multi-currency accounts, and instant funding</p>
+          </div>
         </div>
-        <div id="displayBalanceNGN" style="font-size: 38px; font-weight: 800; margin-bottom: 4px;">₦100.00</div>
-        <div id="displayBalanceUSD" style="font-size: 15px; opacity: 0.85; margin-bottom: 24px;">NGN Account</div>
-        <div style="display:flex; gap: 12px;">
-            <button class="btn-wallet-outline" id="openPopup" style="flex: 1; padding: 12px; border-radius: 50px; background: transparent; border: 1.5px solid rgba(255,255,255,0.4); color: #fff; font-weight: 700; font-size: 14px; cursor: pointer;">
-                View Details &rarr;
+        <div class="wallet-overview-actions">
+          <button type="button" class="btn-wallet-action outline" onclick="loadWalletBalance(); loadTransactions(1);" title="Refresh Wallet Balances">
+            <i class="ph ph-arrows-clockwise"></i> <span>Refresh</span>
+          </button>
+          <button type="button" class="btn-wallet-action primary" onclick="openDepositModal()">
+            <i class="ph ph-plus"></i> <span>Add Funds</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Balanced 3-Card Grid -->
+      <div class="wallet-grid">
+        <!-- Card 1: Available Balance (Hero) -->
+        <div class="wallet-card-hero">
+          <div class="whero-top">
+            <div class="whero-label">
+              <i class="ph ph-wallet"></i>
+              <span>Available Balance</span>
+            </div>
+            <span class="whero-pill" id="activeCurrencyTag">Active: NGN</span>
+          </div>
+          <div class="whero-amount" id="displayBalanceNGN">₦0.00</div>
+          <div class="whero-sub" id="displayBalanceUSD">NGN Account · Approx: $0.00</div>
+          <div class="whero-buttons">
+            <button type="button" class="btn-hero-solid" id="addFundsBtn" onclick="openDepositModal()">
+              <i class="ph ph-plus-circle"></i> Add Funds
             </button>
-            <button class="btn-wallet-solid" id="addFundsBtn" style="flex: 1; padding: 12px; border-radius: 50px; background: #fff; border: none; color: #6D28D9; font-weight: 700; font-size: 14px; cursor: pointer;">
-                <i class="ph ph-plus"></i> Add Funds
+            <button type="button" class="btn-hero-outline" id="openPopup">
+              <i class="ph ph-list-bullets"></i> View Details
             </button>
+          </div>
+        </div>
+
+        <!-- Card 2: NGN Balance -->
+        <div class="wallet-stat-card">
+          <div class="wstat-top">
+            <div class="wstat-label">
+              <span class="wstat-flag">🇳🇬</span>
+              <span>NGN Balance</span>
+            </div>
+            <span class="wstat-badge badge-settlement">Settlement</span>
+          </div>
+          <div class="wstat-amount" id="cardBalanceNGN">₦0.00</div>
+          <div class="wstat-sub">Primary local settlement account balance for all services & orders</div>
+          <div class="wstat-actions">
+            <button type="button" class="btn-wstat-link" onclick="openDepositModal()">
+              <i class="ph ph-credit-card"></i> Deposit NGN
+            </button>
+            <button type="button" class="btn-wstat-link" onclick="openPopup()">
+              <i class="ph ph-bank"></i> Virtual Bank
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 3: USD Balance -->
+        <div class="wallet-stat-card">
+          <div class="wstat-top">
+            <div class="wstat-label">
+              <span class="wstat-flag">🇺🇸</span>
+              <span>USD Balance</span>
+            </div>
+            <span class="wstat-badge badge-usd">Converted</span>
+          </div>
+          <div class="wstat-amount" id="cardBalanceUSD">$0.00</div>
+          <div class="wstat-sub" id="cardExchangeRateLabel">Exchange Rate: ₦1,500 = $1.00 USD</div>
+          <div class="wstat-actions">
+            <button type="button" class="btn-wstat-link" onclick="toggleCurrency()">
+              <i class="ph ph-arrows-left-right"></i> Switch View
+            </button>
+            <a href="#recentActivity" class="btn-wstat-link">
+              <i class="ph ph-clock-counter-clockwise"></i> Activity
+            </a>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Referral Section -->
     <section class="referral-section" style="margin-bottom: 32px;">
-      <div class="activities-card referral-card" style="max-width: 700px; padding: 32px;">
+      <div class="activities-card referral-card" style="max-width: 100%; padding: 28px 30px;">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
             <div>
                 <i class="ph ph-user-plus" style="color:#fff; font-size: 20px; margin-bottom:8px;"></i>
                 <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px; color: #fff;">Referral and Rewards</h3>
-                <p style="font-size: 12px; color: rgba(255,255,255,0.8); max-width: 200px; margin:0;">Share your link and earn exciting rewards.</p>
+                <p style="font-size: 12px; color: rgba(255,255,255,0.8); max-width: 320px; margin:0;">Share your link and earn exciting rewards on every transaction.</p>
             </div>
             <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255, 255, 255, 0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                 <i class="ph ph-gift" style="font-size: 22px; color: #fff;"></i>
@@ -167,10 +233,10 @@
         </div>
         <div style="display:flex; align-items:center; justify-content:space-between; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 12px 16px;">
             <div style="display:flex; align-items:center; gap: 8px;">
-                <span id="displayReferralCode" style="font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; display: inline-block;">REF-DAVIDKIELLY</span>
+                <span id="displayReferralCode" style="font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; display: inline-block;">REF-DAVIDKIELLY</span>
                 <i class="ph ph-copy" id="btnCopyReferral" style="cursor:pointer; color:rgba(255,255,255,0.8);"></i>
             </div>
-            <div style="background: rgba(255,255,255,0.2); width: 30px; height: 30px; border-radius: 50%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+            <div style="background: rgba(255,255,255,0.2); width: 30px; height: 30px; border-radius: 50%; display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="navigator.clipboard.writeText(document.getElementById('displayReferralCode')?.textContent||''); showToast('Referral link copied!','success');">
                 <i class="ph ph-arrow-right" style="color: #fff; font-size: 12px;"></i>
             </div>
         </div>
@@ -179,15 +245,15 @@
       
 <section class="plan">
     <div class="jacket">
-        <div class="action-card" data-action="buy-number" onclick="window.location.href='buy.html'">
+        <div class="action-card" data-action="buy-number" onclick="window.location.href='buy.html?tab=products'">
             <i class="ph ph-sim-card action-icon"></i>
-            <span>Buy Number</span>
+            <span>Products & Numbers</span>
         </div>
-        <div class="action-card" data-action="sms-inbox" onclick="window.location.href='buy.html'">
+        <div class="action-card" data-action="sms-inbox" onclick="window.location.href='buy.html?tab=products'">
             <i class="ph ph-chat-circle-dots action-icon"></i>
             <span>Receive SMS</span>
         </div>
-        <div class="action-card" data-action="countries" onclick="window.location.href='buy.html'">
+        <div class="action-card" data-action="countries" onclick="window.location.href='buy.html?tab=countries'">
             <i class="ph ph-globe action-icon"></i>
             <span>Countries</span>
         </div>
@@ -236,23 +302,40 @@
       <div class="panel">
 
         <div class="panel-header">
-          Wallet Overview
+          <div style="display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;">
+            <i class="ph ph-wallet" style="color:var(--primary);font-size:20px;"></i>
+            <span>Wallet Overview</span>
+          </div>
           <button class="panel-close" id="closePopup">
             <i class="ph ph-x"></i>
           </button>
         </div>
 
-        <div class="balance-row">
+        <div class="balance-row" style="background:var(--border-light);border-radius:14px;margin:16px 20px;padding:16px 18px;border:1px solid var(--border);">
           <div class="balance-left">
-            <i class="ph ph-wallet" style="font-size: 1.5em; vertical-align: middle;"></i>
+            <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--primary),#9333ea);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">
+              <i class="ph ph-wallet"></i>
+            </div>
             <div>
-              <div class="stat-label">Current Balance</div>
-              <div class="balance-amount" id="popupBalanceAmount">$0.00</div>
+              <div class="stat-label">Active Wallet Balance</div>
+              <div class="balance-amount" id="popupBalanceAmount">₦0.00</div>
             </div>
           </div>
-          <button class="btn-add" id="popupAddFundsBtn">
+          <button class="btn-add" id="popupAddFundsBtn" onclick="openDepositModal()" title="Add Funds">
             <i class="ph ph-plus"></i>
           </button>
+        </div>
+
+        <!-- Dual Currency Overview -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px 14px;">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">🇳🇬 NGN Balance</div>
+            <div style="font-size:18px;font-weight:800;color:var(--text);" id="popupBalanceNGN">₦0.00</div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;">🇺🇸 USD Balance</div>
+            <div style="font-size:18px;font-weight:800;color:var(--text);" id="popupBalanceUSD">$0.00</div>
+          </div>
         </div>
 
         <div class="stat-row">

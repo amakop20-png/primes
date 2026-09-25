@@ -255,6 +255,14 @@ function renderBalanceCards(rawBalance, currency) {
     const balSecondaryEl = document.getElementById('displayBalanceUSD');
     const popBalEl       = document.getElementById('popupBalanceAmount');
 
+    // Enhanced Wallet Overview elements
+    const cardNgnEl       = document.getElementById('cardBalanceNGN');
+    const cardUsdEl       = document.getElementById('cardBalanceUSD');
+    const popNgnEl        = document.getElementById('popupBalanceNGN');
+    const popUsdEl        = document.getElementById('popupBalanceUSD');
+    const curTagEl        = document.getElementById('activeCurrencyTag');
+    const rateLabelEl     = document.getElementById('cardExchangeRateLabel');
+
     if (isUSD) {
         if (balPrimaryEl)   balPrimaryEl.textContent   = formattedUSD;
         if (balSecondaryEl) balSecondaryEl.textContent = `USD Equivalent · (₦${rate.toLocaleString()} = $1.00)`;
@@ -264,6 +272,13 @@ function renderBalanceCards(rawBalance, currency) {
         if (balSecondaryEl) balSecondaryEl.textContent = `NGN Account · Approx: ${formattedUSD}`;
         if (popBalEl)       popBalEl.textContent       = formattedNGN;
     }
+
+    if (cardNgnEl)    cardNgnEl.textContent    = formattedNGN;
+    if (cardUsdEl)    cardUsdEl.textContent    = formattedUSD;
+    if (popNgnEl)     popNgnEl.textContent     = formattedNGN;
+    if (popUsdEl)     popUsdEl.textContent     = formattedUSD;
+    if (curTagEl)     curTagEl.textContent     = `Active: ${isUSD ? 'USD ($)' : 'NGN (₦)'}`;
+    if (rateLabelEl)  rateLabelEl.textContent  = `Exchange Rate: ₦${rate.toLocaleString()} = $1.00 USD`;
 
     // Persist per-currency balance
     localStorage.setItem('_walletBalance_USD', String(usdAmount));
