@@ -14,7 +14,102 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=2.5">
+  <link rel="stylesheet" href="styles.css?v=2.6">
+
+  <!-- Embedded Virtual Numbers Cards Styling for Zero Cache Latency -->
+  <style>
+    .vnum-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    @media (max-width: 900px) {
+      .vnum-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+    }
+    @media (max-width: 580px) {
+      .vnum-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+    }
+    .vnum-card {
+      background: var(--surface, #ffffff);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 18px;
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 148px;
+      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      box-sizing: border-box;
+    }
+    .vnum-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary, #7c3aed);
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.09);
+    }
+    .vnum-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .vnum-card-label {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--muted, #64748b);
+      text-transform: capitalize;
+      letter-spacing: 0.2px;
+    }
+    .vnum-card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .vnum-card-icon.active {
+      background: rgba(16, 185, 129, 0.12);
+      color: #10b981;
+    }
+    .vnum-card-icon.total {
+      background: rgba(124, 58, 237, 0.12);
+      color: var(--primary, #7c3aed);
+    }
+    .vnum-card-icon.available {
+      background: rgba(59, 130, 246, 0.12);
+      color: #3b82f6;
+    }
+    .vnum-card-value {
+      font-size: 30px;
+      font-weight: 800;
+      color: var(--text, #0f172a);
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+    .vnum-card-sub {
+      font-size: 12px;
+      color: var(--muted, #64748b);
+      line-height: 1.35;
+    }
+    body.dark-theme .vnum-card {
+      background: var(--surface, #1e293b);
+      border-color: var(--border, #334155);
+    }
+    body.dark-theme .vnum-card-value {
+      color: var(--text, #f8fafc);
+    }
+  </style>
  
 </head>
 
@@ -273,7 +368,7 @@
             <div class="vnum-card-icon active"><i class="ph ph-broadcast"></i></div>
           </div>
           <div class="vnum-card-value" id="dashActiveNumbers">0</div>
-          <div class="vnum-card-sub">Waiting for SMS verification</div>
+          <div class="vnum-card-sub" id="dashActiveSub">No active verifications</div>
         </div>
 
         <!-- Card 2: Total Numbers -->
@@ -480,9 +575,9 @@
   </div>
 
   <script src="https://js.paystack.co/v1/inline.js"></script>
-  <script src="api.js?v=2.3"></script>
-  <script src="ui-shared.js?v=2.4"></script>
-  <script src="script.js?v=2.4"></script>
+  <script src="api.js?v=2.6"></script>
+  <script src="ui-shared.js?v=2.6"></script>
+  <script src="script.js?v=2.6"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 

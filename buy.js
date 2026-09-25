@@ -28,6 +28,49 @@ let pollInterval     = null; // Reference for SMS polling
 let isBuying         = false; // Guard against double-click on Buy
 let isActionBusy     = false; // Guard against multiple finish/cancel/ban requests
 
+/* ══════════════════════════════════════════
+   ACTIVE ORDER TRACKING & CROSS-PAGE SYNC
+══════════════════════════════════════════ */
+function registerActiveOrder(orderId, country, product, phone) {
+    if (!orderId) return;
+    try {
+        let activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
+        if (!Array.isArray(activeOrders)) activeOrders = [];
+        const strId = String(orderId);
+        const idx = activeOrders.findIndex(o => (typeof o === 'object' ? String(o.id) === strId : String(o) === strId));
+        const orderData = {
+            id: strId,
+            country: country || '',
+            product: product || '',
+            phone: phone || '',
+            status: 'PENDING',
+            createdAt: Date.now()
+        };
+        if (idx >= 0) {
+            activeOrders[idx] = { ...activeOrders[idx], ...orderData };
+        } else {
+            activeOrders.push(orderData);
+        }
+        localStorage.setItem('primes_active_orders', JSON.stringify(activeOrders));
+        localStorage.setItem('primes_active_count', String(activeOrders.length));
+        localStorage.setItem('primes_order_update', Date.now().toString());
+    } catch (_) {}
+}
+
+function unregisterActiveOrder(orderId) {
+    if (!orderId) return;
+    try {
+        const strId = String(orderId);
+        let activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
+        if (Array.isArray(activeOrders)) {
+            activeOrders = activeOrders.filter(o => (typeof o === 'object' ? String(o.id) !== strId : String(o) !== strId));
+            localStorage.setItem('primes_active_orders', JSON.stringify(activeOrders));
+            localStorage.setItem('primes_active_count', String(activeOrders.length));
+            localStorage.setItem('primes_order_update', Date.now().toString());
+        }
+    } catch (_) {}
+}
+
 let allCountriesData = []; // Cached array of { key, name, prefix } from getCountries()
 const productsByCountryCache = new Map(); // Cache of products per country
 
@@ -1270,6 +1313,7 @@ async function handleBuyClick(country, product, btnEl) {
         // Save the new order ID
         currentOrderId = orderId;
         localStorage.setItem("currentOrderId", String(orderId));
+        registerActiveOrder(orderId, country, product, response?.order?.phone || response?.phone);
         console.log("[ORDER] New order ID:", orderId);
         console.log("[OTP] Order ID:", orderId);
 
@@ -1721,6 +1765,10 @@ function handleOrderTimeout() {
     if (banBtn)    banBtn.disabled    = true;
     if (cancelBtn) cancelBtn.disabled = false;
 
+    if (currentOrderId) {
+        unregisterActiveOrder(currentOrderId);
+    }
+
     showToast('⏰ Activation timed out after 5 minutes. You can cancel this number to get a refund.', 'error');
 }
 
@@ -1817,6 +1865,10 @@ async function checkOrder(orderId) {
         const terminalStates = ['FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
         if (terminalStates.includes(currentStatus)) {
             console.log(`[POLL] Terminal status reached: ${currentStatus}. Stopping polling.`);
+            unregisterActiveOrder(orderId);
+            if (localStorage.getItem('currentOrderId') === String(orderId)) {
+                localStorage.removeItem('currentOrderId');
+            }
             stopPolling(`Terminal status reached: ${currentStatus}`);
             return;
         }
@@ -2017,6 +2069,7 @@ async function handleFinishOrder() {
         console.log('[STEP 5] Response:', res);
         stopPolling(`Order finished by user (Order ID: ${targetOrderId})`);
         showToast('✅ Order finished and marked complete!', 'success');
+        unregisterActiveOrder(targetOrderId);
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
         currentOrderData = null;
@@ -2102,6 +2155,7 @@ async function executeCancelOrder() {
         hideCancelConfirmModal();
         closeSmsModal();
         showToast('✅ Number has been successfully cancelled.', 'success');
+        unregisterActiveOrder(targetOrderId);
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
         currentOrderData = null;
@@ -2136,6 +2190,7 @@ async function handleBanOrder() {
         console.log('[STEP 7] Response:', res);
         stopPolling(`Order banned by user (Order ID: ${targetOrderId})`);
         showToast('⚠️ Number reported as banned.', 'success');
+        unregisterActiveOrder(targetOrderId);
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
         currentOrderData = null;

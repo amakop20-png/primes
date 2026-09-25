@@ -846,14 +846,147 @@ function fallbackClipboardCopy(text, cb) {
 window.getReferralCode = getReferralCode;
 window.copyReferralCode = copyReferralCode;
 
-function updateVirtualNumbersStats(numbersCount = null) {
-    // 1. Active Numbers
+/* ══════════════════════════════════════════
+   VIRTUAL NUMBERS & ACTIVE NUMBERS (API-CONNECTED)
+   - Fetches live order verification status from /api/order/:id
+   - Updates count on purchase, activation, complete, cancel, expiration
+   - Automatically synchronizes across tabs via StorageEvent
+   - Preserves state accurately across page refreshes
+══════════════════════════════════════════ */
+async function loadActiveNumbers() {
     const activeEl = document.getElementById('dashActiveNumbers');
+    const subEl    = document.getElementById('dashActiveSub');
+
+    // Fast initial render from cached count to eliminate UI flicker
+    const cachedCount = localStorage.getItem('primes_active_count');
+    if (activeEl && cachedCount !== null) {
+        activeEl.textContent = cachedCount;
+        if (subEl) {
+            const n = parseInt(cachedCount, 10) || 0;
+            subEl.textContent = n > 0 
+                ? (n === 1 ? 'Waiting for SMS verification' : `${n} active verifications`) 
+                : 'No active verifications';
+        }
+    }
+
+    // Collect candidate order IDs from localStorage
+    let activeOrders = [];
+    try {
+        const stored = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
+        if (Array.isArray(stored)) {
+            activeOrders = stored;
+        }
+    } catch (_) {
+        activeOrders = [];
+    }
+
+    const currentOrderId = localStorage.getItem('currentOrderId');
+    if (currentOrderId) {
+        const strId = String(currentOrderId);
+        if (!activeOrders.some(o => (typeof o === 'object' ? String(o.id) === strId : String(o) === strId))) {
+            activeOrders.push({ id: strId, status: 'PENDING' });
+        }
+    }
+
+    if (activeOrders.length === 0) {
+        if (activeEl) activeEl.textContent = '0';
+        if (subEl) subEl.textContent = 'No active verifications';
+        localStorage.setItem('primes_active_count', '0');
+        localStorage.setItem('primes_active_orders', JSON.stringify([]));
+        return 0;
+    }
+
+    // Verify candidate orders against backend /api/order/:id
+    const terminalStatuses = ['FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
+    const stillActive = [];
+
+    for (const item of activeOrders) {
+        const orderId = typeof item === 'object' ? (item.id || item.orderId) : item;
+        if (!orderId) continue;
+
+        try {
+            if (typeof getOrder === 'function') {
+                const res = await getOrder(orderId);
+                const orderData = res?.order || res?.data || res;
+                const status = (orderData?.status || '').toUpperCase();
+
+                if (terminalStatuses.includes(status)) {
+                    // Terminal state reached: prune
+                    if (localStorage.getItem('currentOrderId') === String(orderId)) {
+                        localStorage.removeItem('currentOrderId');
+                    }
+                } else {
+                    // Active (e.g. PENDING or RECEIVED)
+                    const updatedObj = typeof item === 'object' 
+                        ? { ...item, status: status || 'PENDING' } 
+                        : { id: String(orderId), status: status || 'PENDING' };
+                    stillActive.push(updatedObj);
+                }
+            } else {
+                stillActive.push(item);
+            }
+        } catch (err) {
+            const status = err?.status || err?.statusCode;
+            if (status === 404) {
+                // Order does not exist on server: prune
+                if (localStorage.getItem('currentOrderId') === String(orderId)) {
+                    localStorage.removeItem('currentOrderId');
+                }
+            } else {
+                // Network error or 5xx: keep optimistically
+                stillActive.push(item);
+            }
+        }
+    }
+
+    // Update verified cache in localStorage
+    localStorage.setItem('primes_active_orders', JSON.stringify(stillActive));
+    const activeCount = stillActive.length;
+    localStorage.setItem('primes_active_count', String(activeCount));
+
     if (activeEl) {
-        const currentOrderId = localStorage.getItem('currentOrderId');
-        const activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
-        const count = (currentOrderId ? 1 : 0) + (Array.isArray(activeOrders) ? activeOrders.length : 0);
-        activeEl.textContent = String(count);
+        activeEl.textContent = String(activeCount);
+    }
+    if (subEl) {
+        subEl.textContent = activeCount > 0
+            ? (activeCount === 1 ? 'Waiting for SMS verification' : `${activeCount} active verifications`)
+            : 'No active verifications';
+    }
+
+    return activeCount;
+}
+
+function updateVirtualNumbersStats(numbersCount = null) {
+    // 1. Active Numbers (rendered from cache or fallback)
+    const activeEl = document.getElementById('dashActiveNumbers');
+    const subEl    = document.getElementById('dashActiveSub');
+    if (activeEl) {
+        const cached = localStorage.getItem('primes_active_count');
+        if (cached !== null) {
+            activeEl.textContent = cached;
+            if (subEl) {
+                const n = parseInt(cached, 10) || 0;
+                subEl.textContent = n > 0 
+                    ? (n === 1 ? 'Waiting for SMS verification' : `${n} active verifications`) 
+                    : 'No active verifications';
+            }
+        } else {
+            let count = 0;
+            try {
+                const list = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
+                count = Array.isArray(list) ? list.length : 0;
+                const cur = localStorage.getItem('currentOrderId');
+                if (cur && !list.some(o => (typeof o === 'object' ? String(o.id) === String(cur) : String(o) === String(cur)))) {
+                    count++;
+                }
+            } catch (_) {}
+            activeEl.textContent = String(count);
+            if (subEl) {
+                subEl.textContent = count > 0 
+                    ? (count === 1 ? 'Waiting for SMS verification' : `${count} active verifications`) 
+                    : 'No active verifications';
+            }
+        }
     }
 
     // 2. Total Numbers
@@ -861,10 +994,16 @@ function updateVirtualNumbersStats(numbersCount = null) {
     if (totalEl) {
         if (numbersCount !== null && numbersCount !== undefined) {
             totalEl.textContent = String(numbersCount);
+            localStorage.setItem('primes_total_numbers', String(numbersCount));
         } else {
-            const popupCount = document.getElementById('popupNumbersPurchased')?.textContent;
-            if (popupCount && popupCount !== '0' && popupCount !== '—') {
-                totalEl.textContent = popupCount;
+            const cachedTotal = localStorage.getItem('primes_total_numbers');
+            if (cachedTotal !== null) {
+                totalEl.textContent = cachedTotal;
+            } else {
+                const popupCount = document.getElementById('popupNumbersPurchased')?.textContent;
+                if (popupCount && popupCount !== '0' && popupCount !== '—') {
+                    totalEl.textContent = popupCount;
+                }
             }
         }
     }
@@ -875,6 +1014,7 @@ function updateVirtualNumbersStats(numbersCount = null) {
         availEl.textContent = '150+';
     }
 }
+window.loadActiveNumbers = loadActiveNumbers;
 window.updateVirtualNumbersStats = updateVirtualNumbersStats;
 
 function renderUserInfo() {
@@ -1320,7 +1460,15 @@ function init() {
     loadWalletBalance();
     loadVirtualAccount();
     loadTransactions(1);
+    loadActiveNumbers();
     loadNotifications().catch(e => console.log('Notif check fail:', e));
+
+    // 7. Multi-tab and cross-page synchronization
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'currentOrderId' || e.key === 'primes_active_orders' || e.key === 'primes_active_count' || e.key === 'primes_order_update') {
+            loadActiveNumbers();
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', init);
