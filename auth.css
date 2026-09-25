@@ -438,3 +438,106 @@ body.dark-theme .auth-back-link:hover {
     font-size: 1.45rem;
   }
 }
+
+/* ── Auth Alerts & Notification States ── */
+.auth-alert {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 1.25rem;
+  box-sizing: border-box;
+}
+
+.auth-alert i {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.auth-alert-success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #065F46;
+}
+
+body.dark-theme .auth-alert-success {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6EE7B7;
+}
+
+.auth-alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #991B1B;
+}
+
+body.dark-theme .auth-alert-error {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #FCA5A5;
+}
+
+.auth-alert-info {
+  background: rgba(21, 94, 239, 0.08);
+  border: 1px solid rgba(21, 94, 239, 0.25);
+  color: #1E40AF;
+}
+
+body.dark-theme .auth-alert-info {
+  background: rgba(76, 134, 255, 0.12);
+  border-color: rgba(76, 134, 255, 0.35);
+  color: #93C5FD;
+}
+
+.auth-icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin: 0 auto 1.25rem;
+}
+
+.auth-icon-circle.success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+}
+
+.auth-icon-circle.brand {
+  background: rgba(21, 94, 239, 0.1);
+  color: var(--brand, #155EEF);
+}
+
+.auth-token-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 8px;
+  font-size: 0.825rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  word-break: break-all;
+}
+
+body.dark-theme .auth-token-chip {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6EE7B7;
+}
+
+.auth-help-text {
+  font-size: 0.8rem;
+  color: var(--muted, #5C6272);
+  margin-top: 0.25rem;
+}

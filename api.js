@@ -436,17 +436,25 @@ async function signupUser(userData) {
 }
 
 async function forgotPassword(email) {
+    if (!email) throw new Error('Email is required.');
     return await apiRequest('/api/forgot-password', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: String(email).trim().toLowerCase() }),
         suppressAuthRedirect: true
     });
 }
 
 async function resetPassword(token, newPassword) {
+    if (!token) throw new Error('Reset token is required.');
+    if (!newPassword) throw new Error('New password is required.');
+    const cleanToken = typeof token === 'string' ? token.trim() : token;
     return await apiRequest('/api/reset-password', {
         method: 'POST',
-        body: JSON.stringify({ token, newPassword }),
+        body: JSON.stringify({
+            token: cleanToken,
+            password: newPassword,
+            newPassword: newPassword
+        }),
         suppressAuthRedirect: true
     });
 }
