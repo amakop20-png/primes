@@ -155,7 +155,12 @@
             </div>
             <span class="whero-pill" id="activeCurrencyTag">Active: NGN</span>
           </div>
-          <div class="whero-amount" id="displayBalanceNGN">₦0.00</div>
+          <div class="whero-amount-row">
+            <div class="whero-amount" id="displayBalanceNGN" style="margin-bottom:0;">₦0.00</div>
+            <button type="button" class="btn-balance-privacy" id="toggleBalancePrivacyBtn" onclick="toggleBalancePrivacy()" aria-label="Hide wallet balance" title="Hide wallet balance">
+              <i class="ph ph-eye" id="balancePrivacyIcon"></i>
+            </button>
+          </div>
           <div class="whero-sub" id="displayBalanceUSD">NGN Account · Approx: $0.00</div>
           <div class="whero-buttons">
             <button type="button" class="btn-hero-solid" id="addFundsBtn" onclick="openDepositModal()">
@@ -318,7 +323,12 @@
             </div>
             <div>
               <div class="stat-label">Active Wallet Balance</div>
-              <div class="balance-amount" id="popupBalanceAmount">₦0.00</div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="balance-amount" id="popupBalanceAmount">₦0.00</div>
+                <button type="button" class="btn-balance-privacy-sm" onclick="toggleBalancePrivacy()" aria-label="Hide wallet balance" title="Toggle balance privacy">
+                  <i class="ph ph-eye balance-privacy-icon-sync"></i>
+                </button>
+              </div>
             </div>
           </div>
           <button class="btn-add" id="popupAddFundsBtn" onclick="openDepositModal()" title="Add Funds">

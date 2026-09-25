@@ -228,6 +228,131 @@ function toggleCurrency() {
     }
 }
 
+/* ══════════════════════════════════════════
+   WALLET BALANCE PRIVACY / HIDE BALANCE
+══════════════════════════════════════════ */
+const BALANCE_MASK = '••••••••';
+
+function isBalanceHidden() {
+    return localStorage.getItem('primes_balance_hidden') === 'true';
+}
+
+function setBalanceHidden(hidden) {
+    localStorage.setItem('primes_balance_hidden', hidden ? 'true' : 'false');
+}
+
+function toggleBalancePrivacy() {
+    const willHide = !isBalanceHidden();
+    setBalanceHidden(willHide);
+    updateBalancePrivacyDisplay();
+    if (typeof showToast === 'function') {
+        showToast(willHide ? '🙈 Wallet balance hidden' : '👁️ Wallet balance visible', 'info');
+    }
+}
+window.toggleBalancePrivacy = toggleBalancePrivacy;
+window.isBalanceHidden = isBalanceHidden;
+
+function updateBalancePrivacyDisplay() {
+    const hidden = isBalanceHidden();
+    const curr   = getCurrency();
+    const isUSD  = curr === 'USD';
+    const rate   = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
+
+    const ngnAmount = cachedNgnBalance;
+    const usdAmount = ngnAmount / rate;
+
+    const formattedNGN = '₦' + ngnAmount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedUSD = '$' + usdAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const primaryFormatted = isUSD ? formattedUSD : formattedNGN;
+
+    // 1. Available Balance (Hero Card)
+    const balPrimaryEl = document.getElementById('displayBalanceNGN');
+    if (balPrimaryEl) {
+        balPrimaryEl.textContent = hidden ? BALANCE_MASK : primaryFormatted;
+        balPrimaryEl.classList.toggle('balance-masked', hidden);
+    }
+
+    // 2. Secondary Balance (Hero Card)
+    const balSecondaryEl = document.getElementById('displayBalanceUSD');
+    if (balSecondaryEl) {
+        if (hidden) {
+            balSecondaryEl.textContent = isUSD
+                ? `USD Equivalent · (₦${rate.toLocaleString()} = $1.00)`
+                : `NGN Account · Approx: ${BALANCE_MASK}`;
+        } else {
+            balSecondaryEl.textContent = isUSD
+                ? `USD Equivalent · (₦${rate.toLocaleString()} = $1.00)`
+                : `NGN Account · Approx: ${formattedUSD}`;
+        }
+    }
+
+    // 3. NGN Balance Card
+    const cardNgnEl = document.getElementById('cardBalanceNGN');
+    if (cardNgnEl) {
+        cardNgnEl.textContent = hidden ? BALANCE_MASK : formattedNGN;
+        cardNgnEl.classList.toggle('balance-masked', hidden);
+    }
+
+    // 4. USD Balance Card
+    const cardUsdEl = document.getElementById('cardBalanceUSD');
+    if (cardUsdEl) {
+        cardUsdEl.textContent = hidden ? BALANCE_MASK : formattedUSD;
+        cardUsdEl.classList.toggle('balance-masked', hidden);
+    }
+
+    // 5. Popup Balance Modal
+    const popBalEl = document.getElementById('popupBalanceAmount');
+    if (popBalEl) {
+        popBalEl.textContent = hidden ? BALANCE_MASK : primaryFormatted;
+        popBalEl.classList.toggle('balance-masked', hidden);
+    }
+
+    const popNgnEl = document.getElementById('popupBalanceNGN');
+    if (popNgnEl) {
+        popNgnEl.textContent = hidden ? BALANCE_MASK : formattedNGN;
+        popNgnEl.classList.toggle('balance-masked', hidden);
+    }
+
+    const popUsdEl = document.getElementById('popupBalanceUSD');
+    if (popUsdEl) {
+        popUsdEl.textContent = hidden ? BALANCE_MASK : formattedUSD;
+        popUsdEl.classList.toggle('balance-masked', hidden);
+    }
+
+    // 6. Referral Balance
+    const refBalEl = document.getElementById('displayReferralBalance');
+    if (refBalEl) {
+        if (hidden) {
+            refBalEl.textContent = BALANCE_MASK;
+            refBalEl.classList.add('balance-masked');
+        } else {
+            refBalEl.classList.remove('balance-masked');
+            const session = getSession();
+            const refBal = parseFloat(session?.referralBalance) || 0;
+            if (isUSD) {
+                const usdVal = refBal / rate;
+                refBalEl.textContent = '$' + usdVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else {
+                refBalEl.textContent = '₦' + refBal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+        }
+    }
+
+    // 7. Update all eye toggle buttons and icons
+    const ariaLabel = hidden ? 'Show wallet balance' : 'Hide wallet balance';
+    const iconClass = hidden ? 'ph ph-eye-slash' : 'ph ph-eye';
+
+    document.querySelectorAll('#toggleBalancePrivacyBtn, .btn-balance-privacy, .btn-balance-privacy-sm').forEach(btn => {
+        btn.setAttribute('aria-label', ariaLabel);
+        btn.setAttribute('title', ariaLabel);
+    });
+
+    document.querySelectorAll('#balancePrivacyIcon, .balance-privacy-icon-sync').forEach(icon => {
+        icon.className = iconClass + (icon.classList.contains('balance-privacy-icon-sync') ? ' balance-privacy-icon-sync' : '');
+    });
+}
+window.updateBalancePrivacyDisplay = updateBalancePrivacyDisplay;
+
 /**
  * Render the balance cards for the active currency.
  * When currency is USD, converts the authoritative NGN balance to USD equivalent.
@@ -248,40 +373,17 @@ function renderBalanceCards(rawBalance, currency) {
     const ngnAmount = cachedNgnBalance;
     const usdAmount = ngnAmount / rate;
 
-    const formattedNGN = '₦' + ngnAmount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const formattedUSD = '$' + usdAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const curTagEl    = document.getElementById('activeCurrencyTag');
+    const rateLabelEl = document.getElementById('cardExchangeRateLabel');
 
-    const balPrimaryEl   = document.getElementById('displayBalanceNGN');
-    const balSecondaryEl = document.getElementById('displayBalanceUSD');
-    const popBalEl       = document.getElementById('popupBalanceAmount');
-
-    // Enhanced Wallet Overview elements
-    const cardNgnEl       = document.getElementById('cardBalanceNGN');
-    const cardUsdEl       = document.getElementById('cardBalanceUSD');
-    const popNgnEl        = document.getElementById('popupBalanceNGN');
-    const popUsdEl        = document.getElementById('popupBalanceUSD');
-    const curTagEl        = document.getElementById('activeCurrencyTag');
-    const rateLabelEl     = document.getElementById('cardExchangeRateLabel');
-
-    if (isUSD) {
-        if (balPrimaryEl)   balPrimaryEl.textContent   = formattedUSD;
-        if (balSecondaryEl) balSecondaryEl.textContent = `USD Equivalent · (₦${rate.toLocaleString()} = $1.00)`;
-        if (popBalEl)       popBalEl.textContent       = formattedUSD;
-    } else {
-        if (balPrimaryEl)   balPrimaryEl.textContent   = formattedNGN;
-        if (balSecondaryEl) balSecondaryEl.textContent = `NGN Account · Approx: ${formattedUSD}`;
-        if (popBalEl)       popBalEl.textContent       = formattedNGN;
-    }
-
-    if (cardNgnEl)    cardNgnEl.textContent    = formattedNGN;
-    if (cardUsdEl)    cardUsdEl.textContent    = formattedUSD;
-    if (popNgnEl)     popNgnEl.textContent     = formattedNGN;
-    if (popUsdEl)     popUsdEl.textContent     = formattedUSD;
-    if (curTagEl)     curTagEl.textContent     = `Active: ${isUSD ? 'USD ($)' : 'NGN (₦)'}`;
-    if (rateLabelEl)  rateLabelEl.textContent  = `Exchange Rate: ₦${rate.toLocaleString()} = $1.00 USD`;
+    if (curTagEl)    curTagEl.textContent    = `Active: ${isUSD ? 'USD ($)' : 'NGN (₦)'}`;
+    if (rateLabelEl) rateLabelEl.textContent = `Exchange Rate: ₦${rate.toLocaleString()} = $1.00 USD`;
 
     // Persist per-currency balance
     localStorage.setItem('_walletBalance_USD', String(usdAmount));
+
+    // Render displays respecting privacy (masked vs visible)
+    updateBalancePrivacyDisplay();
 
     // Sync to admin user records
     syncAdminUserData(ngnAmount, usdAmount);
@@ -720,14 +822,26 @@ async function loadReferralBalance() {
         const isUSD  = curr === 'USD';
         const rate   = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
 
-        if (isUSD) {
-            const usdVal = refBal / rate;
-            el.textContent = '$' + usdVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (isBalanceHidden()) {
+            el.textContent = BALANCE_MASK;
+            el.classList.add('balance-masked');
         } else {
-            el.textContent = '₦' + refBal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            el.classList.remove('balance-masked');
+            if (isUSD) {
+                const usdVal = refBal / rate;
+                el.textContent = '$' + usdVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            } else {
+                el.textContent = '₦' + refBal.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
         }
     } catch (err) {
-        el.textContent = getCurrency() === 'USD' ? '$0.00' : '₦0.00';
+        if (isBalanceHidden()) {
+            el.textContent = BALANCE_MASK;
+            el.classList.add('balance-masked');
+        } else {
+            el.classList.remove('balance-masked');
+            el.textContent = getCurrency() === 'USD' ? '$0.00' : '₦0.00';
+        }
     }
 }
 
@@ -1081,6 +1195,17 @@ function init() {
     // page reload shows the correct currency immediately (not just NGN
     // by default) before any balance data has even loaded.
     updateCurrencyDisplay(getCurrency());
+
+    // 2c. Restore balance privacy visibility state (show/hide with bullets)
+    updateBalancePrivacyDisplay();
+
+    // Wire Balance Privacy Eye Buttons
+    document.querySelectorAll('#toggleBalancePrivacyBtn, .btn-balance-privacy, .btn-balance-privacy-sm').forEach(btn => {
+        if (!btn._privacyWired) {
+            btn.addEventListener('click', toggleBalancePrivacy);
+            btn._privacyWired = true;
+        }
+    });
 
     // 3. Wire currency switcher
     const switchEl = document.getElementById('currencySwitch');

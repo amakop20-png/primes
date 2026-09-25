@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Restore currency UI
     updateCurrencyDisplay(getCurrency());
+    updateBuyBalancePrivacyDisplay();
 
     renderUserInfo();
     loadWalletBalanceBuyPage();
@@ -192,16 +193,71 @@ async function fetchWalletBalance(currency) {
     return await getWalletBalance(currency);
 }
 
+/* ══════════════════════════════════════════
+   WALLET BALANCE PRIVACY / HIDE BALANCE
+══════════════════════════════════════════ */
+const BALANCE_MASK = '••••••••';
+
+function isBalanceHidden() {
+    return localStorage.getItem('primes_balance_hidden') === 'true';
+}
+
+function setBalanceHidden(hidden) {
+    localStorage.setItem('primes_balance_hidden', hidden ? 'true' : 'false');
+}
+
+let cachedBuyBalanceAmount = 0;
+let cachedBuyCurrency = 'NGN';
+let cachedBuySymbol = '₦';
+
+function toggleBalancePrivacy() {
+    const willHide = !isBalanceHidden();
+    setBalanceHidden(willHide);
+    updateBuyBalancePrivacyDisplay();
+    if (typeof showToast === 'function') {
+        showToast(willHide ? '🙈 Wallet balance hidden' : '👁️ Wallet balance visible', 'info');
+    }
+}
+window.toggleBalancePrivacy = toggleBalancePrivacy;
+window.isBalanceHidden = isBalanceHidden;
+
+function updateBuyBalancePrivacyDisplay() {
+    const balEl = document.getElementById('buyWalletBalance');
+    const hidden = isBalanceHidden();
+    if (balEl) {
+        if (hidden) {
+            balEl.textContent = BALANCE_MASK;
+            balEl.classList.add('balance-masked');
+        } else {
+            balEl.classList.remove('balance-masked');
+            balEl.textContent = cachedBuySymbol + Number(cachedBuyBalanceAmount).toLocaleString(cachedBuyCurrency === 'USD' ? 'en-US' : 'en-NG', {
+                minimumFractionDigits: 2, maximumFractionDigits: 2
+            });
+        }
+    }
+    const ariaLabel = hidden ? 'Show wallet balance' : 'Hide wallet balance';
+    const iconClass = hidden ? 'ph ph-eye-slash' : 'ph ph-eye';
+    const btn = document.getElementById('toggleBuyBalancePrivacyBtn');
+    const icon = document.getElementById('buyBalancePrivacyIcon');
+    if (btn) {
+        btn.setAttribute('aria-label', ariaLabel);
+        btn.setAttribute('title', ariaLabel);
+    }
+    if (icon) {
+        icon.className = iconClass;
+    }
+}
+window.updateBuyBalancePrivacyDisplay = updateBuyBalancePrivacyDisplay;
+
 // Parses the balance out of whichever shape the backend returns and
 // writes it to the DOM + localStorage cache without cross-currency synthesis.
 function applyWalletBalance(data, currency, symbol, balEl) {
     const bal = normalizeWalletBalance(data, currency);
+    cachedBuyBalanceAmount = Number(bal) || 0;
+    cachedBuyCurrency = currency;
+    cachedBuySymbol = symbol;
 
-    if (balEl) {
-        balEl.textContent = symbol + Number(bal).toLocaleString(currency === 'USD' ? 'en-US' : 'en-NG', {
-            minimumFractionDigits: 2, maximumFractionDigits: 2
-        });
-    }
+    updateBuyBalancePrivacyDisplay();
 
     localStorage.setItem('_walletBalance_' + currency, String(bal));
     if (currency === 'NGN') localStorage.setItem('_walletBalance', String(bal));
