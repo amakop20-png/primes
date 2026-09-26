@@ -1175,8 +1175,9 @@ header {
 
 .logo,
 .logo-container {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
   justify-content: flex-start;
   padding: 4px 0;
   text-decoration: none;
@@ -1185,13 +1186,14 @@ header {
 .logo img,
 .logo-container img,
 .nura-sq-logo {
-  width: 30px;
-  height: 20px;
-  max-width: 30px;
-  max-height: 20px;
+  width: auto;
+  height: 22px;
+  max-width: 28px;
+  max-height: 22px;
   display: block;
   object-fit: contain;
   transition: transform 0.25s ease, filter 0.25s ease;
+  flex-shrink: 0;
 }
 
 .logo img:hover,
@@ -1210,18 +1212,20 @@ header {
 }
 
 .sidebar-brand-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
   text-decoration: none;
 }
 
 .sidebar-logo {
-  height: 54px;
+  height: 26px;
   width: auto;
-  max-width: 210px;
+  max-width: 32px;
   object-fit: contain;
   display: block;
   transition: transform 0.25s ease;
+  flex-shrink: 0;
 }
 
 .sidebar-logo:hover {
@@ -2782,9 +2786,9 @@ main > p {
   .dash-header .logo img,
   .dash-header .logo-container img,
   .nura-sq-logo {
-    width: 30px;
+    width: auto;
     height: 20px;
-    max-width: 30px;
+    max-width: 26px;
     max-height: 20px;
   }
 
