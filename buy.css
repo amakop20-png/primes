@@ -48,10 +48,10 @@ body {
 /* LOGO */
 .logo img {
   width: auto;  
-  height: 58px;
-  max-width: 230px;
+  height: 20px;
+  max-height: 20px;
   object-fit: contain;
-  border-radius: 10px;
+  border-radius: 4px;
 }
 
 /* RIGHT */
