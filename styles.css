@@ -265,12 +265,33 @@ header {
     flex-shrink: 0;
 }
 
+.header__logo-link,
+.header__logo a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--text);
+}
+
+.header__logo-img,
 .header__logo img {
-    height: 20px;
-    max-height: 20px;
+    height: 22px;
     width: auto;
+    max-height: 24px;
     object-fit: contain;
     display: block;
+    flex-shrink: 0;
+}
+
+.header__logo-text {
+    font-size: 1.18rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    white-space: nowrap;
+    line-height: 1;
+    display: inline-block;
 }
 
 .header__nav {
@@ -311,6 +332,23 @@ header {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
+}
+
+#themeToggle {
+    background: none;
+    border: none;
+    font-size: 1.15rem;
+    color: var(--text);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, transform 0.2s ease;
+    outline: none;
+    flex-shrink: 0;
 }
 
 #themeToggle:hover {
@@ -325,6 +363,7 @@ header {
     background: none;
     font-weight: 600;
     font-size: 0.8rem;
+    flex-shrink: 0;
 }
 
 .btn-primary a,
@@ -339,6 +378,7 @@ header {
     font-size: 0.8rem;
     line-height: 1;
     border-radius: var(--radius-sm);
+    white-space: nowrap;
 }
 
 .btn-primary a {
@@ -373,25 +413,36 @@ header {
     display: none;
     flex-direction: column;
     justify-content: center;
-    gap: 5px;
-    width: 34px;
-    height: 34px;
-    background: none;
-    border: none;
+    align-items: center;
+    gap: 4px;
+    width: 32px;
+    height: 32px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--border);
+    border-radius: 6px;
     padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.menu-toggle:hover {
+    background: color-mix(in srgb, var(--surface-sunk) 85%, var(--brand));
+    border-color: var(--brand);
 }
 
 .menu-toggle span {
+    display: block;
     height: 2px;
-    width: 100%;
+    width: 15px;
     background: var(--text);
     border-radius: 2px;
     transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
-.menu-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.menu-toggle.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
 .menu-toggle.open span:nth-child(2) { opacity: 0; }
-.menu-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.menu-toggle.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 
 /* ══════════════════════════════════════════
    HERO
@@ -706,21 +757,34 @@ header {
 
 @media (max-width: 860px) {
     header {
-        padding: 12px 16px;
-        gap: 8px;
+        padding: 12px 18px;
+        gap: 12px;
+        justify-content: space-between;
     }
 
+    .header__logo {
+        flex-shrink: 0;
+    }
+
+    .header__logo-img,
     .header__logo img {
         height: 20px;
-        max-height: 20px;
         width: auto;
+        max-height: 20px;
         object-fit: contain;
+    }
+
+    .header__logo-text {
+        font-size: 1.08rem;
+        font-weight: 800;
     }
 
     .header__actions {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
+        margin-left: auto;
+        flex-shrink: 0;
     }
 
     .header__actions .btn-secondary,
@@ -730,26 +794,28 @@ header {
 
     .header__actions .btn-secondary a,
     .header__actions .btn-primary a {
-        padding: 4px 10px;
-        height: 25px;
+        padding: 5px 11px;
+        height: 27px;
         box-sizing: border-box;
-        font-size: 0.76rem;
+        font-size: 0.78rem;
         gap: 4px;
         line-height: 1;
+        white-space: nowrap;
     }
 
     #themeToggle {
-        padding: 4px !important;
-        font-size: 0.95rem !important;
+        padding: 5px !important;
+        font-size: 1.05rem !important;
         margin-right: 0 !important;
     }
 
     .menu-toggle {
         display: flex;
-        width: 28px;
-        height: 28px;
-        gap: 5px;
+        width: 32px;
+        height: 32px;
+        gap: 4px;
         flex-shrink: 0;
+        margin-left: 2px;
     }
 
     .header__nav {
@@ -879,39 +945,72 @@ header {
 @media (max-width: 560px) {
     header {
         padding: 10px 14px;
+        gap: 8px;
+        justify-content: space-between;
+    }
+
+    .header__logo {
+        flex-shrink: 0;
+    }
+
+    .header__logo-link,
+    .header__logo a {
         gap: 6px;
     }
 
+    .header__logo-img,
     .header__logo img {
-        height: 20px;
-        max-height: 20px;
+        height: 18px;
         width: auto;
+        max-height: 18px;
         object-fit: contain;
     }
 
+    .header__logo-text {
+        font-size: 0.98rem;
+        font-weight: 800;
+        letter-spacing: -0.2px;
+    }
+
     .header__actions {
-        gap: 5px;
+        gap: 6px;
+        margin-left: auto;
+        flex-shrink: 0;
     }
 
     .header__actions .btn-secondary a,
     .header__actions .btn-primary a {
-        padding: 3px 8px;
-        height: 23px;
+        padding: 4px 9px;
+        height: 25px;
         box-sizing: border-box;
-        font-size: 0.72rem;
+        font-size: 0.74rem;
         line-height: 1;
+        white-space: nowrap;
     }
 
     #themeToggle {
-        padding: 3px !important;
-        font-size: 0.88rem !important;
+        padding: 4px !important;
+        font-size: 0.95rem !important;
+        margin-right: 0 !important;
     }
 
     .menu-toggle {
-        width: 26px;
-        height: 26px;
-        gap: 4px;
+        width: 29px;
+        height: 29px;
+        gap: 3.5px;
+        border-radius: 5px;
+        flex-shrink: 0;
+        margin-left: 2px;
     }
+
+    .menu-toggle span {
+        width: 14px;
+        height: 1.75px;
+    }
+
+    .menu-toggle.open span:nth-child(1) { transform: translateY(5.25px) rotate(45deg); }
+    .menu-toggle.open span:nth-child(2) { opacity: 0; }
+    .menu-toggle.open span:nth-child(3) { transform: translateY(-5.25px) rotate(-45deg); }
 
     .hero, .features, .benefits {
         padding-left: 16px;
@@ -948,33 +1047,71 @@ header {
 @media (max-width: 380px) {
     header {
         padding: 8px 10px;
-        gap: 4px;
+        gap: 6px;
+        justify-content: space-between;
     }
 
+    .header__logo {
+        flex-shrink: 0;
+    }
+
+    .header__logo-link,
+    .header__logo a {
+        gap: 5px;
+    }
+
+    .header__logo-img,
     .header__logo img {
-        height: 20px;
-        max-height: 20px;
+        height: 16px;
         width: auto;
+        max-height: 16px;
         object-fit: contain;
+    }
+
+    .header__logo-text {
+        font-size: 0.88rem;
+        font-weight: 800;
     }
 
     .header__actions {
         gap: 4px;
+        margin-left: auto;
+        flex-shrink: 0;
     }
 
     .header__actions .btn-secondary a,
     .header__actions .btn-primary a {
-        padding: 2px 6px;
-        height: 20px;
+        padding: 3px 7px;
+        height: 22px;
         box-sizing: border-box;
-        font-size: 0.66rem;
+        font-size: 0.68rem;
         line-height: 1;
+        white-space: nowrap;
     }
 
     #themeToggle {
-        padding: 2px !important;
-        font-size: 0.82rem !important;
+        padding: 3px !important;
+        font-size: 0.85rem !important;
+        margin-right: 0 !important;
     }
+
+    .menu-toggle {
+        width: 26px;
+        height: 26px;
+        gap: 3px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        margin-left: 1px;
+    }
+
+    .menu-toggle span {
+        width: 12px;
+        height: 1.5px;
+    }
+
+    .menu-toggle.open span:nth-child(1) { transform: translateY(4.5px) rotate(45deg); }
+    .menu-toggle.open span:nth-child(2) { opacity: 0; }
+    .menu-toggle.open span:nth-child(3) { transform: translateY(-4.5px) rotate(-45deg); }
 
     .hero__title {
         font-size: 1.75rem;
@@ -1048,9 +1185,10 @@ header {
 .logo img,
 .logo-container img,
 .nura-sq-logo {
+  width: 30px;
   height: 20px;
+  max-width: 30px;
   max-height: 20px;
-  width: auto;
   display: block;
   object-fit: contain;
   transition: transform 0.25s ease, filter 0.25s ease;
@@ -2644,9 +2782,10 @@ main > p {
   .dash-header .logo img,
   .dash-header .logo-container img,
   .nura-sq-logo {
+    width: 30px;
     height: 20px;
+    max-width: 30px;
     max-height: 20px;
-    width: auto;
   }
 
   .close {
