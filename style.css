@@ -80,8 +80,9 @@ header {
 }
 
 .logo img {
-  width: 80px;
-  height: auto;
+  width: auto;
+  height: 58px;
+  max-width: 230px;
   display: block;
   object-fit: contain;
 

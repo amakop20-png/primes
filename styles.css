@@ -260,8 +260,9 @@ header {
 }
 
 .header__logo img {
-    width: 44px;
-    height: 44px;
+    height: 56px;
+    width: auto;
+    max-width: 230px;
     object-fit: contain;
 }
 
@@ -699,8 +700,9 @@ header {
     }
 
     .header__logo img {
-        width: 38px;
-        height: 38px;
+        height: 48px;
+        width: auto;
+        max-width: 190px;
         object-fit: contain;
     }
 
@@ -926,8 +928,9 @@ header {
     }
 
     .header__logo img {
-        width: 30px;
-        height: 30px;
+        height: 38px;
+        width: auto;
+        max-width: 150px;
     }
 
     .header__actions {
@@ -1012,9 +1015,9 @@ header {
 .logo img,
 .logo-container img,
 .nura-sq-logo {
-  height: 48px;
+  height: 58px;
   width: auto;
-  max-width: 190px;
+  max-width: 230px;
   display: block;
   object-fit: contain;
   transition: transform 0.25s ease, filter 0.25s ease;
@@ -1042,9 +1045,9 @@ header {
 }
 
 .sidebar-logo {
-  height: 46px;
+  height: 54px;
   width: auto;
-  max-width: 175px;
+  max-width: 210px;
   object-fit: contain;
   display: block;
   transition: transform 0.25s ease;
@@ -2608,8 +2611,8 @@ main > p {
   .dash-header .logo img,
   .dash-header .logo-container img,
   .nura-sq-logo {
-    height: 42px;
-    max-width: 155px;
+    height: 50px;
+    max-width: 190px;
   }
 
   .close {

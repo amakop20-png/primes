@@ -60,25 +60,29 @@
       top: calc(100% + 6px);
       left: 0;
       right: 0;
-      max-height: 380px;
+      max-height: 400px;
       overflow-y: auto;
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       border-radius: 14px;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.15);
-      z-index: 1000;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+      z-index: 1050;
       padding: 6px 0;
+      scrollbar-width: thin;
     }
 
     .search-section-header {
-      padding: 6px 14px;
+      padding: 8px 14px;
       font-size: 11px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
       color: var(--muted);
       border-bottom: 1px solid var(--border);
       background: var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .search-item {
@@ -89,6 +93,7 @@
       cursor: pointer;
       transition: background 0.15s ease;
       border-bottom: 1px solid var(--border-light);
+      gap: 12px;
     }
 
     .search-item:last-child {
@@ -102,28 +107,168 @@
     .search-item-info {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .search-item-icon-box {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--primary-light, rgba(124, 58, 237, 0.1));
+      color: var(--primary, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
     }
 
     .search-item-flag {
-      font-size: 1.25rem;
+      font-size: 1.35rem;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--border-light);
+      flex-shrink: 0;
+    }
+
+    .search-item-details {
+      min-width: 0;
+      flex: 1;
     }
 
     .search-item-title {
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 700;
       color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      line-height: 1.3;
+    }
+
+    .search-item-country-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary, #7c3aed);
+      background: var(--primary-light, rgba(124, 58, 237, 0.1));
+      padding: 2px 7px;
+      border-radius: 6px;
     }
 
     .search-item-subtitle {
-      font-size: 11px;
+      font-size: 11.5px;
       color: var(--muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .search-item-action {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .search-item-price {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .btn-search-buy {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(135deg, var(--primary, #7c3aed), #9333ea);
+      color: #ffffff !important;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 12.5px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-search-buy:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+      opacity: 0.95;
+    }
+
+    .btn-search-buy:active {
+      transform: translateY(0);
+    }
+
+    .btn-search-buy:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-search-select {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--border-light);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-search-select:hover {
+      background: var(--primary-light);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .search-empty-state {
+      padding: 24px 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .search-empty-state i {
+      font-size: 28px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    @keyframes highlightPulse {
+      0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.5); }
+      70% { box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+    }
+
+    .highlight-pulse {
+      animation: highlightPulse 1.5s ease-out;
+      border-color: var(--primary, #7c3aed) !important;
     }
 
     /* ── Loading Skeleton ── */

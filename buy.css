@@ -47,9 +47,10 @@ body {
 
 /* LOGO */
 .logo img {
-  width: 48px;  
-  height: 48px;
-  object-fit: cover;
+  width: auto;  
+  height: 58px;
+  max-width: 230px;
+  object-fit: contain;
   border-radius: 10px;
 }
 

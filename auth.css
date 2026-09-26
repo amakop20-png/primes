@@ -128,9 +128,9 @@ body.dark-theme.auth-page::before {
 }
 
 .auth-card-logo {
-  height: 50px;
+  height: 58px;
   width: auto;
-  max-width: 210px;
+  max-width: 230px;
   object-fit: contain;
   display: inline-block;
   transition: transform 0.2s ease;
