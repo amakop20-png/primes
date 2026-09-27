@@ -60,23 +60,23 @@
       top: calc(100% + 6px);
       left: 0;
       right: 0;
-      max-height: 400px;
+      max-height: 380px;
       overflow-y: auto;
       background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: 14px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
       z-index: 1050;
-      padding: 6px 0;
+      padding: 4px 0;
       scrollbar-width: thin;
     }
 
     .search-section-header {
-      padding: 8px 14px;
-      font-size: 11px;
+      padding: 6px 12px;
+      font-size: 10.5px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.5px;
       color: var(--muted);
       border-bottom: 1px solid var(--border);
       background: var(--border-light);
@@ -89,11 +89,11 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
+      padding: 8px 12px;
       cursor: pointer;
       transition: background 0.15s ease;
       border-bottom: 1px solid var(--border-light);
-      gap: 12px;
+      gap: 10px;
     }
 
     .search-item:last-child {
@@ -107,33 +107,33 @@
     .search-item-info {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       min-width: 0;
       flex: 1;
     }
 
     .search-item-icon-box {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       background: var(--primary-light, rgba(124, 58, 237, 0.1));
       color: var(--primary, #7c3aed);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 16px;
       flex-shrink: 0;
     }
 
     .search-item-flag {
-      font-size: 1.35rem;
+      font-size: 1.25rem;
       line-height: 1;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
       background: var(--border-light);
       flex-shrink: 0;
     }
@@ -144,14 +144,14 @@
     }
 
     .search-item-title {
-      font-size: 13.5px;
+      font-size: 13px;
       font-weight: 700;
       color: var(--text);
       display: flex;
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
-      line-height: 1.3;
+      line-height: 1.25;
     }
 
     .search-item-country-badge {
@@ -292,26 +292,29 @@
     .state-box {
       grid-column: 1 / -1;
       text-align: center;
-      padding: 60px 20px;
+      padding: 36px 16px;
+      border-radius: 14px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
       color: var(--muted);
     }
 
     .state-box i {
-      font-size: 2.5rem;
-      margin-bottom: 14px;
+      font-size: 2rem;
+      margin-bottom: 10px;
       display: block;
       color: var(--primary);
     }
 
     .state-box p {
-      font-size: 15px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 700;
     }
 
     /* ── Card Enhancements ── */
     .card-flag {
-      font-size: 2rem;
-      margin-bottom: 8px;
+      font-size: 1.6rem;
+      margin-bottom: 6px;
       display: block;
     }
 
@@ -319,21 +322,20 @@
       display: inline-block;
       background: var(--primary-light);
       color: var(--primary);
-      border-radius: 20px;
-      padding: 3px 10px;
-      font-size: 11px;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 9.5px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
+      letter-spacing: 0.3px;
     }
 
     .card-meta {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 10px;
-      font-size: 12px;
+      margin-top: 6px;
+      font-size: 11px;
       color: var(--muted);
     }
 
@@ -344,10 +346,11 @@
     }
 
     .card-price {
-      font-size: 1.3rem;
+      font-size: 16px;
       font-weight: 800;
       color: var(--primary);
-      margin: 8px 0 4px;
+      margin: 2px 0 8px;
+      letter-spacing: -0.2px;
     }
 
     /* ── SMS Result Modal ── */
@@ -359,7 +362,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 16px;
     }
 
     .sms-modal-overlay.show {
@@ -368,60 +371,60 @@
 
     .sms-modal {
       background: var(--surface);
-      border-radius: 20px;
-      padding: 32px;
+      border-radius: 16px;
+      padding: 22px 20px;
       width: 100%;
-      max-width: 440px;
+      max-width: 400px;
       border: 1px solid var(--border);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.18);
       position: relative;
     }
 
     .sms-modal h3 {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 800;
       color: var(--text);
-      margin-bottom: 20px;
+      margin-bottom: 14px;
     }
 
     .sms-phone-display {
       background: var(--primary-light);
-      border-radius: 14px;
-      padding: 16px 20px;
+      border-radius: 12px;
+      padding: 12px 16px;
       text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .sms-phone-display .phone-num {
-      font-size: 1.5rem;
+      font-size: 1.35rem;
       font-weight: 800;
       color: var(--primary);
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
     }
 
     .sms-phone-display .phone-label {
       font-size: 11px;
       color: var(--muted);
       font-weight: 600;
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     .sms-status-row {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      border-radius: 12px;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 9px;
       background: var(--border-light);
-      margin-bottom: 14px;
-      font-size: 13px;
+      margin-bottom: 10px;
+      font-size: 12.5px;
       font-weight: 600;
       color: var(--text);
     }
 
     .sms-status-row .dot {
-      width: 9px;
-      height: 9px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: #f59e0b;
       flex-shrink: 0;
@@ -440,10 +443,10 @@
     .sms-otp-box {
       background: var(--surface-card, rgba(0, 0, 0, 0.03));
       border: 1.5px dashed var(--border);
-      border-radius: 14px;
-      padding: 16px 18px;
+      border-radius: 12px;
+      padding: 12px 14px;
       text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       transition: all 0.3s ease;
       display: block;
     }
@@ -458,15 +461,15 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     .sms-otp-box .otp-label {
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--muted);
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.8px;
     }
 
     .sms-otp-box.code-received .otp-label {
@@ -474,35 +477,35 @@
     }
 
     .sms-otp-box .otp-code {
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       font-weight: 700;
       color: var(--muted);
       letter-spacing: 1px;
-      margin: 6px 0;
+      margin: 4px 0;
       word-break: break-all;
       transition: all 0.2s ease;
     }
 
     .sms-otp-box.code-received .otp-code {
-      font-size: 2.2rem;
+      font-size: 1.8rem;
       font-weight: 800;
       color: #fff;
-      letter-spacing: 6px;
+      letter-spacing: 4px;
     }
 
     .sms-otp-box .otp-text {
-      font-size: 12px;
+      font-size: 11.5px;
       color: var(--muted);
-      margin-top: 6px;
+      margin-top: 4px;
       word-break: break-word;
-      line-height: 1.4;
+      line-height: 1.35;
     }
 
     .sms-otp-box.code-received .otp-text {
       color: #ffffff;
       background: rgba(0, 0, 0, 0.15);
-      padding: 8px 12px;
-      border-radius: 8px;
+      padding: 6px 10px;
+      border-radius: 6px;
     }
 
     .btn-copy-code {
@@ -512,18 +515,18 @@
       background: #ffffff;
       color: #065f46;
       border: none;
-      padding: 5px 12px;
-      border-radius: 8px;
-      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.12);
-      transition: all 0.2s ease;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      transition: all 0.15s ease;
     }
 
     .btn-copy-code:hover {
       transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.18);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
     }
 
     .btn-copy-code.copied {
@@ -534,19 +537,19 @@
     .sms-modal-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 16px;
+      gap: 8px;
+      margin-top: 12px;
     }
 
     .sms-modal-actions button {
-      padding: 11px;
-      border-radius: 12px;
+      padding: 9px 10px;
+      border-radius: 8px;
       border: none;
       font-family: 'Nunito', sans-serif;
       font-weight: 700;
-      font-size: 13px;
+      font-size: 12px;
       cursor: pointer;
-      transition: 0.2s ease;
+      transition: 0.15s ease;
     }
 
     .btn-modal-cancel {
@@ -592,7 +595,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 16px;
       animation: cancelFadeIn 0.2s ease;
     }
 
@@ -607,12 +610,12 @@
 
     .cancel-confirm-modal {
       background: var(--surface, #ffffff);
-      border-radius: 20px;
-      padding: 28px 24px;
+      border-radius: 16px;
+      padding: 22px 20px;
       width: 100%;
-      max-width: 420px;
+      max-width: 380px;
       border: 1px solid var(--border, #e2e8f0);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
       text-align: center;
       transform: scale(0.96);
       animation: cancelPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -623,21 +626,21 @@
     }
 
     .cancel-modal-icon-wrapper {
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       display: flex;
       justify-content: center;
     }
 
     .cancel-modal-icon {
-      width: 54px;
-      height: 54px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: #fee2e2;
       color: #ef4444;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
+      font-size: 22px;
     }
 
     body.dark-theme .cancel-modal-icon {
@@ -646,32 +649,32 @@
     }
 
     .cancel-modal-title {
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       font-weight: 800;
       color: var(--text, #111827);
-      margin: 0 0 8px 0;
+      margin: 0 0 6px 0;
     }
 
     .cancel-modal-desc {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--muted, #64748b);
-      margin: 0 0 16px 0;
-      line-height: 1.5;
+      margin: 0 0 12px 0;
+      line-height: 1.45;
     }
 
     .cancel-modal-warning-card {
       background: rgba(239, 68, 68, 0.05);
       border: 1px solid rgba(239, 68, 68, 0.2);
-      border-radius: 12px;
-      padding: 12px 14px;
+      border-radius: 10px;
+      padding: 10px 12px;
       display: flex;
       align-items: flex-start;
-      gap: 10px;
+      gap: 8px;
       text-align: left;
-      font-size: 12.5px;
-      line-height: 1.5;
+      font-size: 12px;
+      line-height: 1.45;
       color: var(--text, #334155);
-      margin-bottom: 22px;
+      margin-bottom: 16px;
     }
 
     body.dark-theme .cancel-modal-warning-card {
@@ -681,7 +684,7 @@
     }
 
     .cancel-modal-warning-card i {
-      font-size: 17px;
+      font-size: 15px;
       color: #ef4444;
       flex-shrink: 0;
       margin-top: 1px;
@@ -690,7 +693,7 @@
     .cancel-modal-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 10px;
     }
 
     @media (max-width: 420px) {
@@ -700,16 +703,16 @@
     }
 
     .btn-cancel-keep {
-      padding: 12px 16px;
-      border-radius: 12px;
+      padding: 9px 14px;
+      border-radius: 8px;
       border: 1px solid var(--border, #cbd5e1);
       background: var(--border-light, #f1f5f9);
       color: var(--text, #1e293b);
       font-family: 'Nunito', sans-serif;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
     }
 
     .btn-cancel-keep:hover {
@@ -717,16 +720,16 @@
     }
 
     .btn-cancel-confirm {
-      padding: 12px 16px;
-      border-radius: 12px;
+      padding: 9px 14px;
+      border-radius: 8px;
       border: 1px solid #b91c1c;
       background: #dc2626;
       color: #ffffff;
       font-family: 'Nunito', sans-serif;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -735,7 +738,7 @@
 
     .btn-cancel-confirm:hover {
       background: #b91c1c;
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
     }
 
     .btn-cancel-confirm:disabled,
@@ -820,7 +823,7 @@
     @media (max-width: 480px) {
       .filter-bar { flex-direction: column; }
       .filter-bar select, .filter-bar input, .search-box-container { min-width: 100%; width: 100%; }
-      .sms-modal { padding: 24px 18px; }
+      .sms-modal { padding: 18px 16px; border-radius: 14px; }
     }
 
     /* ══════════════════════════════════════
@@ -835,45 +838,45 @@
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 16px;
     }
     .settings-overlay.show { display: flex; }
 
     .settings-modal {
       background: var(--surface);
-      border-radius: 24px;
+      border-radius: 18px;
       padding: 0;
       width: 100%;
-      max-width: 520px;
+      max-width: 480px;
       max-height: 90vh;
       overflow-y: auto;
       border: 1px solid var(--border);
-      box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.25);
       position: relative;
-      animation: slideUpFade 0.28s ease;
+      animation: slideUpFade 0.25s ease;
     }
 
     @keyframes slideUpFade {
-      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      from { opacity: 0; transform: translateY(18px) scale(0.98); }
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     .settings-close-x {
       position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 34px;
-      height: 34px;
+      top: 14px;
+      right: 14px;
+      width: 30px;
+      height: 30px;
       background: var(--border-light);
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       color: var(--muted);
-      font-size: 15px;
-      transition: 0.2s;
+      font-size: 14px;
+      transition: 0.15s;
       z-index: 10;
     }
     .settings-close-x:hover { background: #fee2e2; color: #dc2626; }
@@ -881,34 +884,34 @@
     .settings-header {
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 28px 28px 20px;
+      gap: 14px;
+      padding: 20px 22px 16px;
       border-bottom: 1px solid var(--border);
     }
 
     .settings-header-icon {
-      width: 52px;
-      height: 52px;
+      width: 44px;
+      height: 44px;
       background: linear-gradient(135deg, var(--primary), #a855f7);
-      border-radius: 16px;
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
+      font-size: 20px;
       color: white;
       flex-shrink: 0;
     }
 
     .settings-header h2 {
       margin: 0;
-      font-size: 1.25rem;
+      font-size: 1.15rem;
       font-weight: 800;
       color: var(--text);
     }
 
     .settings-header p {
-      margin: 4px 0 0;
-      font-size: 13px;
+      margin: 3px 0 0;
+      font-size: 12.5px;
       color: var(--muted);
     }
 
@@ -916,19 +919,19 @@
     .settings-tabs {
       display: flex;
       gap: 4px;
-      padding: 16px 20px 0;
+      padding: 12px 18px 0;
       border-bottom: 1px solid var(--border);
       overflow-x: auto;
     }
 
     .stab {
-      padding: 9px 16px;
+      padding: 8px 14px;
       border: none;
       background: transparent;
       color: var(--muted);
       font-family: 'Nunito', sans-serif;
       font-weight: 700;
-      font-size: 13px;
+      font-size: 12.5px;
       cursor: pointer;
       border-bottom: 2px solid transparent;
       margin-bottom: -1px;
@@ -936,8 +939,8 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      border-radius: 8px 8px 0 0;
-      transition: all 0.2s;
+      border-radius: 6px 6px 0 0;
+      transition: all 0.15s;
     }
 
     .stab:hover { color: var(--primary); background: var(--primary-light); }
@@ -946,13 +949,13 @@
     /* Tab Content */
     .stab-content {
       display: none;
-      padding: 24px 28px;
+      padding: 20px 22px;
     }
     .stab-content.active { display: block; }
 
     /* Form Fields */
     .sfield-group {
-      margin-bottom: 18px;
+      margin-bottom: 14px;
     }
 
     .sfield-label {
@@ -1430,6 +1433,7 @@
           <p>Please select a country above to view available numbers.</p>
         </div>
       </div>
+    </div>
   </div>
 
   <!-- SMS / Number Modal -->

@@ -234,7 +234,7 @@ aside .top a.active {
    MAIN CONTAINER
 ══════════════════════════════════════ */
 .container {
-  padding: 40px 24px;
+  padding: 24px 28px;
   transition: 0.3s ease;
 }
 
@@ -539,15 +539,16 @@ aside .top a.active {
      SINGLE CARD
   ========================= */
   .card {
-    width: 80%;
+    width: 100%;
     min-height: auto;
-    padding: 18px 16px;
-    margin: 10px;
-    border-radius: 14px;
+    padding: 14px 12px;
+    margin: 0;
+    border-radius: 12px;
     background: var(--card-bg);
     color: var(--text);
     border: 1px solid var(--border);
-    box-shadow: 0 6px 20px rgba(121, 88, 199, 0.18);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-sizing: border-box;
     transition:
       transform 0.2s ease,
       box-shadow 0.2s ease;

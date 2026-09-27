@@ -65,14 +65,18 @@
   <!-- Hero Section -->
   <section class="hero">
     <div class="hero__content">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        <span>Instant OTP &bull; 180+ Countries &bull; 99.9% Delivery</span>
+      </div>
+
       <h1 class="hero__title">
-        Global Phone Numbers
-        <span class="highlight">Made Simple</span>
+        Get Virtual Numbers for SMS Verification
+        <span class="highlight">Worldwide</span>
       </h1>
 
       <p class="hero__subtitle">
-        Get instant access to virtual phone numbers from 70+ countries.
-        Perfect for SMS verification, marketing campaigns, and international business communication.
+        Receive SMS codes, verify your accounts and stay connected with global numbers. Fast, secure and easy to use.
       </p>
 
       <div class="hero__cta">
@@ -83,16 +87,191 @@
           </a>
         </button>
         <button class="btn-secondary btn-large" style="border: none !important; outline: none !important;">
-          <a href="#features">
-            Learn More
+          <a href="#popularServices">
+            View Pricing
             <i class="ph ph-arrow-right"></i>
           </a>
         </button>
       </div>
+
+      <div class="hero-trust-bar">
+        <div class="hero-trust-item"><i class="ph ph-globe"></i> <span>180+ Countries</span></div>
+        <div class="hero-trust-item"><i class="ph ph-shield-check"></i> <span>100% Secure &amp; Private</span></div>
+        <div class="hero-trust-item"><i class="ph ph-lightning"></i> <span>Instant SMS Delivery</span></div>
+      </div>
     </div>
 
     <div class="hero__image">
-      <img src="pot1.jpg" alt="Global phone numbers illustration">
+      <div class="hero-image-wrapper">
+        <img src="hero-phone.png" alt="Hand holding smartphone with virtual numbers for WhatsApp, Telegram, Google, Facebook, Instagram, TikTok" class="hero-main-img" id="heroPhoneImg">
+      </div>
+      <img src="pot1.jpg" alt="Global phone numbers illustration" style="display:none;">
+      <!-- Preserved terminal mockup for backward compatibility -->
+      <div class="hero-terminal-mockup" style="display:none;">
+        <div class="mockup-header">
+          <div class="mockup-header-left">
+            <span class="mockup-dot red"></span>
+            <span class="mockup-dot yellow"></span>
+            <span class="mockup-dot green"></span>
+            <span class="mockup-title">Active Virtual Number &bull; USA (+1)</span>
+          </div>
+          <span class="mockup-live-tag"><span class="pulse-indicator"></span> LIVE WAITING</span>
+        </div>
+        
+        <div class="mockup-body">
+          <div class="mockup-number-card">
+            <div class="mockup-num-top">
+              <div class="mockup-country">
+                <span class="mockup-flag">🇺🇸</span>
+                <div>
+                  <div class="mockup-cname">United States</div>
+                  <div class="mockup-service">WhatsApp Verification</div>
+                </div>
+              </div>
+              <span class="mockup-status-badge">Waiting for SMS</span>
+            </div>
+            <div class="mockup-phone-row">
+              <span class="mockup-phone-number">+1 (202) 555-0194</span>
+              <button type="button" class="mockup-copy-btn" onclick="navigator.clipboard?.writeText('+12025550194'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 1500);" title="Copy Phone Number">Copy</button>
+            </div>
+          </div>
+
+          <div class="mockup-sms-card">
+            <div class="mockup-sms-header">
+              <div class="mockup-sender">
+                <i class="ph ph-chat-circle-dots"></i>
+                <span>WhatsApp</span>
+              </div>
+              <span class="mockup-time">Just now</span>
+            </div>
+            <div class="mockup-sms-text">
+              Your WhatsApp code is <strong class="mockup-otp">729-418</strong>. Don't share this code with anyone.
+            </div>
+            <div class="mockup-otp-action-row">
+              <div class="mockup-code-highlight">
+                <span class="mockup-code-val">729418</span>
+              </div>
+              <span class="mockup-received-badge"><i class="ph ph-check-circle"></i> OTP Received in 2.4s</span>
+            </div>
+          </div>
+
+          <div class="mockup-stats-bar">
+            <div class="mockup-stat">
+              <i class="ph ph-lightning"></i>
+              <span>Instant Activation</span>
+            </div>
+            <div class="mockup-stat">
+              <i class="ph ph-shield-check"></i>
+              <span>100% Private</span>
+            </div>
+            <div class="mockup-stat">
+              <i class="ph ph-globe"></i>
+              <span>150+ Regions</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Popular Numbers / Services Showcase -->
+  <section class="popular-services-section" id="popularServices">
+    <div class="section-header">
+      <div class="sub-badge">TOP ONLINE SERVICES</div>
+      <h2>Get Virtual Numbers for Any Service</h2>
+      <p>Instant SMS activation codes for global platforms. Fresh, clean, private numbers available on-demand.</p>
+    </div>
+
+    <div class="services-showcase-grid">
+      <!-- WhatsApp -->
+      <div class="service-showcase-card">
+        <div class="showcase-card-top">
+          <div class="showcase-icon whatsapp"><i class="ph ph-whatsapp-logo"></i></div>
+          <span class="showcase-badge instant">Instant OTP</span>
+        </div>
+        <h3 class="showcase-title">WhatsApp</h3>
+        <p class="showcase-desc">Private numbers for personal and business WhatsApp account verification.</p>
+        <div class="showcase-meta">
+          <span class="showcase-country"><span class="flag">🇺🇸</span> +1 USA</span>
+          <span class="showcase-stock"><i class="ph ph-check"></i> 10,000+ In Stock</span>
+        </div>
+        <a href="login.html" class="showcase-btn">Get WhatsApp Number &rarr;</a>
+      </div>
+
+      <!-- Telegram -->
+      <div class="service-showcase-card">
+        <div class="showcase-card-top">
+          <div class="showcase-icon telegram"><i class="ph ph-telegram-logo"></i></div>
+          <span class="showcase-badge instant">Instant OTP</span>
+        </div>
+        <h3 class="showcase-title">Telegram</h3>
+        <p class="showcase-desc">Secure temporary numbers for Telegram channel and account creation.</p>
+        <div class="showcase-meta">
+          <span class="showcase-country"><span class="flag">🇬🇧</span> +44 UK</span>
+          <span class="showcase-stock"><i class="ph ph-check"></i> 8,500+ In Stock</span>
+        </div>
+        <a href="login.html" class="showcase-btn">Get Telegram Number &rarr;</a>
+      </div>
+
+      <!-- Google & Gmail -->
+      <div class="service-showcase-card">
+        <div class="showcase-card-top">
+          <div class="showcase-icon google"><i class="ph ph-google-logo"></i></div>
+          <span class="showcase-badge instant">Instant OTP</span>
+        </div>
+        <h3 class="showcase-title">Google &amp; Gmail</h3>
+        <p class="showcase-desc">Bypass phone verification during Gmail, Google Cloud, and YouTube registration.</p>
+        <div class="showcase-meta">
+          <span class="showcase-country"><span class="flag">🇳🇬</span> +234 Nigeria</span>
+          <span class="showcase-stock"><i class="ph ph-check"></i> 12,000+ In Stock</span>
+        </div>
+        <a href="login.html" class="showcase-btn">Get Google Number &rarr;</a>
+      </div>
+
+      <!-- OpenAI & ChatGPT -->
+      <div class="service-showcase-card">
+        <div class="showcase-card-top">
+          <div class="showcase-icon openai"><i class="ph ph-cpu"></i></div>
+          <span class="showcase-badge instant">Instant OTP</span>
+        </div>
+        <h3 class="showcase-title">OpenAI &amp; ChatGPT</h3>
+        <p class="showcase-desc">Reliable virtual numbers for ChatGPT Plus, API keys, and OpenAI registration.</p>
+        <div class="showcase-meta">
+          <span class="showcase-country"><span class="flag">🇩🇪</span> +49 Germany</span>
+          <span class="showcase-stock"><i class="ph ph-check"></i> 5,000+ In Stock</span>
+        </div>
+        <a href="login.html" class="showcase-btn">Get OpenAI Number &rarr;</a>
+      </div>
+
+      <!-- Instagram & Meta -->
+      <div class="service-showcase-card">
+        <div class="showcase-card-top">
+          <div class="showcase-icon instagram"><i class="ph ph-instagram-logo"></i></div>
+          <span class="showcase-badge instant">Instant OTP</span>
+        </div>
+        <h3 class="showcase-title">Instagram &amp; Meta</h3>
+        <p class="showcase-desc">Instant verification codes for Instagram, Facebook, and Threads accounts.</p>
+        <div class="showcase-meta">
+          <span class="showcase-country"><span class="flag">🇫🇷</span> +33 France</span>
+          <span class="showcase-stock"><i class="ph ph-check"></i> 7,200+ In Stock</span>
+        </div>
+        <a href="login.html" class="showcase-btn">Get Instagram Number &rarr;</a>
+      </div>
+
+      <!-- TikTok & X (Twitter) -->
+      <div class="service-showcase-card">
+        <div class="showcase-card-top">
+          <div class="showcase-icon tiktok"><i class="ph ph-tiktok-logo"></i></div>
+          <span class="showcase-badge instant">Instant OTP</span>
+        </div>
+        <h3 class="showcase-title">TikTok &amp; X (Twitter)</h3>
+        <p class="showcase-desc">Verify social media accounts instantly without revealing personal SIM info.</p>
+        <div class="showcase-meta">
+          <span class="showcase-country"><span class="flag">🇨🇦</span> +1 Canada</span>
+          <span class="showcase-stock"><i class="ph ph-check"></i> 6,800+ In Stock</span>
+        </div>
+        <a href="login.html" class="showcase-btn">Get Social Number &rarr;</a>
+      </div>
     </div>
   </section>
 
