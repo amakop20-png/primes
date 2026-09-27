@@ -4,12 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Help Center - Nura SQ</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="help.css">
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Phosphor Icons -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- CSS -->
+  <link rel="stylesheet" href="styles.css?v=2.5">
+  <link rel="stylesheet" href="help.css">
 </head>
 <body>
+  <script>
+    if (localStorage.getItem('dashboardTheme') === 'dark') {
+      document.body.classList.add('dark-theme');
+    }
+  </script>
+
   <div class="loader-wrapper" id="loaderWrapper">
     <img src="nuraxq-logo.png" alt="Nura SQ" class="loader-logo" style="width:160px;height:auto;object-fit:contain;">
   </div>

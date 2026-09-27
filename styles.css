@@ -328,6 +328,15 @@ header {
     width: 100%;
 }
 
+.nav-link.active {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.nav-link.active::after {
+    width: 100%;
+}
+
 .header__actions {
     display: flex;
     align-items: center;
