@@ -508,7 +508,7 @@ aside .top a.active {
 /* =========================================
    MOBILE RESPONSIVENESS
 ========================================= */
-@media screen and (max-width: 480px) {
+@media screen and (max-width: 768px) {
 
   html,
   body {
@@ -529,25 +529,30 @@ aside .top a.active {
   ========================= */
   .cards,
   .cards-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    width: 100%;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
   }
 
   /* =========================
      SINGLE CARD
   ========================= */
   .card {
-    width: 100%;
-    min-height: 180px;
-    padding: 16px 14px;
-    margin: 0;
-    border-radius: 14px;
+    width: 100% !important;
+    max-width: 440px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    min-height: 190px !important;
+    padding: 20px 18px 18px !important;
+    border-radius: 16px !important;
     background: var(--card-bg);
     color: var(--text);
     border: 1px solid var(--border);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
