@@ -138,6 +138,23 @@ body.dark-theme.auth-page::before {
   }
 }
 
+/* ── Smooth Continuous Floating Logo Animation ── */
+@keyframes gentleLogoHover {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.auth-page .auth-card-brand-icon,
+.auth-page .auth-banner-badge,
+.auth-page .auth-header .logo img.header__logo-img {
+  animation: gentleLogoHover 3.4s ease-in-out infinite;
+  will-change: transform;
+}
+
 /* ── Form Column (Left Side) ── */
 .auth-form-column {
   padding: 2.75rem 3rem;
@@ -149,20 +166,28 @@ body.dark-theme.auth-page::before {
 }
 
 .auth-card-brand {
-  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto 1.5rem auto;
+  text-align: center;
 }
 
 .auth-card-brand-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   text-decoration: none;
+  margin: 0 auto;
 }
 
 .auth-card-brand-icon {
   height: 36px;
   width: auto;
   object-fit: contain;
+  display: inline-block;
 }
 
 .auth-card-brand-name {
@@ -173,7 +198,7 @@ body.dark-theme.auth-page::before {
 }
 
 .auth-card-header {
-  text-align: left;
+  text-align: center;
   margin-bottom: 1.75rem;
 }
 
@@ -184,6 +209,7 @@ body.dark-theme.auth-page::before {
   letter-spacing: -0.025em;
   margin: 0 0 0.35rem;
   line-height: 1.25;
+  text-align: center;
 }
 
 .auth-card-header p {
@@ -191,6 +217,7 @@ body.dark-theme.auth-page::before {
   color: var(--muted, #64748B);
   line-height: 1.5;
   margin: 0;
+  text-align: center;
 }
 
 /* ── Form Controls ── */
@@ -430,7 +457,7 @@ body.dark-theme.auth-page::before {
 /* ── Banner Column (Right Side - Vibrant Purple Hero Panel) ── */
 .auth-banner-column {
   background: linear-gradient(145deg, #4C1D95 0%, #6D28D9 40%, #7C3AED 75%, #8B5CF6 100%);
-  padding: 3rem 2.75rem;
+  padding: 3.5rem 2.75rem;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -438,6 +465,58 @@ body.dark-theme.auth-page::before {
   justify-content: center;
   align-items: center;
   color: #FFFFFF;
+}
+
+/* Specific vertical balance for Signup page right card (Option B: naturally fills available space) */
+.signup-split-card .auth-banner-column {
+  justify-content: center;
+  padding: 3.5rem 2.75rem;
+}
+
+.signup-split-card .auth-banner-content {
+  max-width: 390px;
+  width: 100%;
+}
+
+.signup-split-card .auth-banner-badge {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  margin: 0 auto 1.5rem;
+}
+
+.signup-split-card .auth-banner-logo {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+}
+
+.signup-split-card .auth-banner-content h2 {
+  font-size: 1.7rem;
+  margin-bottom: 0.75rem;
+}
+
+.signup-split-card .auth-banner-desc {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.signup-split-card .auth-banner-features {
+  gap: 1rem;
+  width: 100%;
+}
+
+.signup-split-card .auth-feature-item {
+  padding: 13px 18px;
+  font-size: 0.9rem;
+  border-radius: 14px;
+  gap: 14px;
+}
+
+.signup-split-card .auth-feature-item i {
+  font-size: 1.35rem;
 }
 
 /* Ambient glow & decorative background geometry */
@@ -648,47 +727,146 @@ body.dark-theme .auth-card {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
 }
 
-/* ── Responsive Adaptations ── */
-@media (max-width: 920px) {
-  .auth-split-card {
-    grid-template-columns: 1fr;
-    max-width: 500px;
-    border-radius: 20px;
+/* ══════════════════════════════════════════════════════════════════════
+   Responsive Mobile & Tablet Layout (Stack: Left on Top, Right on Bottom)
+   ══════════════════════════════════════════════════════════════════════ */
+@media (max-width: 992px) {
+  .auth-main {
+    padding: 1.5rem 1rem 3rem;
   }
 
-  .auth-banner-column {
-    display: none;
+  /* Split container stacks into a unified vertical column */
+  .auth-split-card,
+  .auth-split-card.signup-split-card,
+  .auth-split-card.login-split-card {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    min-height: auto !important;
+    height: auto !important;
+    max-width: 520px !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    box-shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.04) !important;
   }
 
-  .auth-form-column {
-    padding: 2.25rem 2rem;
+  /* 1. Right-hand side section/card — TOP */
+  .auth-split-card .auth-banner-column,
+  .signup-split-card .auth-banner-column,
+  .login-split-card .auth-banner-column {
+    order: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-height: auto !important;
+    padding: 2.25rem 1.75rem 2rem !important;
+    border-radius: 0 !important;
+    border-bottom: 1px solid var(--border, #E2E8F0) !important;
+    box-sizing: border-box !important;
+    text-align: center !important;
+  }
+
+  /* 2. Left-hand side section (Form) — BOTTOM */
+  .auth-split-card .auth-form-column,
+  .signup-split-card .auth-form-column,
+  .login-split-card .auth-form-column {
+    order: 2 !important;
+    width: 100% !important;
+    min-height: auto !important;
+    padding: 2.25rem 1.75rem 2.5rem !important;
+    border-bottom: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .auth-banner-content,
+  .signup-split-card .auth-banner-content {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .auth-banner-badge,
+  .signup-split-card .auth-banner-badge {
+    width: 62px !important;
+    height: 62px !important;
+    border-radius: 18px !important;
+    margin: 0 auto 1rem !important;
+  }
+
+  .auth-banner-logo {
+    height: 34px !important;
+  }
+
+  .auth-banner-content h2,
+  .signup-split-card .auth-banner-content h2 {
+    font-size: 1.35rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .auth-banner-desc,
+  .signup-split-card .auth-banner-desc {
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .auth-banner-features,
+  .signup-split-card .auth-banner-features {
+    gap: 0.65rem !important;
+    width: 100% !important;
+  }
+
+  .auth-feature-item,
+  .signup-split-card .auth-feature-item {
+    padding: 9px 12px !important;
+    font-size: 0.825rem !important;
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
   }
 }
 
 @media (max-width: 600px) {
   .auth-header {
-    padding: 0.85rem 1.25rem;
+    padding: 0.85rem 1.15rem;
   }
 
   .auth-main {
-    padding: 1.5rem 1rem 3rem;
+    padding: 1rem 0.75rem 2.25rem !important;
   }
 
-  .auth-split-card {
-    border-radius: 18px;
+  .auth-split-card,
+  .auth-split-card.signup-split-card,
+  .auth-split-card.login-split-card {
+    border-radius: 16px !important;
+    max-width: 100% !important;
   }
 
-  .auth-form-column {
-    padding: 1.75rem 1.25rem;
+  /* 1. Right-hand side section/card — TOP */
+  .auth-split-card .auth-banner-column,
+  .signup-split-card .auth-banner-column,
+  .login-split-card .auth-banner-column {
+    padding: 2rem 1.15rem 1.75rem !important;
+    border-bottom: 1px solid var(--border, #E2E8F0) !important;
+  }
+
+  /* 2. Left-hand side section (Form) — BOTTOM */
+  .auth-split-card .auth-form-column,
+  .signup-split-card .auth-form-column,
+  .login-split-card .auth-form-column {
+    padding: 1.75rem 1.15rem 2rem !important;
+    border-bottom: none !important;
   }
 
   .name-grid {
-    grid-template-columns: 1fr;
-    gap: 0.85rem;
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
   }
 
   .auth-card-header h1 {
-    font-size: 1.5rem;
+    font-size: 1.45rem;
   }
 
   .auth-card-brand-icon {
