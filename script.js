@@ -431,7 +431,7 @@ function syncAdminUserData(ngnBalance, usdBalance) {
         if (!found && (userEmail || userName)) {
             users.unshift({
                 name: userName,
-                email: userEmail || `${session.username || 'user'}@nurasq.com`,
+                email: userEmail || `${session.username || 'user'}@nuraxq.com`,
                 phone: userPhone || '—',
                 balance: String(ngnBalance),
                 balanceUSD: String(usdBalance),
@@ -816,7 +816,7 @@ function getReferralCode() {
     }
     const stored = localStorage.getItem('primes_referral_code');
     if (stored) return stored;
-    return 'REF-NURASQ';
+    return 'REF-NURAXQ';
 }
 
 function copyReferralCode() {

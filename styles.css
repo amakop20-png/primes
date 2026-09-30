@@ -62,7 +62,7 @@ body {
   overflow-x: hidden;
 }
 /* ══════════════════════════════════════════════════════════════════════
-   Nura SQ — Landing Page Stylesheet
+   NuraXQ — Landing Page Stylesheet
    Design concept: enterprise communications infrastructure — the visual
    language of a company real businesses trust with their SMS traffic.
    Restrained navy/blue palette, generous whitespace, real elevation
@@ -1778,7 +1778,8 @@ header {
 
 .logo img,
 .logo-container img,
-.nura-sq-logo {
+.nura-sq-logo,
+.nuraxq-logo {
   width: auto;
   height: 22px;
   max-width: 28px;
@@ -1791,7 +1792,8 @@ header {
 
 .logo img:hover,
 .logo-container img:hover,
-.nura-sq-logo:hover {
+.nura-sq-logo:hover,
+.nuraxq-logo:hover {
   transform: scale(1.03);
 }
 
@@ -3567,7 +3569,8 @@ main > p {
 
   .dash-header .logo img,
   .dash-header .logo-container img,
-  .nura-sq-logo {
+  .nura-sq-logo,
+  .nuraxq-logo {
     width: auto;
     height: 20px;
     max-width: 26px;

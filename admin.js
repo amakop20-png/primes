@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════════════
-   ADMIN.JS — Nura SQ Production Administration Console Engine
+   ADMIN.JS — NuraXQ Production Administration Console Engine
    ══════════════════════════════════════════════════════════════════════ */
 
 // ── Storage Keys ──

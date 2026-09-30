@@ -1344,7 +1344,7 @@ async function handleBuyClick(country, product, btnEl) {
 
         let displayError = error.message || 'Failed to purchase number.';
         if (displayError.includes('400') || displayError.toLowerCase().includes('status code 400')) {
-            displayError = 'Nura SQ upstream provider error (Code 400): This service is currently unavailable or out of stock from the provider. Your wallet was not charged.';
+            displayError = 'NuraXQ upstream provider error (Code 400): This service is currently unavailable or out of stock from the provider. Your wallet was not charged.';
         } else if (displayError.toLowerCase().includes('insufficient')) {
             displayError = `Insufficient balance: Provider price for available numbers in this service exceeds current balance (${sym}${walletBalance}). Please fund your wallet.`;
         }
