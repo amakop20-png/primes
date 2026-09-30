@@ -1319,9 +1319,20 @@
     </div>
 
     <div class="header-right">
-      <div class="currency-switch" id="currencySwitch" style="display:flex;align-items:center;gap:6px;cursor:pointer;background:var(--border-light);padding:6px 12px;border-radius:20px;font-weight:700;font-size:13px;color:var(--text);border:1px solid var(--border);transition:all 0.2s;user-select:none;">
-        <span id="currencySymbol">$</span> <span id="currencyName">USD</span>
-      </div>
+      <button type="button" class="currency-switch currency-switch-toggle" id="currencySwitch" aria-label="Switch Currency" title="Switch Currency">
+        <span class="cswitch-track">
+          <span class="cswitch-item curr-segment-ngn active" data-curr="NGN">
+            <span class="cswitch-sym">₦</span>
+            <span class="cswitch-code">NGN</span>
+          </span>
+          <span class="cswitch-item curr-segment-usd" data-curr="USD">
+            <span class="cswitch-sym">$</span>
+            <span class="cswitch-code">USD</span>
+          </span>
+        </span>
+        <span id="currencySymbol" style="display:none;" aria-hidden="true">$</span>
+        <span id="currencyName" style="display:none;" aria-hidden="true">USD</span>
+      </button>
       <div class="notifications profile-dropdown">
         <button class="profile-toggle" onclick="toggleNotifDropdown()" id="notifToggle" type="button" aria-expanded="false" style="background:transparent; border:none; position:relative; padding: 4px; cursor: pointer;">
             <i class="ph ph-bell" style="font-size: 18px; color: var(--text);"></i>

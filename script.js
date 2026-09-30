@@ -193,13 +193,35 @@ function updateCurrencyDisplay(currency) {
         depInp.min = isUSD ? '1' : '100';
         depInp.placeholder = isUSD ? 'e.g. 10' : 'e.g. 1000';
     }
+
+    // Update segmented toggle buttons across dashboard and sidebar
+    document.querySelectorAll('.curr-segment-ngn').forEach(el => el.classList.toggle('active', !isUSD));
+    document.querySelectorAll('.curr-segment-usd').forEach(el => el.classList.toggle('active', isUSD));
 }
 
 // In-memory cache for authoritative NGN balance to enable instantaneous switching
 let cachedNgnBalance = parseFloat(localStorage.getItem('_walletBalance_NGN') || localStorage.getItem('_walletBalance') || '0') || 0;
 
-function toggleCurrency() {
+function setDashboardCurrency(target) {
+    if (!target) return;
     const current = getCurrency();
+    if (current.toUpperCase() !== target.toUpperCase()) {
+        toggleCurrency();
+    }
+}
+window.setDashboardCurrency = setDashboardCurrency;
+
+function toggleCurrency(e) {
+    const current = getCurrency();
+    if (e && e.target && e.target.closest) {
+        const seg = e.target.closest('[data-curr]');
+        if (seg) {
+            const targetCurr = seg.getAttribute('data-curr');
+            if (targetCurr && targetCurr.toUpperCase() === current.toUpperCase()) {
+                return;
+            }
+        }
+    }
     const next    = current === 'NGN' ? 'USD' : 'NGN';
     localStorage.setItem('primes_currency', next);
 
@@ -228,7 +250,7 @@ function toggleCurrency() {
 /* ══════════════════════════════════════════
    WALLET BALANCE PRIVACY / HIDE BALANCE
 ══════════════════════════════════════════ */
-const BALANCE_MASK = '••••••••';
+const BALANCE_MASK_DIGITS = '•••••';
 let balanceVisible = localStorage.getItem('primes_balance_hidden') !== 'true';
 
 function isBalanceHidden() {
@@ -240,11 +262,17 @@ function setBalanceHidden(hidden) {
     localStorage.setItem('primes_balance_hidden', hidden ? 'true' : 'false');
 }
 
-function toggleBalancePrivacy() {
+let lastBalanceToggleTimestamp = 0;
+function toggleBalancePrivacy(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const now = Date.now();
+    if (now - lastBalanceToggleTimestamp < 200) return; // Prevent duplicate trigger
+    lastBalanceToggleTimestamp = now;
+
     balanceVisible = !balanceVisible;
     localStorage.setItem('primes_balance_hidden', balanceVisible ? 'false' : 'true');
     updateBalancePrivacyDisplay();
-    showToast(balanceVisible ? 'Wallet balance visible' : 'Wallet balance hidden', 'success');
+    showToast(balanceVisible ? 'Wallet balance visible' : 'Wallet balance hidden', 'info');
 }
 window.toggleBalancePrivacy = toggleBalancePrivacy;
 window.isBalanceHidden = isBalanceHidden;
@@ -254,6 +282,7 @@ function updateBalancePrivacyDisplay() {
     const curr   = getCurrency();
     const isUSD  = curr === 'USD';
     const rate   = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
+    const currSym = isUSD ? '$' : '₦';
 
     const ngnAmount = cachedNgnBalance || 0;
     const usdAmount = ngnAmount / rate;
@@ -261,58 +290,51 @@ function updateBalancePrivacyDisplay() {
     const formattedNGN = '₦' + ngnAmount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const formattedUSD = '$' + usdAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const primaryFormatted = isUSD ? formattedUSD : formattedNGN;
+    const maskedFormatted = currSym + BALANCE_MASK_DIGITS;
 
-    // 1. Available Balance (Hero Card)
+    // 1. Available Balance (Card)
     const balPrimaryEl = document.getElementById('displayBalanceNGN');
     if (balPrimaryEl) {
-        balPrimaryEl.textContent = isHidden ? BALANCE_MASK : primaryFormatted;
+        balPrimaryEl.textContent = isHidden ? maskedFormatted : primaryFormatted;
         balPrimaryEl.classList.toggle('balance-masked', isHidden);
     }
 
-    // 2. Secondary Balance (Hero Card)
+    // 2. Secondary Balance (Keep cleared so real amount is never exposed)
     const balSecondaryEl = document.getElementById('displayBalanceUSD');
     if (balSecondaryEl) {
-        if (isHidden) {
-            balSecondaryEl.textContent = isUSD
-                ? `USD Equivalent · (₦${rate.toLocaleString()} = $1.00)`
-                : `Approx. ${BALANCE_MASK}`;
-        } else {
-            balSecondaryEl.textContent = isUSD
-                ? `USD Equivalent · (₦${rate.toLocaleString()} = $1.00)`
-                : `Approx. ${formattedUSD}`;
-        }
+        balSecondaryEl.textContent = '';
     }
 
     // 3. NGN Balance Card
     const cardNgnEl = document.getElementById('cardBalanceNGN');
     if (cardNgnEl) {
-        cardNgnEl.textContent = isHidden ? BALANCE_MASK : formattedNGN;
+        cardNgnEl.textContent = isHidden ? ('₦' + BALANCE_MASK_DIGITS) : formattedNGN;
         cardNgnEl.classList.toggle('balance-masked', isHidden);
     }
 
     // 4. USD Balance Card
     const cardUsdEl = document.getElementById('cardBalanceUSD');
     if (cardUsdEl) {
-        cardUsdEl.textContent = isHidden ? BALANCE_MASK : formattedUSD;
+        cardUsdEl.textContent = isHidden ? ('$' + BALANCE_MASK_DIGITS) : formattedUSD;
         cardUsdEl.classList.toggle('balance-masked', isHidden);
     }
 
     // 5. Popup Balance Modal
     const popBalEl = document.getElementById('popupBalanceAmount');
     if (popBalEl) {
-        popBalEl.textContent = isHidden ? BALANCE_MASK : primaryFormatted;
+        popBalEl.textContent = isHidden ? maskedFormatted : primaryFormatted;
         popBalEl.classList.toggle('balance-masked', isHidden);
     }
 
     const popNgnEl = document.getElementById('popupBalanceNGN');
     if (popNgnEl) {
-        popNgnEl.textContent = isHidden ? BALANCE_MASK : formattedNGN;
+        popNgnEl.textContent = isHidden ? ('₦' + BALANCE_MASK_DIGITS) : formattedNGN;
         popNgnEl.classList.toggle('balance-masked', isHidden);
     }
 
     const popUsdEl = document.getElementById('popupBalanceUSD');
     if (popUsdEl) {
-        popUsdEl.textContent = isHidden ? BALANCE_MASK : formattedUSD;
+        popUsdEl.textContent = isHidden ? ('$' + BALANCE_MASK_DIGITS) : formattedUSD;
         popUsdEl.classList.toggle('balance-masked', isHidden);
     }
 
@@ -320,7 +342,7 @@ function updateBalancePrivacyDisplay() {
     const refBalEl = document.getElementById('displayReferralBalance');
     if (refBalEl) {
         if (isHidden) {
-            refBalEl.textContent = BALANCE_MASK;
+            refBalEl.textContent = currSym + BALANCE_MASK_DIGITS;
             refBalEl.classList.add('balance-masked');
         } else {
             refBalEl.classList.remove('balance-masked');

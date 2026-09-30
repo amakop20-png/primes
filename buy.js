@@ -167,14 +167,28 @@ function getCurrency() {
 }
 
 function updateCurrencyDisplay(currency) {
+    const isUSD = currency === 'USD';
     const sym  = document.getElementById('currencySymbol');
     const name = document.getElementById('currencyName');
-    if (sym)  sym.textContent  = currency === 'USD' ? '$' : '₦';
+    if (sym)  sym.textContent  = isUSD ? '$' : '₦';
     if (name) name.textContent = currency;
+
+    document.querySelectorAll('.curr-segment-ngn').forEach(el => el.classList.toggle('active', !isUSD));
+    document.querySelectorAll('.curr-segment-usd').forEach(el => el.classList.toggle('active', isUSD));
 }
 
-function toggleBuyCurrency() {
-    const next = getCurrency() === 'NGN' ? 'USD' : 'NGN';
+function toggleBuyCurrency(e) {
+    const current = getCurrency();
+    if (e && e.target && e.target.closest) {
+        const seg = e.target.closest('[data-curr]');
+        if (seg) {
+            const targetCurr = seg.getAttribute('data-curr');
+            if (targetCurr && targetCurr.toUpperCase() === current.toUpperCase()) {
+                return;
+            }
+        }
+    }
+    const next = current === 'NGN' ? 'USD' : 'NGN';
     localStorage.setItem('primes_currency', next);
     updateCurrencyDisplay(next);
     loadWalletBalanceBuyPage();

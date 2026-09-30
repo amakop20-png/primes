@@ -131,8 +131,19 @@
         </a>
     </div>
     <div class="header-right">
-        <button type="button" class="currency-switch" id="currencySwitch" style="display: flex; align-items: center; gap: 6px; cursor: pointer; background: var(--border-light); padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; color: var(--text); border: none;">
-            <span id="currencySymbol">₦</span> <span id="currencyName">NGN</span> <i class="ph ph-caret-down" style="font-size:10px;"></i>
+        <button type="button" class="currency-switch currency-switch-toggle" id="currencySwitch" aria-label="Switch Currency" title="Switch Currency">
+            <span class="cswitch-track">
+                <span class="cswitch-item curr-segment-ngn active" data-curr="NGN">
+                    <span class="cswitch-sym">₦</span>
+                    <span class="cswitch-code">NGN</span>
+                </span>
+                <span class="cswitch-item curr-segment-usd" data-curr="USD">
+                    <span class="cswitch-sym">$</span>
+                    <span class="cswitch-code">USD</span>
+                </span>
+            </span>
+            <span id="currencySymbol" style="display:none;" aria-hidden="true">₦</span>
+            <span id="currencyName" style="display:none;" aria-hidden="true">NGN</span>
         </button>
         <div class="notifications profile-dropdown">
             <button class="profile-toggle" onclick="toggleNotifDropdown()" id="notifToggle" type="button" aria-expanded="false" style="background:transparent; border:none; position:relative; padding: 4px; cursor: pointer;">
@@ -219,94 +230,42 @@
         <p>Manage your wallet and account activities.</p>
     </div>
 
-    <!-- Wallet Overview Section -->
-    <section class="wallet-overview-section" id="walletOverviewSection">
-      <div class="wallet-overview-header">
-        <div class="wallet-overview-title-wrap">
-          <div class="wallet-title-icon-box">
-            <i class="ph ph-wallet"></i>
+    <!-- Wallet Section -->
+    <section class="wallet-overview-section" id="walletOverviewSection" style="margin-bottom: 28px;">
+      <div class="wallet-card-hero">
+        <div class="whero-top">
+          <div class="whero-label">
+            <span class="whero-status-dot" title="Account Active"></span>
+            <span>ACCOUNT BALANCE</span>
           </div>
-          <div>
-            <h2 class="wallet-overview-title">Wallet Overview</h2>
-            <p class="wallet-overview-sub">Available balance, multi-currency accounts, and instant funding</p>
-          </div>
-        </div>
-        <div class="wallet-overview-actions">
-          <button type="button" class="btn-wallet-action outline" onclick="loadWalletBalance(); loadTransactions(1);" title="Refresh Wallet Balances">
-            <i class="ph ph-arrows-clockwise"></i> <span>Refresh</span>
-          </button>
-          <button type="button" class="btn-wallet-action primary" onclick="openDepositModal()">
-            <i class="ph ph-plus"></i> <span>Add Funds</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Balanced 3-Card Grid -->
-      <div class="wallet-grid">
-        <!-- Card 1: Available Balance (Hero) -->
-        <div class="wallet-card-hero">
-          <div class="whero-top">
-            <div class="whero-label">
-              <i class="ph ph-wallet"></i>
-              <span>Available Balance</span>
+          <div class="whero-top-right">
+            <div class="wcard-currency-toggle" role="group" aria-label="Currency selection">
+              <button type="button" class="wcard-curr-btn curr-segment-ngn active" onclick="setDashboardCurrency('NGN')" title="Switch to Nigerian Naira">NGN</button>
+              <button type="button" class="wcard-curr-btn curr-segment-usd" onclick="setDashboardCurrency('USD')" title="Switch to US Dollar">USD</button>
             </div>
-            <span class="whero-pill" id="activeCurrencyTag">Active: NGN</span>
-          </div>
-          <div class="whero-amount-row">
-            <div class="whero-amount" id="displayBalanceNGN" style="margin-bottom:0;">₦0.00</div>
-            <button type="button" class="btn-balance-privacy" id="toggleBalancePrivacyBtn" aria-label="Hide wallet balance" title="Hide wallet balance">
+            <button type="button" class="btn-balance-privacy" id="toggleBalancePrivacyBtn" onclick="toggleBalancePrivacy(event)" aria-label="Hide wallet balance" title="Hide wallet balance">
               <i class="ph ph-eye" id="balancePrivacyIcon"></i>
             </button>
           </div>
-          <div class="whero-sub" id="displayBalanceUSD">Approx. $0.00</div>
-          <div class="whero-buttons">
-            <button type="button" class="btn-hero-outline" id="openPopup">
-              <i class="ph ph-file-text"></i> View Details
-            </button>
-          </div>
         </div>
 
-        <!-- Card 2: NGN Balance -->
-        <div class="wallet-stat-card">
-          <div class="wstat-top">
-            <div class="wstat-label">
-              <span class="wstat-curr-pill">NGN</span>
-              <span>NGN Balance</span>
-            </div>
-            <span class="wstat-badge badge-settlement">Settlement</span>
-          </div>
-          <div class="wstat-amount" id="cardBalanceNGN">₦0.00</div>
-          <div class="wstat-sub">Primary local settlement account balance for all services &amp; orders</div>
-          <div class="wstat-actions">
-            <button type="button" class="btn-wstat-link" onclick="openDepositModal()">
-              <i class="ph ph-credit-card"></i> Deposit NGN
-            </button>
-            <button type="button" class="btn-wstat-link" onclick="openPopup()">
-              <i class="ph ph-bank"></i> Virtual Bank
-            </button>
-          </div>
+        <div class="whero-amount-row">
+          <div class="whero-amount" id="displayBalanceNGN" style="margin-bottom:0;">₦0.00</div>
         </div>
 
-        <!-- Card 3: USD Balance -->
-        <div class="wallet-stat-card">
-          <div class="wstat-top">
-            <div class="wstat-label">
-              <span class="wstat-curr-pill">USD</span>
-              <span>USD Balance</span>
-            </div>
-            <span class="wstat-badge badge-usd">Converted</span>
-          </div>
-          <div class="wstat-amount" id="cardBalanceUSD">$0.00</div>
-          <div class="wstat-sub" id="cardExchangeRateLabel">Exchange Rate: ₦1,500 = $1.00 USD</div>
-          <div class="wstat-actions">
-            <button type="button" class="btn-wstat-link" onclick="toggleCurrency()">
-              <i class="ph ph-arrows-left-right"></i> Switch View
-            </button>
-            <a href="#recentActivity" class="btn-wstat-link">
-              <i class="ph ph-clock-counter-clockwise"></i> Activity
-            </a>
-          </div>
+        <div class="whero-buttons">
+          <button type="button" class="btn-hero-solid btn-hero-fund" onclick="openDepositModal()">
+            <i class="ph ph-plus"></i> Add Funds
+          </button>
         </div>
+
+        <!-- Hidden Compatibility Anchors (Keeps existing JS completely safe) -->
+        <span id="activeCurrencyTag" style="display:none;">Active: NGN</span>
+        <span id="displayBalanceUSD" style="display:none;"></span>
+        <span id="cardBalanceNGN" style="display:none;"></span>
+        <span id="cardBalanceUSD" style="display:none;"></span>
+        <span id="cardExchangeRateLabel" style="display:none;"></span>
+        <button id="openPopup" style="display:none;"></button>
       </div>
     </section>
 

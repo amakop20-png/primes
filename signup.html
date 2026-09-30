@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sign Up - Nura SQ</title>
+  <title>Sign Up - NuraXQ</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="auth.css">
@@ -20,139 +20,177 @@
   <header class="auth-header">
     <div class="logo">
       <a href="index.html" class="header__logo-link">
-        <img src="nuraxq-icon.png" alt="Nura SQ" class="header__logo-img">
-        <span class="header__logo-text">Nura SQ</span>
+        <img src="nuraxq-icon.png" alt="NuraXQ" class="header__logo-img">
+        <span class="header__logo-text">NuraXQ</span>
       </a>
     </div>
     <a href="index.html" class="auth-back-link"><i class="ph ph-arrow-left"></i> Back to Home</a>
   </header>
 
-  <!-- Centered Auth Card Container -->
+  <!-- Centered Split Card Auth Container -->
   <main class="auth-main">
-    <div class="auth-card signup-card">
-      <div class="auth-card-logo-wrap">
-        <a href="index.html" class="header__logo-link" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
-          <img src="nuraxq-icon.png" alt="Nura SQ" style="height:32px;width:auto;object-fit:contain;">
-          <span style="font-size:1.5rem;font-weight:800;color:var(--text);letter-spacing:-0.5px;">Nura SQ</span>
-        </a>
-      </div>
+    <div class="auth-split-card signup-split-card">
+      
+      <!-- Left Column: Form Panel -->
+      <div class="auth-form-column">
+        <div class="auth-card-brand">
+          <a href="index.html" class="auth-card-brand-link">
+            <img src="nuraxq-icon.png" alt="NuraXQ" class="auth-card-brand-icon">
+            <span class="auth-card-brand-name">NuraXQ</span>
+          </a>
+        </div>
 
-      <div class="auth-card-header">
-        <h1>Create Account</h1>
-        <p>Get instant access to virtual phone numbers from 70+ countries</p>
-      </div>
+        <div class="auth-card-header">
+          <h1>Create Account</h1>
+          <p>Get instant access to virtual phone numbers from 70+ countries</p>
+        </div>
 
-      <form class="auth-form" id="registerForm">
-        <!-- First & Last Name (Responsive Grid) -->
-        <div class="name-grid">
-          <div class="form-group">
-            <label for="firstName">First Name</label>
-            <div class="input-group">
-              <span class="input-icon"><i class="ph ph-user"></i></span>
-              <input type="text" id="firstName" name="firstName" class="form-control" 
-                     placeholder="John" required autocomplete="given-name">
+        <form class="auth-form" id="registerForm">
+          <!-- First & Last Name (Responsive Grid) -->
+          <div class="name-grid">
+            <div class="form-group">
+              <label for="firstName">First Name</label>
+              <div class="input-group">
+                <span class="input-icon"><i class="ph ph-user"></i></span>
+                <input type="text" id="firstName" name="firstName" class="form-control" 
+                       placeholder="John" required autocomplete="given-name">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="lastName">Last Name</label>
+              <div class="input-group">
+                <span class="input-icon"><i class="ph ph-user"></i></span>
+                <input type="text" id="lastName" name="lastName" class="form-control" 
+                       placeholder="Doe" required autocomplete="family-name">
+              </div>
             </div>
           </div>
 
+          <!-- Username -->
           <div class="form-group">
-            <label for="lastName">Last Name</label>
+            <label for="username">Username</label>
             <div class="input-group">
-              <span class="input-icon"><i class="ph ph-user"></i></span>
-              <input type="text" id="lastName" name="lastName" class="form-control" 
-                     placeholder="Doe" required autocomplete="family-name">
+              <span class="input-icon"><i class="ph ph-at"></i></span>
+              <input type="text" id="username" name="username" class="form-control" 
+                     placeholder="johndoe" required autocomplete="username">
+            </div>
+            <div id="username-error" style="color: #ff355b; font-size: 0.85rem; margin-top: 0.25rem; display: none;"></div>
+            <small style="color: var(--muted); font-size: 0.78rem; margin-top: 0.15rem;">Letters and numbers only (minimum 3 characters)</small>
+          </div>
+
+          <!-- Email Address -->
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <div class="input-group">
+              <span class="input-icon"><i class="ph ph-envelope-simple"></i></span>
+              <input type="email" id="email" name="email" class="form-control" 
+                     placeholder="john@example.com" required autocomplete="email">
+            </div>
+          </div>
+
+          <!-- Phone Number -->
+          <div class="form-group">
+            <label for="phoneNumber">Phone Number</label>
+            <div class="input-group">
+              <span class="input-icon"><i class="ph ph-device-mobile"></i></span>
+              <input type="tel" id="phoneNumber" name="phoneNumber" class="form-control" 
+                     placeholder="+234 800 000 0000" required autocomplete="tel">
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="input-group">
+              <span class="input-icon"><i class="ph ph-lock-key"></i></span>
+              <input type="password" id="password" name="password" class="form-control" 
+                     placeholder="••••••••" minlength="8" required autocomplete="new-password"
+                     style="padding-right: 2.85rem;">
+              <button type="button" class="password-toggle" aria-label="Toggle password visibility">👁️</button>
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="form-group">
+            <label for="confirm_password">Confirm Password</label>
+            <div class="input-group">
+              <span class="input-icon"><i class="ph ph-lock-key"></i></span>
+              <input type="password" id="confirm_password" name="confirm_password" class="form-control" 
+                     placeholder="••••••••" minlength="8" required autocomplete="new-password"
+                     style="padding-right: 2.85rem;">
+              <button type="button" class="password-toggle" aria-label="Toggle password visibility">👁️</button>
+            </div>
+            <div id="password-error" style="color: #ff355b; font-size: 0.85rem; margin-top: 0.25rem; display: none;"></div>
+          </div>
+
+          <!-- Referral Code -->
+          <div class="form-group">
+            <label for="referral_code">Referral Code <span style="font-weight: normal; color: var(--muted); text-transform: none;">(Optional)</span></label>
+            <div class="input-group">
+              <span class="input-icon"><i class="ph ph-gift"></i></span>
+              <input type="text" id="referral_code" name="referral_code" class="form-control" 
+                     placeholder="e.g. REF-USERNAME" style="text-transform: uppercase;">
+            </div>
+          </div>
+
+          <!-- Terms Agreement Checkbox -->
+          <div class="auth-checkbox-group" style="margin-top: 0.25rem;">
+            <input type="checkbox" id="accept_terms" name="accept_terms" required>
+            <label for="accept_terms">I agree to the <a href="terms.html" target="_blank">Terms & Conditions</a></label>
+          </div>
+
+          <!-- Keep Me Logged In Checkbox -->
+          <div class="auth-checkbox-group">
+            <input type="checkbox" id="remember_me" name="remember_me" checked>
+            <label for="remember_me">Keep me logged in (30 days)</label>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="auth-submit-btn" id="registerBtn">
+            <span>Create Account</span>
+            <div id="btnSpinner" class="btn-spinner" style="display: none;"></div>
+          </button>
+
+          <div class="auth-footer">
+            <p>Already have an account? <a href="login.html">Sign In</a></p>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right Column: Hero Banner Panel (Matches Reference Style) -->
+      <div class="auth-banner-column">
+        <div class="auth-banner-ambient"></div>
+        <div class="auth-banner-content">
+          <div class="auth-banner-badge">
+            <img src="nuraxq-icon.png" alt="NuraXQ" class="auth-banner-logo">
+          </div>
+          <h2>Instant SMS Verification</h2>
+          <p class="auth-banner-desc">
+            Get instant virtual numbers from 70+ countries for WhatsApp, Telegram, Google, TikTok, and hundreds more services.
+          </p>
+
+          <div class="auth-banner-features">
+            <div class="auth-feature-item">
+              <i class="ph ph-lightning"></i>
+              <span>High speed code delivery</span>
+            </div>
+            <div class="auth-feature-item">
+              <i class="ph ph-shield-check"></i>
+              <span>Guaranteed private & disposable</span>
+            </div>
+            <div class="auth-feature-item">
+              <i class="ph ph-globe-hemisphere-west"></i>
+              <span>Numbers across 70+ global regions</span>
+            </div>
+            <div class="auth-feature-item">
+              <i class="ph ph-wallet"></i>
+              <span>Instant auto-funding via card & transfer</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Username -->
-        <div class="form-group">
-          <label for="username">Username</label>
-          <div class="input-group">
-            <span class="input-icon"><i class="ph ph-at"></i></span>
-            <input type="text" id="username" name="username" class="form-control" 
-                   placeholder="johndoe" required autocomplete="username">
-          </div>
-          <div id="username-error" style="color: #ff355b; font-size: 0.85rem; margin-top: 0.25rem; display: none;"></div>
-          <small style="color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem;">Letters and numbers only (minimum 3 characters)</small>
-        </div>
-
-        <!-- Email -->
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <div class="input-group">
-            <span class="input-icon"><i class="ph ph-envelope-simple"></i></span>
-            <input type="email" id="email" name="email" class="form-control" 
-                   placeholder="john@example.com" required autocomplete="email">
-          </div>
-        </div>
-
-        <!-- Phone Number -->
-        <div class="form-group">
-          <label for="phoneNumber">Phone Number</label>
-          <div class="input-group">
-            <span class="input-icon"><i class="ph ph-device-mobile"></i></span>
-            <input type="tel" id="phoneNumber" name="phoneNumber" class="form-control" 
-                   placeholder="+234 800 000 0000" required autocomplete="tel">
-          </div>
-        </div>
-
-        <!-- Password -->
-        <div class="form-group">
-          <label for="password">Password</label>
-          <div class="input-group">
-            <span class="input-icon"><i class="ph ph-lock-key"></i></span>
-            <input type="password" id="password" name="password" class="form-control" 
-                   placeholder="••••••••" minlength="8" required autocomplete="new-password"
-                   style="padding-right: 2.85rem;">
-            <button type="button" class="password-toggle" aria-label="Toggle password visibility">👁️</button>
-          </div>
-        </div>
-
-        <!-- Confirm Password -->
-        <div class="form-group">
-          <label for="confirm_password">Confirm Password</label>
-          <div class="input-group">
-            <span class="input-icon"><i class="ph ph-lock-key"></i></span>
-            <input type="password" id="confirm_password" name="confirm_password" class="form-control" 
-                   placeholder="••••••••" minlength="8" required autocomplete="new-password"
-                   style="padding-right: 2.85rem;">
-            <button type="button" class="password-toggle" aria-label="Toggle password visibility">👁️</button>
-          </div>
-          <div id="password-error" style="color: #ff355b; font-size: 0.85rem; margin-top: 0.25rem; display: none;"></div>
-        </div>
-
-        <!-- Referral Code -->
-        <div class="form-group">
-          <label for="referral_code">Referral Code <span style="font-weight: normal; color: var(--muted);">(Optional)</span></label>
-          <div class="input-group">
-            <span class="input-icon"><i class="ph ph-gift"></i></span>
-            <input type="text" id="referral_code" name="referral_code" class="form-control" 
-                   placeholder="e.g. REF-USERNAME" style="text-transform: uppercase;">
-          </div>
-        </div>
-
-        <!-- Terms Agreement Checkbox -->
-        <div class="auth-checkbox-group" style="margin-top: 0.25rem;">
-          <input type="checkbox" id="accept_terms" name="accept_terms" required>
-          <label for="accept_terms">I agree to the <a href="terms.html" target="_blank">Terms & Conditions</a></label>
-        </div>
-
-        <!-- Keep Me Logged In Checkbox -->
-        <div class="auth-checkbox-group">
-          <input type="checkbox" id="remember_me" name="remember_me" checked>
-          <label for="remember_me">Keep me logged in (30 days)</label>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="auth-submit-btn" id="registerBtn">
-          <span>Create Account</span>
-          <div id="btnSpinner" class="btn-spinner" style="display: none;"></div>
-        </button>
-
-        <div class="auth-footer">
-          <p>Already have an account? <a href="login.html">Sign In</a></p>
-        </div>
-      </form>
     </div>
   </main>
 
