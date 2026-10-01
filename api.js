@@ -485,6 +485,8 @@ async function resetPassword(token, newPassword) {
         }),
         suppressAuthRedirect: true
     });
+}
+
 async function getNotifications() {
     try {
         return await apiRequest('/api/notifications', {
