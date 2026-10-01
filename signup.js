@@ -165,6 +165,8 @@ function initForm() {
             document.getElementById("accept_terms")?.checked;
 
 
+        const referralCode = document.getElementById("referral_code")?.value.trim();
+
         // ==============================
         // Validation
         // ==============================
@@ -268,7 +270,10 @@ function initForm() {
                 password,
                 firstName,
                 lastName,
-                phoneNumber
+                phoneNumber,
+                phone: phoneNumber,
+                referral_code: referralCode,
+                referralCode: referralCode
             });
 
             showToast(
@@ -345,3 +350,11 @@ document.addEventListener("DOMContentLoaded", () => {
     initPasswordToggle();
     initForm();
 });
+
+// Explicit global exports ensuring inline handlers or external calls never throw 'signup is not defined'
+if (typeof window !== "undefined") {
+    if (typeof signupUser === "function") {
+        window.signupUser = signupUser;
+        window.signup = signupUser;
+    }
+}

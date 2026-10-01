@@ -279,3 +279,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.history.replaceState({}, document.title, cleanUrl);
 });
+
+// Explicit global exports ensuring inline handlers or external calls never throw 'login is not defined'
+if (typeof window !== "undefined") {
+    if (typeof loginUser === "function") {
+        window.loginUser = loginUser;
+        window.login = loginUser;
+    }
+}

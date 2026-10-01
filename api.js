@@ -19,8 +19,6 @@ function getAuthToken() {
         token = localStorage.getItem('accessToken') || localStorage.getItem('token');
         if (token) {
             localStorage.setItem('primes_token', token);
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('token');
         }
     }
     return token || null;
@@ -29,9 +27,9 @@ function getAuthToken() {
 function setAuthToken(token) {
     if (token) {
         localStorage.setItem('primes_token', token);
-        // Clear conflicting legacy keys
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('token');
+        // Also mirror to legacy keys for compatibility across old/new code
+        localStorage.setItem('accessToken', token);
+        localStorage.setItem('token', token);
     }
 }
 
@@ -448,17 +446,54 @@ async function banOrder(orderId) {
 }
 
 async function loginUser(identifier, password) {
+    let id = identifier;
+    let pwd = password;
+    if (typeof identifier === 'object' && identifier !== null) {
+        id = identifier.identifier || identifier.email || identifier.username;
+        pwd = identifier.password !== undefined ? identifier.password : password;
+    }
+    const cleanId = String(id || '').trim();
     return await apiRequest('/api/login', {
         method: 'POST',
-        body: JSON.stringify({ identifier, password }),
+        body: JSON.stringify({
+            identifier: cleanId,
+            email: cleanId,
+            username: cleanId,
+            password: pwd
+        }),
         suppressAuthRedirect: true
     });
 }
 
 async function signupUser(userData) {
+    if (!userData || typeof userData !== 'object') {
+        throw new Error('Registration details are required.');
+    }
+    const cleanUsername = String(userData.username || '').trim();
+    const cleanEmail = String(userData.email || '').trim().toLowerCase();
+    const cleanPhone = String(userData.phoneNumber || userData.phone || '').trim();
+    const cleanFirstName = String(userData.firstName || '').trim();
+    const cleanLastName = String(userData.lastName || '').trim();
+
+    const payload = {
+        username: cleanUsername,
+        email: cleanEmail,
+        password: userData.password,
+        firstName: cleanFirstName,
+        lastName: cleanLastName,
+        phoneNumber: cleanPhone,
+        phone: cleanPhone
+    };
+
+    const ref = userData.referral_code || userData.referralCode;
+    if (ref) {
+        payload.referral_code = String(ref).trim();
+        payload.referralCode = String(ref).trim();
+    }
+
     return await apiRequest('/api/signup', {
         method: 'POST',
-        body: JSON.stringify(userData),
+        body: JSON.stringify(payload),
         suppressAuthRedirect: true
     });
 }
