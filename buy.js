@@ -2226,13 +2226,57 @@ function copyNumberToClipboard() {
     const phoneEl = document.getElementById('modalPhone');
     if (!phoneEl) return;
     const num = phoneEl.textContent.trim();
-    if (!num || num === '—') return;
-    navigator.clipboard.writeText(num).then(() => {
-        showToast('📋 Number copied to clipboard!', 'success');
-    }).catch(() => {
-        showToast('Number: ' + num, 'info');
-    });
+    if (!num || num === '—' || num.toLowerCase().includes('loading')) return;
+
+    const copyBtn = document.getElementById('btnCopyNumber');
+
+    const handleSuccess = () => {
+        showToast('📋 Number copied to clipboard: ' + num, 'success');
+        if (copyBtn) {
+            const originalHTML = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="ph ph-check"></i> Copied!';
+            copyBtn.style.background = '#10b981';
+            copyBtn.style.color = '#ffffff';
+            setTimeout(() => {
+                copyBtn.innerHTML = originalHTML;
+                copyBtn.style.background = '';
+                copyBtn.style.color = '';
+            }, 2000);
+        }
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(num).then(handleSuccess).catch(() => {
+            fallbackNumberCopy(num, handleSuccess);
+        });
+    } else {
+        fallbackNumberCopy(num, handleSuccess);
+    }
 }
+
+function fallbackNumberCopy(text, cb) {
+    try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        textArea.setAttribute('readonly', '');
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (successful && typeof cb === 'function') {
+            cb();
+        } else {
+            showToast('Number: ' + text, 'info');
+        }
+    } catch (_) {
+        showToast('Number: ' + text, 'info');
+    }
+}
+window.copyNumberToClipboard = copyNumberToClipboard;
 
 /* ══════════════════════════════════════════
    COPY VERIFICATION CODE
@@ -2243,9 +2287,10 @@ function copyOtpCodeToClipboard() {
     const code = otpCode.textContent.trim();
     if (!code || code === '—' || code === 'Waiting for code...' || code.includes('No code') || code.includes('Cancelled') || code.includes('Banned') || code.includes('Error')) return;
 
-    navigator.clipboard.writeText(code).then(() => {
+    const btn = document.getElementById('btnCopyCode');
+
+    const handleSuccess = () => {
         showToast('📋 Verification code copied to clipboard!', 'success');
-        const btn = document.getElementById('btnCopyCode');
         if (btn) {
             btn.classList.add('copied');
             btn.innerHTML = '<i class="ph ph-check"></i> Copied!';
@@ -2254,9 +2299,15 @@ function copyOtpCodeToClipboard() {
                 btn.innerHTML = '<i class="ph ph-copy"></i> Copy Code';
             }, 2000);
         }
-    }).catch(() => {
-        showToast('Code: ' + code, 'info');
-    });
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(handleSuccess).catch(() => {
+            fallbackNumberCopy(code, handleSuccess);
+        });
+    } else {
+        fallbackNumberCopy(code, handleSuccess);
+    }
 }
 window.copyOtpCodeToClipboard = copyOtpCodeToClipboard;
 

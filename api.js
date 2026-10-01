@@ -304,20 +304,48 @@ function normalizeWalletBalance(data, currency = 'NGN') {
 function normalizeVirtualAccount(data) {
     if (!data || typeof data !== 'object') return null;
 
-    // Some backends already return it flat - support both.
-    const src = data.dedicatedAccount || data.virtualAccount || data;
+    // Inspect possible nested objects from Paystack, custom backends, and data wrappers
+    const candidates = [
+        data.dedicatedAccount,
+        data.dedicated_account,
+        data.virtualAccount,
+        data.virtual_account,
+        data.account,
+        data.data?.dedicatedAccount,
+        data.data?.dedicated_account,
+        data.data?.virtualAccount,
+        data.data?.virtual_account,
+        data.data?.account,
+        data.data,
+        data
+    ];
+
+    let src = null;
+    for (const c of candidates) {
+        if (c && typeof c === 'object' && (c.account_number || c.accountNumber || c.account_no || c.accountNo)) {
+            src = c;
+            break;
+        }
+    }
+    if (!src) {
+        src = data.dedicatedAccount || data.dedicated_account || data.virtualAccount || data.virtual_account || data.account || data.data || data;
+    }
 
     if (!src || typeof src !== 'object') return null;
 
+    const accNum  = src.account_number || src.accountNumber || src.account_no || src.accountNo || null;
+    const accName = src.account_name || src.accountName || src.name || null;
+    const bank    = (src.bank && (src.bank.name || src.bank.slug)) || src.bank_name || src.bankName || (typeof src.bank === 'string' ? src.bank : null);
+
     return {
         raw: data,
-        accountName: src.account_name || src.accountName || null,
-        accountNumber: src.account_number || src.accountNumber || null,
-        bankName: (src.bank && (src.bank.name || src.bank.slug)) || src.bankName || null,
-        currency: src.currency || 'NGN',
-        active: src.active !== undefined ? src.active : null,
+        accountName: accName,
+        accountNumber: accNum,
+        bankName: bank,
+        currency: src.currency || data.currency || 'NGN',
+        active: src.active !== undefined ? src.active : (data.active !== undefined ? data.active : null),
         assigned: src.assigned !== undefined ? src.assigned : null,
-        id: src.id || data._id || null,
+        id: src.id || src._id || data.id || data._id || null,
         createdAt: src.created_at || src.createdAt || null,
         updatedAt: src.updated_at || src.updatedAt || null,
     };
@@ -457,6 +485,22 @@ async function resetPassword(token, newPassword) {
         }),
         suppressAuthRedirect: true
     });
+async function getNotifications() {
+    try {
+        return await apiRequest('/api/notifications', {
+            method: 'GET',
+            suppressAuthRedirect: true
+        });
+    } catch (_) {
+        try {
+            return await apiRequest('/api/user/notifications', {
+                method: 'GET',
+                suppressAuthRedirect: true
+            });
+        } catch (e) {
+            return null;
+        }
+    }
 }
 
 /* ==========================================
@@ -492,6 +536,7 @@ window.signupUser = signupUser;
 window.signup = signupUser;
 window.forgotPassword = forgotPassword;
 window.resetPassword = resetPassword;
+window.getNotifications = getNotifications;
 
 window.NuraAPI = {
     BASE_URL: API_BASE_URL,
@@ -518,6 +563,7 @@ window.NuraAPI = {
     finishOrder,
     cancelOrder,
     banOrder,
+    getNotifications,
     login: loginUser,
     loginUser,
     signup: signupUser,

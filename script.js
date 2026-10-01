@@ -43,6 +43,8 @@ function closePopup() {
         document.body.style.overflow = '';
     }
 }
+window.openPopup = openPopup;
+window.closePopup = closePopup;
 
 
 // ── Dropdown Toggle ──
@@ -600,14 +602,14 @@ function renderVirtualAccountDetails(container, acct, currency) {
             </div>
             <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="color:var(--muted,#888);font-weight:600;">${isUSD ? 'Account / IBAN' : 'Account No.'}</span>
-                <span id="vaAccountNumber" style="font-weight:800;color:var(--primary,#7c3aed);letter-spacing:1px;font-size:16px;">${accNum}</span>
+                <span id="vaAccountNumber" onclick="copyVirtualAccount()" title="Click to copy account number" style="font-weight:800;color:var(--primary,#7c3aed);letter-spacing:1px;font-size:16px;cursor:pointer;padding:2px 6px;border-radius:6px;transition:background 0.2s;" onmouseover="this.style.background='var(--primary-light,#f5f3ff)'" onmouseout="this.style.background='transparent'">${accNum}</span>
             </div>
             <div style="display:flex;justify-content:space-between;">
                 <span style="color:var(--muted,#888);font-weight:600;">Account Name</span>
                 <span style="font-weight:700;color:var(--text);">${accName}</span>
             </div>
-            <button onclick="copyVirtualAccount()" style="margin-top:8px;padding:8px 14px;border-radius:10px;border:1.5px solid var(--primary,#7c3aed);background:var(--primary-light,#f5f3ff);color:var(--primary,#7c3aed);font-weight:700;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-                <i class="ph ph-copy"></i> Copy Account Number
+            <button id="btnCopyVA" onclick="copyVirtualAccount()" style="margin-top:8px;padding:8px 14px;border-radius:10px;border:1.5px solid var(--primary,#7c3aed);background:var(--primary-light,#f5f3ff);color:var(--primary,#7c3aed);font-weight:700;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;">
+                <i class="ph ph-copy" id="vaCopyIcon"></i> <span id="vaCopyText">Copy Account Number</span>
             </button>
         </div>
         <p style="margin-top:10px;font-size:11px;color:var(--muted,#888);text-align:center;">
@@ -680,12 +682,40 @@ function copyVirtualAccount() {
     const el = document.getElementById('vaAccountNumber');
     if (!el) return;
     const text = el.textContent.trim();
-    navigator.clipboard.writeText(text).then(() => {
-        showToast('Account number copied to clipboard!', 'success');
-    }).catch(() => {
-        showToast('Account: ' + text, 'info');
-    });
+    if (!text || text === '—' || text === '-' || text.toLowerCase().includes('loading')) return;
+
+    const copyBtn  = document.getElementById('btnCopyVA');
+    const copyIcon = document.getElementById('vaCopyIcon');
+    const copyText = document.getElementById('vaCopyText');
+
+    const handleSuccess = () => {
+        if (copyBtn) {
+            copyBtn.style.background = 'var(--primary,#7c3aed)';
+            copyBtn.style.color = '#ffffff';
+        }
+        if (copyIcon) copyIcon.className = 'ph ph-check';
+        if (copyText) copyText.textContent = 'Copied!';
+        showToast('Account number copied to clipboard: ' + text, 'success');
+
+        setTimeout(() => {
+            if (copyBtn) {
+                copyBtn.style.background = 'var(--primary-light,#f5f3ff)';
+                copyBtn.style.color = 'var(--primary,#7c3aed)';
+            }
+            if (copyIcon) copyIcon.className = 'ph ph-copy';
+            if (copyText) copyText.textContent = 'Copy Account Number';
+        }, 2200);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(handleSuccess).catch(() => {
+            fallbackClipboardCopy(text, handleSuccess, 'Account Number');
+        });
+    } else {
+        fallbackClipboardCopy(text, handleSuccess, 'Account Number');
+    }
 }
+window.copyVirtualAccount = copyVirtualAccount;
 
 /* ══════════════════════════════════════════
    TRANSACTIONS
@@ -843,13 +873,14 @@ function copyReferralCode() {
     }
 }
 
-function fallbackClipboardCopy(text, cb) {
+function fallbackClipboardCopy(text, cb, label = 'Copied') {
     try {
         const textArea = document.createElement('textarea');
         textArea.value = text;
         textArea.style.position = 'fixed';
         textArea.style.left = '-9999px';
         textArea.style.top = '0';
+        textArea.setAttribute('readonly', '');
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
@@ -857,11 +888,13 @@ function fallbackClipboardCopy(text, cb) {
         document.body.removeChild(textArea);
         if (successful && typeof cb === 'function') {
             cb();
+        } else if (successful) {
+            showToast(`${label}: ${text}`, 'success');
         } else {
-            showToast('Code: ' + text, 'info');
+            showToast(`${label}: ${text}`, 'info');
         }
     } catch (_) {
-        showToast('Code: ' + text, 'info');
+        showToast(`${label}: ${text}`, 'info');
     }
 }
 
