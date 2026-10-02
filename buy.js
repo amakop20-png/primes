@@ -2876,15 +2876,25 @@ async function loadNotifications() {
     list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Loading notifications...</div>';
 
     try {
-        const err = new Error('Not Found');
-        err.status = 404;
-        throw err;
-    } catch (err) {
-        if (err.status === 404) {
-            list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Notification system is not fully connected to the backend yet (Endpoint missing).</div>';
-        } else {
-            list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Failed to load notifications.</div>';
+        let notifs = [];
+        if (typeof window.getNotifications === 'function') {
+            const res = await window.getNotifications();
+            if (res && Array.isArray(res.notifications)) notifs = res.notifications;
+            else if (res && Array.isArray(res.data)) notifs = res.data;
+            else if (Array.isArray(res)) notifs = res;
         }
+
+        // Check local notifications store if available
+        if (!notifs || notifs.length === 0) {
+            try {
+                const stored = JSON.parse(localStorage.getItem('primes_notifications') || '[]');
+                if (Array.isArray(stored) && stored.length > 0) notifs = stored;
+            } catch (_) {}
+        }
+
+        renderNotifications(notifs || []);
+    } catch (err) {
+        renderNotifications([]);
     }
 }
 
