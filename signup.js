@@ -290,6 +290,33 @@ function initForm() {
                 }
             }
 
+            // Sync with admin dashboard records
+            try {
+                const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
+                const displayName = [firstName, lastName].filter(Boolean).join(' ') || username || 'User';
+                const userEmail = (email || '').toLowerCase();
+                const exists = users.some(u => (u.email && u.email.toLowerCase() === userEmail));
+                if (!exists && (userEmail || displayName)) {
+                    users.unshift({
+                        name: displayName,
+                        email: userEmail || `${username}@nuraxq.com`,
+                        phone: phoneNumber || '—',
+                        balance: '0',
+                        role: 'user',
+                        createdAt: new Date().toISOString()
+                    });
+                    localStorage.setItem('primes_users', JSON.stringify(users));
+                }
+                const activity = JSON.parse(localStorage.getItem('primes_activity') || '[]');
+                activity.unshift({
+                    type: 'signup',
+                    message: `New user registered: ${displayName}`,
+                    username: displayName,
+                    timestamp: new Date().toISOString()
+                });
+                localStorage.setItem('primes_activity', JSON.stringify(activity.slice(0, 100)));
+            } catch (_) {}
+
             form.reset();
 
             setTimeout(() => {

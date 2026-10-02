@@ -54,10 +54,46 @@ function registerActiveOrder(orderId, country, product, phone) {
         localStorage.setItem('primes_active_orders', JSON.stringify(activeOrders));
         localStorage.setItem('primes_active_count', String(activeOrders.length));
         localStorage.setItem('primes_order_update', Date.now().toString());
+
+        // Sync with admin dashboard orders & activity
+        try {
+            let allOrders = JSON.parse(localStorage.getItem('primes_orders') || '[]');
+            if (!Array.isArray(allOrders)) allOrders = [];
+            const userSession = typeof getSession === 'function' ? getSession() : null;
+            const existingIdx = allOrders.findIndex(o => String(o.orderId || o.id) === strId);
+            const fullRecord = {
+                orderId: strId,
+                id: strId,
+                userName: userSession?.name || userSession?.username || 'User',
+                userEmail: userSession?.email || '',
+                service: product || '—',
+                product: product || '—',
+                country: country || '—',
+                phone: phone || '—',
+                amountNGN: 0,
+                status: 'PENDING',
+                createdAt: new Date().toISOString()
+            };
+            if (existingIdx >= 0) {
+                allOrders[existingIdx] = { ...allOrders[existingIdx], ...fullRecord };
+            } else {
+                allOrders.unshift(fullRecord);
+            }
+            localStorage.setItem('primes_orders', JSON.stringify(allOrders));
+
+            let activity = JSON.parse(localStorage.getItem('primes_activity') || '[]');
+            activity.unshift({
+                type: 'purchase',
+                message: `Order #${strId} placed for ${product || 'number'} (${country || 'Global'})`,
+                username: userSession?.name || userSession?.username || 'User',
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('primes_activity', JSON.stringify(activity.slice(0, 100)));
+        } catch (_) {}
     } catch (_) {}
 }
 
-function unregisterActiveOrder(orderId) {
+function unregisterActiveOrder(orderId, finalStatus) {
     if (!orderId) return;
     try {
         const strId = String(orderId);
@@ -67,6 +103,17 @@ function unregisterActiveOrder(orderId) {
             localStorage.setItem('primes_active_orders', JSON.stringify(activeOrders));
             localStorage.setItem('primes_active_count', String(activeOrders.length));
             localStorage.setItem('primes_order_update', Date.now().toString());
+        }
+
+        if (finalStatus) {
+            try {
+                let allOrders = JSON.parse(localStorage.getItem('primes_orders') || '[]');
+                const target = allOrders.find(o => String(o.orderId || o.id) === strId);
+                if (target) {
+                    target.status = finalStatus;
+                    localStorage.setItem('primes_orders', JSON.stringify(allOrders));
+                }
+            } catch (_) {}
         }
     } catch (_) {}
 }
@@ -2083,7 +2130,7 @@ async function handleFinishOrder() {
         console.log('[STEP 5] Response:', res);
         stopPolling(`Order finished by user (Order ID: ${targetOrderId})`);
         showToast('✅ Order finished and marked complete!', 'success');
-        unregisterActiveOrder(targetOrderId);
+        unregisterActiveOrder(targetOrderId, 'FINISHED');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
         currentOrderData = null;
@@ -2169,7 +2216,7 @@ async function executeCancelOrder() {
         hideCancelConfirmModal();
         closeSmsModal();
         showToast('✅ Number has been successfully cancelled.', 'success');
-        unregisterActiveOrder(targetOrderId);
+        unregisterActiveOrder(targetOrderId, 'CANCELED');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
         currentOrderData = null;
@@ -2204,7 +2251,7 @@ async function handleBanOrder() {
         console.log('[STEP 7] Response:', res);
         stopPolling(`Order banned by user (Order ID: ${targetOrderId})`);
         showToast('⚠️ Number reported as banned.', 'success');
-        unregisterActiveOrder(targetOrderId);
+        unregisterActiveOrder(targetOrderId, 'BANNED');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
         currentOrderData = null;

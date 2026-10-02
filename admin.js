@@ -361,6 +361,101 @@ async function loadAllData() {
     allUsers    = JSON.parse(localStorage.getItem(KEY_USERS) || '[]');
     allOrders   = JSON.parse(localStorage.getItem(KEY_ORDERS) || '[]');
     allActivity = JSON.parse(localStorage.getItem(KEY_ACTIVITY) || '[]');
+
+    // 1. Sync orders from primes_active_orders into allOrders
+    try {
+      const activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
+      if (Array.isArray(activeOrders) && activeOrders.length) {
+        let changed = false;
+        activeOrders.forEach(ao => {
+          const id = String(ao.id || ao.orderId || '');
+          if (id && !allOrders.some(o => String(o.orderId || o.id) === id)) {
+            allOrders.unshift({
+              orderId: id,
+              id: id,
+              service: ao.product || ao.service || '—',
+              product: ao.product || '—',
+              country: ao.country || '—',
+              phone: ao.phone || '—',
+              amountNGN: ao.amountNGN || 0,
+              status: ao.status || 'PENDING',
+              createdAt: ao.createdAt ? (typeof ao.createdAt === 'number' ? new Date(ao.createdAt).toISOString() : ao.createdAt) : new Date().toISOString()
+            });
+            changed = true;
+          }
+        });
+        if (changed) {
+          localStorage.setItem(KEY_ORDERS, JSON.stringify(allOrders));
+        }
+      }
+    } catch (_) {}
+
+    // 2. Sync logged-in user from primes_session into allUsers
+    try {
+      const userSession = typeof getSession === 'function' ? getSession() : JSON.parse(localStorage.getItem('primes_session') || 'null');
+      if (userSession && (userSession.email || userSession.username)) {
+        const email = (userSession.email || '').toLowerCase();
+        const name = userSession.name || userSession.username || 'User';
+        const exists = allUsers.some(u => (u.email && u.email.toLowerCase() === email) || (u.name && u.name === name));
+        if (!exists) {
+          allUsers.unshift({
+            name: name,
+            email: email || `${userSession.username || 'user'}@nuraxq.com`,
+            phone: userSession.phone || '—',
+            balance: String(userSession.balance || 0),
+            role: userSession.role || 'admin',
+            createdAt: userSession.loggedAt || userSession.createdAt || new Date().toISOString()
+          });
+          localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
+        }
+      }
+    } catch (_) {}
+
+    // 3. Ensure default platform admin is in allUsers if empty
+    if (!allUsers.length) {
+      allUsers = [
+        {
+          name: 'NuraXQ Super Admin',
+          email: 'admin@nuraxq.com',
+          phone: '+234 800 000 0000',
+          balance: '25000',
+          role: 'admin',
+          createdAt: new Date().toISOString()
+        }
+      ];
+      localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
+    }
+
+    // 4. Sync authoritative wallet balance if available
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('primes_token');
+    if (token && typeof apiRequest === 'function') {
+      try {
+        const wb = await apiRequest('/api/get-wallet-balance?currency=NGN', {
+          method: 'GET',
+          suppressAuthRedirect: true
+        });
+        const bal = typeof normalizeWalletBalance === 'function' ? normalizeWalletBalance(wb, 'NGN') : parseFloat(wb?.balance || wb?.ngnBalance || 0);
+        if (!isNaN(bal) && bal >= 0) {
+          const userSession = typeof getSession === 'function' ? getSession() : null;
+          if (userSession && userSession.email) {
+            const u = allUsers.find(x => x.email && x.email.toLowerCase() === userSession.email.toLowerCase());
+            if (u) {
+              u.balance = String(bal);
+              localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 5. Pre-load cached transactions if available
+    try {
+      const cachedTxs = JSON.parse(localStorage.getItem('primes_transactions') || '[]');
+      if (Array.isArray(cachedTxs) && cachedTxs.length) {
+        allTransactions = cachedTxs;
+        setText('navTxBadge', cachedTxs.length);
+      }
+    } catch (_) {}
   } catch (err) {
     console.error('Error reading local admin data:', err);
     adminToast('Failed to load local records.', 'error');
@@ -666,43 +761,49 @@ async function checkLiveOrderStatus(orderId) {
 
   try {
     let orderData = null;
-    if (typeof getOrder === 'function') {
-      orderData = await getOrder(orderId);
+    if (typeof apiRequest === 'function') {
+      orderData = await apiRequest(`/api/order/${encodeURIComponent(orderId)}`, {
+        method: 'GET',
+        suppressAuthRedirect: true
+      });
     } else {
-      const res = await fetch(`https://nurasms-api.onrender.com/api/order/${encodeURIComponent(orderId)}`);
+      const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('primes_token');
+      const res = await fetch(`https://nurasms-api.onrender.com/api/order/${encodeURIComponent(orderId)}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       orderData = await res.json();
     }
 
-    const o = orderData.order || orderData;
+    const o = orderData?.order || orderData;
     const body = document.getElementById('orderModalBody');
     if (body) {
       body.innerHTML = `
         <div class="modal-field">
           <div class="modal-field-label">Order ID</div>
-          <div class="modal-field-value" style="font-family:monospace;">${escapeHTML(String(o.id || orderId))}</div>
+          <div class="modal-field-value" style="font-family:monospace;">${escapeHTML(String(o?.id || orderId))}</div>
         </div>
         <div class="modal-field">
           <div class="modal-field-label">Live Status</div>
-          <div class="modal-field-value">${statusBadge(o.status)}</div>
+          <div class="modal-field-value">${statusBadge(o?.status || 'PENDING')}</div>
         </div>
         <div class="modal-field">
           <div class="modal-field-label">Phone Number</div>
-          <div class="modal-field-value" style="font-family:monospace;">${escapeHTML(o.phone || '—')}</div>
+          <div class="modal-field-value" style="font-family:monospace;">${escapeHTML(o?.phone || '—')}</div>
         </div>
         <div class="modal-field">
           <div class="modal-field-label">Received SMS Code</div>
-          <div class="modal-field-value" style="color:var(--green);font-size:16px;font-weight:800;">${escapeHTML(o.sms?.[0]?.code || o.code || 'None yet')}</div>
+          <div class="modal-field-value" style="color:var(--green);font-size:16px;font-weight:800;">${escapeHTML(o?.sms?.[0]?.code || o?.code || 'None yet')}</div>
         </div>
         <div class="modal-field full-width">
           <div class="modal-field-label">Full SMS Payload</div>
-          <div class="modal-field-value" style="font-size:12px;color:var(--muted);">${escapeHTML(o.sms?.[0]?.text || 'Waiting for provider transmission...')}</div>
+          <div class="modal-field-value" style="font-size:12px;color:var(--muted);">${escapeHTML(o?.sms?.[0]?.text || o?.text || 'Waiting for provider transmission...')}</div>
         </div>
       `;
     }
     showModal('orderModal');
 
     // Sync updated status to local array
-    if (o.status) {
+    if (o?.status) {
       const existing = allOrders.find(x => String(x.orderId || x.id) === String(orderId));
       if (existing) {
         existing.status = o.status;
@@ -711,7 +812,7 @@ async function checkLiveOrderStatus(orderId) {
       }
     }
   } catch (err) {
-    adminToast(`Provider query error: ${err.message || 'Unable to fetch status'}`, 'error');
+    adminToast(`Provider status: ${err.message || 'Unable to fetch status'}`, 'info');
   }
 }
 
@@ -725,27 +826,27 @@ async function loadBackendTransactions() {
 
   try {
     let result = null;
-    if (typeof getTransactions === 'function') {
-      result = await getTransactions(1, 50, 'NGN');
-    } else {
-      const token = getAuthToken();
-      const res = await fetch('https://nurasms-api.onrender.com/api/get-transactions?page=1&limit=50&currency=NGN', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-      result = await res.json();
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('primes_token');
+
+    if (token && typeof apiRequest === 'function') {
+      try {
+        result = await apiRequest('/api/get-transactions?page=1&limit=50&currency=NGN', {
+          method: 'GET',
+          suppressAuthRedirect: true
+        });
+      } catch (reqErr) {
+        console.warn('[Admin] Live backend get-transactions warning:', reqErr.message);
+      }
     }
 
-    const txList = result.data || result.transactions || [];
+    const txList = (result && (result.data || result.transactions)) || JSON.parse(localStorage.getItem('primes_transactions') || '[]') || [];
     allTransactions = txList;
     setText('navTxBadge', txList.length);
 
     if (!tbody) return;
 
     if (!txList.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No platform transactions found on backend.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No platform transactions recorded yet.</td></tr>';
       return;
     }
 
@@ -763,7 +864,12 @@ async function loadBackendTransactions() {
       </tr>
     `).join('');
 
-    adminToast('Backend transactions synchronized.', 'success');
+    if (result && (result.data || result.transactions)) {
+      localStorage.setItem('primes_transactions', JSON.stringify(txList));
+      adminToast('Backend transactions synchronized.', 'success');
+    } else {
+      adminToast('Transactions loaded.', 'info');
+    }
   } catch (err) {
     if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="empty-cell" style="color:var(--red);">Failed to sync transactions: ${escapeHTML(err.message)}</td></tr>`;
     adminToast('Could not load transactions from backend.', 'error');
@@ -916,6 +1022,33 @@ async function fundUser() {
       const newBal = previousBal + amount;
       target.balance = String(newBal);
       localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
+
+      // Sync active session if currently logged-in user was funded
+      try {
+        const sess = typeof getSession === 'function' ? getSession() : JSON.parse(localStorage.getItem('primes_session') || 'null');
+        if (sess && sess.email && sess.email.toLowerCase() === email.toLowerCase()) {
+          sess.balance = newBal;
+          if (typeof setSession === 'function') setSession(sess);
+          else localStorage.setItem('primes_session', JSON.stringify(sess));
+          localStorage.setItem('_actual_ngn_balance', String(newBal));
+          localStorage.setItem('_walletBalance_NGN', String(newBal));
+          localStorage.setItem('_walletBalance', String(newBal));
+        }
+      } catch (_) {}
+
+      // Record transaction
+      try {
+        const txs = JSON.parse(localStorage.getItem('primes_transactions') || '[]');
+        txs.unshift({
+          reference: 'ADM-' + Date.now().toString(36).toUpperCase(),
+          type: 'CREDIT (ADMIN)',
+          amount: amount,
+          status: 'SUCCESS',
+          createdAt: new Date().toISOString(),
+          userEmail: email
+        });
+        localStorage.setItem('primes_transactions', JSON.stringify(txs.slice(0, 100)));
+      } catch (_) {}
 
       logActivity('fund', `Admin credited ₦${amount.toLocaleString()} to ${email} (New balance: ₦${newBal.toLocaleString()})`);
       adminToast(`Successfully funded ₦${amount.toLocaleString()} to ${email}`, 'success');
