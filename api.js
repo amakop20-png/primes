@@ -44,6 +44,7 @@ function clearAuth() {
     localStorage.removeItem('_walletBalance_USD');
     localStorage.removeItem('_actual_usd_balance');
     localStorage.removeItem('_actual_ngn_balance');
+    localStorage.removeItem('primes_notifications');
 }
 
 function requireAuth() {
@@ -522,21 +523,139 @@ async function resetPassword(token, newPassword) {
     });
 }
 
-async function getNotifications() {
+/* ==========================================
+   USER-SPECIFIC NOTIFICATION SYSTEM
+========================================== */
+
+function getUserNotificationKey() {
+    const session = getSession();
+    const id = session?._id || session?.id || session?.email || session?.username;
+    if (id) {
+        return `primes_notifications_${String(id).toLowerCase().trim()}`;
+    }
+    return 'primes_notifications_guest';
+}
+
+async function createNotification(notifData) {
+    if (!notifData || typeof notifData !== 'object') return null;
+    const session = getSession();
+    const userKey = session?._id || session?.id || session?.email || session?.username || 'user';
+    const userEmail = (session?.email || '').toLowerCase();
+    const storageKey = getUserNotificationKey();
+
+    const newNotif = {
+        id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        userId: String(userKey),
+        userEmail: userEmail,
+        title: notifData.title || 'Notification',
+        message: notifData.message || '',
+        type: notifData.type || 'system',
+        createdAt: new Date().toISOString(),
+        read: false
+    };
+
+    // 1. Attempt backend notification creation (if server endpoint becomes available)
     try {
-        return await apiRequest('/api/notifications', {
-            method: 'GET',
+        await apiRequest('/api/notifications', {
+            method: 'POST',
+            body: JSON.stringify(newNotif),
             suppressAuthRedirect: true
         });
     } catch (_) {
-        try {
-            return await apiRequest('/api/user/notifications', {
-                method: 'GET',
-                suppressAuthRedirect: true
-            });
-        } catch (e) {
-            return null;
+        // Backend notification endpoint not implemented on microservice (expected)
+    }
+
+    // 2. Persist in user-specific storage
+    try {
+        let list = [];
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+            try { list = JSON.parse(raw); } catch (_) { list = []; }
         }
+        if (!Array.isArray(list)) list = [];
+        list.unshift(newNotif);
+        localStorage.setItem(storageKey, JSON.stringify(list.slice(0, 100)));
+
+        // Dispatch events so dropdown updates immediately in all open pages/tabs
+        window.dispatchEvent(new CustomEvent('primes_notification_created', { detail: newNotif }));
+        window.dispatchEvent(new CustomEvent('primes_notification_updated', { detail: list }));
+    } catch (err) {
+        console.warn('[Notifications] Error saving notification:', err);
+    }
+
+    return newNotif;
+}
+
+async function getNotifications() {
+    const session = getSession();
+    const userKey = session?._id || session?.id || session?.email || session?.username;
+    const userEmail = (session?.email || '').toLowerCase().trim();
+    const storageKey = getUserNotificationKey();
+
+    // 1. Query remote backend endpoint first
+    try {
+        const res = await apiRequest('/api/notifications', {
+            method: 'GET',
+            suppressAuthRedirect: true
+        });
+        if (res) {
+            const list = Array.isArray(res.notifications) ? res.notifications : (Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : null));
+            if (Array.isArray(list) && list.length > 0) {
+                // Filter strictly for current user
+                const filtered = userKey 
+                    ? list.filter(n => (n.userId && String(n.userId) === String(userKey)) || (n.userEmail && n.userEmail.toLowerCase() === userEmail))
+                    : list;
+                localStorage.setItem(storageKey, JSON.stringify(filtered.slice(0, 100)));
+                return filtered;
+            }
+        }
+    } catch (_) {
+        // Expected if backend has no /api/notifications endpoint
+    }
+
+    // 2. Load user-specific notifications from storage
+    try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+        }
+
+        // Migration from legacy primes_notifications (strictly matched to user)
+        const legacy = JSON.parse(localStorage.getItem('primes_notifications') || '[]');
+        if (Array.isArray(legacy) && legacy.length > 0) {
+            const filtered = legacy.filter(n => 
+                (userEmail && n.userEmail && n.userEmail.toLowerCase() === userEmail) ||
+                (userKey && n.userId && String(n.userId) === String(userKey))
+            );
+            if (filtered.length > 0) {
+                localStorage.setItem(storageKey, JSON.stringify(filtered));
+                return filtered;
+            }
+        }
+    } catch (_) {}
+
+    return [];
+}
+
+async function markAllNotificationsRead() {
+    const storageKey = getUserNotificationKey();
+
+    try {
+        await apiRequest('/api/notifications/read-all', {
+            method: 'POST',
+            suppressAuthRedirect: true
+        });
+    } catch (_) {}
+
+    try {
+        const list = await getNotifications();
+        list.forEach(n => { n.read = true; });
+        localStorage.setItem(storageKey, JSON.stringify(list));
+        window.dispatchEvent(new CustomEvent('primes_notification_updated', { detail: list }));
+        return list;
+    } catch (_) {
+        return [];
     }
 }
 
@@ -574,6 +693,9 @@ window.signup = signupUser;
 window.forgotPassword = forgotPassword;
 window.resetPassword = resetPassword;
 window.getNotifications = getNotifications;
+window.createNotification = createNotification;
+window.markAllNotificationsRead = markAllNotificationsRead;
+window.getUserNotificationKey = getUserNotificationKey;
 
 window.NuraAPI = {
     BASE_URL: API_BASE_URL,
@@ -601,6 +723,9 @@ window.NuraAPI = {
     cancelOrder,
     banOrder,
     getNotifications,
+    createNotification,
+    markAllNotificationsRead,
+    getUserNotificationKey,
     login: loginUser,
     loginUser,
     signup: signupUser,

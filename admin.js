@@ -1051,6 +1051,27 @@ async function fundUser() {
       } catch (_) {}
 
       logActivity('fund', `Admin credited ₦${amount.toLocaleString()} to ${email} (New balance: ₦${newBal.toLocaleString()})`);
+
+      // Dispatch in-app notification to the funded user's notification box
+      try {
+        const notifKey = `primes_notifications_${email.toLowerCase().trim()}`;
+        const existingNotifs = JSON.parse(localStorage.getItem(notifKey) || '[]');
+        const newNotif = {
+          id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+          userId: email,
+          userEmail: email.toLowerCase(),
+          title: 'Wallet Credited',
+          message: `Admin credited ₦${amount.toLocaleString()} to your wallet. New balance: ₦${newBal.toLocaleString()}.`,
+          type: 'wallet',
+          createdAt: new Date().toISOString(),
+          read: false
+        };
+        existingNotifs.unshift(newNotif);
+        localStorage.setItem(notifKey, JSON.stringify(existingNotifs.slice(0, 100)));
+        window.dispatchEvent(new CustomEvent('primes_notification_created', { detail: newNotif }));
+        window.dispatchEvent(new CustomEvent('primes_notification_updated', { detail: existingNotifs }));
+      } catch (_) {}
+
       adminToast(`Successfully funded ₦${amount.toLocaleString()} to ${email}`, 'success');
 
       document.getElementById('fundAmount').value = '';

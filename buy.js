@@ -27,6 +27,7 @@ let remainingTime    = 300;  // 300 seconds / 5-minute countdown timeout
 let pollInterval     = null; // Reference for SMS polling
 let isBuying         = false; // Guard against double-click on Buy
 let isActionBusy     = false; // Guard against multiple finish/cancel/ban requests
+const notifiedOtpOrders = new Set(); // Prevent duplicate OTP notifications on polling
 
 /* ══════════════════════════════════════════
    ACTIVE ORDER TRACKING & CROSS-PAGE SYNC
@@ -1380,6 +1381,19 @@ async function handleBuyClick(country, product, btnEl) {
 
         showToast('✅ Number purchased successfully! Opening order…', 'success');
 
+        // Trigger in-app notification for number purchased
+        if (typeof createNotification === 'function') {
+            const countryName = (selectedCountryName || country || '').toUpperCase();
+            const prodName = (product || '').toUpperCase();
+            const purchasedPhone = response?.order?.phone || response?.phone;
+            const phoneStr = purchasedPhone ? ` (${purchasedPhone})` : '';
+            createNotification({
+                title: 'Number Purchased',
+                message: `Successfully purchased ${prodName} number${phoneStr} in ${countryName}. Order #${orderId}.`,
+                type: 'order'
+            });
+        }
+
         await loadWalletBalanceBuyPage();
 
         // Requirement 2 & 3: Use the new order ID to fetch order, get number, and poll
@@ -2017,6 +2031,19 @@ function displayOTP(code) {
 
     const cancelBtn = document.getElementById('btnCancelOrder');
     if (cancelBtn) cancelBtn.disabled = true;
+
+    // Trigger in-app notification for OTP received (guarded against duplicate poll alerts)
+    if (otp && currentOrderId && !notifiedOtpOrders.has(String(currentOrderId))) {
+        notifiedOtpOrders.add(String(currentOrderId));
+        if (typeof createNotification === 'function') {
+            const prod = (selectedProduct || 'Verification').toUpperCase();
+            createNotification({
+                title: 'OTP Received',
+                message: `Verification code for ${prod}: ${otp}. Order #${currentOrderId}.`,
+                type: 'otp'
+            });
+        }
+    }
 }
 
 function displaySMS(text, sender = '') {
@@ -2130,6 +2157,16 @@ async function handleFinishOrder() {
         console.log('[STEP 5] Response:', res);
         stopPolling(`Order finished by user (Order ID: ${targetOrderId})`);
         showToast('✅ Order finished and marked complete!', 'success');
+
+        // Trigger in-app notification for order completed
+        if (typeof createNotification === 'function') {
+            createNotification({
+                title: 'Order Completed',
+                message: `Order #${targetOrderId} has been marked complete.`,
+                type: 'order'
+            });
+        }
+
         unregisterActiveOrder(targetOrderId, 'FINISHED');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -2216,6 +2253,16 @@ async function executeCancelOrder() {
         hideCancelConfirmModal();
         closeSmsModal();
         showToast('✅ Number has been successfully cancelled.', 'success');
+
+        // Trigger in-app notification for order cancelled
+        if (typeof createNotification === 'function') {
+            createNotification({
+                title: 'Order Cancelled',
+                message: `Order #${targetOrderId} was cancelled. Wallet refunded.`,
+                type: 'order'
+            });
+        }
+
         unregisterActiveOrder(targetOrderId, 'CANCELED');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -2251,6 +2298,16 @@ async function handleBanOrder() {
         console.log('[STEP 7] Response:', res);
         stopPolling(`Order banned by user (Order ID: ${targetOrderId})`);
         showToast('⚠️ Number reported as banned.', 'success');
+
+        // Trigger in-app notification for number reported/banned
+        if (typeof createNotification === 'function') {
+            createNotification({
+                title: 'Number Reported',
+                message: `Order #${targetOrderId} was reported as banned/unusable.`,
+                type: 'order'
+            });
+        }
+
         unregisterActiveOrder(targetOrderId, 'BANNED');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
@@ -2920,7 +2977,6 @@ document.addEventListener('click', function(e) {
 async function loadNotifications() {
     const list = document.getElementById('notifList');
     if (!list) return;
-    list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Loading notifications...</div>';
 
     try {
         let notifs = [];
@@ -2929,18 +2985,15 @@ async function loadNotifications() {
             if (res && Array.isArray(res.notifications)) notifs = res.notifications;
             else if (res && Array.isArray(res.data)) notifs = res.data;
             else if (Array.isArray(res)) notifs = res;
-        }
-
-        // Check local notifications store if available
-        if (!notifs || notifs.length === 0) {
-            try {
-                const stored = JSON.parse(localStorage.getItem('primes_notifications') || '[]');
-                if (Array.isArray(stored) && stored.length > 0) notifs = stored;
-            } catch (_) {}
+        } else {
+            const storageKey = typeof getUserNotificationKey === 'function' ? getUserNotificationKey() : 'primes_notifications';
+            const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            if (Array.isArray(stored)) notifs = stored;
         }
 
         renderNotifications(notifs || []);
     } catch (err) {
+        console.warn('[Notifications] Error loading notifications in buy.js:', err);
         renderNotifications([]);
     }
 }
@@ -2963,11 +3016,11 @@ function renderNotifications(notifs) {
     }
 
     list.innerHTML = notifs.map(n => `
-        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${n.read ? 'transparent' : 'rgba(124, 58, 237, 0.05)'}; display:flex; gap: 12px;">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${n.read ? 'transparent' : 'var(--primary)'}; margin-top: 6px;"></div>
-            <div>
-                <p style="font-size: 13px; font-weight: 700; color: var(--text); margin: 0 0 4px;">${n.title || 'Notification'}</p>
-                <p style="font-size: 12px; color: var(--muted); margin: 0 0 4px;">${n.message || ''}</p>
+        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${n.read ? 'transparent' : 'rgba(124, 58, 237, 0.05)'}; display:flex; gap: 12px; align-items: flex-start;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${n.read ? 'transparent' : 'var(--primary)'}; margin-top: 6px; flex-shrink: 0;"></div>
+            <div style="flex: 1; min-width: 0;">
+                <p style="font-size: 13px; font-weight: 700; color: var(--text); margin: 0 0 4px; word-break: break-word;">${escapeHTML(n.title || 'Notification')}</p>
+                <p style="font-size: 12px; color: var(--muted); margin: 0 0 4px; line-height: 1.4; word-break: break-word;">${escapeHTML(n.message || '')}</p>
                 <p style="font-size: 10px; color: var(--muted); margin: 0;">${new Date(n.createdAt || Date.now()).toLocaleString()}</p>
             </div>
         </div>
@@ -2977,8 +3030,29 @@ function renderNotifications(notifs) {
 async function markAllNotifRead() {
     const badge = document.getElementById('notifBadge');
     if (badge) badge.style.display = 'none';
+    if (typeof window.markAllNotificationsRead === 'function') {
+        try {
+            await window.markAllNotificationsRead();
+        } catch (_) {}
+    }
     loadNotifications();
 }
+
+window.loadNotifications = loadNotifications;
+window.markAllNotifRead = markAllNotifRead;
+
+// Listen for cross-component and storage notification updates
+window.addEventListener('primes_notification_updated', () => {
+    loadNotifications().catch(() => {});
+});
+window.addEventListener('primes_notification_created', () => {
+    loadNotifications().catch(() => {});
+});
+window.addEventListener('storage', (e) => {
+    if (e.key && e.key.startsWith('primes_notifications')) {
+        loadNotifications().catch(() => {});
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     if (getAuthToken()) {

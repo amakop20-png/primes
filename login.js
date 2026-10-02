@@ -241,6 +241,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('primes_activity', JSON.stringify(activity.slice(0, 100)));
                 } catch (_) {}
 
+                // Initialize welcome notification if user inbox has no items yet
+                try {
+                    const userEmail = (user.email || '').toLowerCase().trim();
+                    const notifKey = `primes_notifications_${userEmail || user._id || user.username || 'user'}`;
+                    const existingNotifs = JSON.parse(localStorage.getItem(notifKey) || '[]');
+                    if (!existingNotifs || existingNotifs.length === 0) {
+                        if (typeof createNotification === 'function') {
+                            createNotification({
+                                title: 'Welcome to NuraXQ',
+                                message: `Welcome, ${displayName}! Your virtual verification account is active and ready.`,
+                                type: 'system'
+                            });
+                        }
+                    }
+                } catch (_) {}
+
                 toast.show(result.message || 'Login successful! Redirecting...', 'success');
 
                 setTimeout(() => {

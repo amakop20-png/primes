@@ -1293,6 +1293,15 @@ async function launchPaystack(rawVal) {
                         
                         showToast(`✅ Payment of ${symbol}${rawVal.toLocaleString()} verified and credited!`, 'success');
                         
+                        // Create in-app user notification
+                        if (typeof createNotification === 'function') {
+                            createNotification({
+                                title: 'Wallet Funded',
+                                message: `Your wallet was credited with ${symbol}${rawVal.toLocaleString()} (${curr}). Ref: ${response.reference || transactionRef}`,
+                                type: 'wallet'
+                            });
+                        }
+
                         // After verified success, load the new authoritative balance from the server
                         await loadWalletBalance(curr);
                         await loadTransactions(1, curr);
@@ -1536,7 +1545,6 @@ let unreadCount = 0;
 async function loadNotifications() {
     const list = document.getElementById('notifList');
     if (!list) return;
-    list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 13px;">Loading notifications...</div>';
 
     try {
         let notifs = [];
@@ -1545,18 +1553,15 @@ async function loadNotifications() {
             if (res && Array.isArray(res.notifications)) notifs = res.notifications;
             else if (res && Array.isArray(res.data)) notifs = res.data;
             else if (Array.isArray(res)) notifs = res;
-        }
-
-        // Check local notifications store if available
-        if (!notifs || notifs.length === 0) {
-            try {
-                const stored = JSON.parse(localStorage.getItem('primes_notifications') || '[]');
-                if (Array.isArray(stored) && stored.length > 0) notifs = stored;
-            } catch (_) {}
+        } else {
+            const storageKey = typeof getUserNotificationKey === 'function' ? getUserNotificationKey() : 'primes_notifications';
+            const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            if (Array.isArray(stored)) notifs = stored;
         }
 
         renderNotifications(notifs || []);
     } catch (err) {
+        console.warn('[Notifications] Error loading notifications:', err);
         renderNotifications([]);
     }
 }
@@ -1579,11 +1584,11 @@ function renderNotifications(notifs) {
     }
 
     list.innerHTML = notifs.map(n => `
-        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${n.read ? 'transparent' : 'rgba(124, 58, 237, 0.05)'}; display:flex; gap: 12px;">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${n.read ? 'transparent' : 'var(--primary)'}; margin-top: 6px;"></div>
-            <div>
-                <p style="font-size: 13px; font-weight: 700; color: var(--text); margin: 0 0 4px;">${n.title || 'Notification'}</p>
-                <p style="font-size: 12px; color: var(--muted); margin: 0 0 4px;">${n.message || ''}</p>
+        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border); background: ${n.read ? 'transparent' : 'rgba(124, 58, 237, 0.05)'}; display:flex; gap: 12px; align-items: flex-start;">
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: ${n.read ? 'transparent' : 'var(--primary)'}; margin-top: 6px; flex-shrink: 0;"></div>
+            <div style="flex: 1; min-width: 0;">
+                <p style="font-size: 13px; font-weight: 700; color: var(--text); margin: 0 0 4px; word-break: break-word;">${escapeHTML(n.title || 'Notification')}</p>
+                <p style="font-size: 12px; color: var(--muted); margin: 0 0 4px; line-height: 1.4; word-break: break-word;">${escapeHTML(n.message || '')}</p>
                 <p style="font-size: 10px; color: var(--muted); margin: 0;">${new Date(n.createdAt || Date.now()).toLocaleString()}</p>
             </div>
         </div>
@@ -1593,5 +1598,26 @@ function renderNotifications(notifs) {
 async function markAllNotifRead() {
     const badge = document.getElementById('notifBadge');
     if (badge) badge.style.display = 'none';
+    if (typeof window.markAllNotificationsRead === 'function') {
+        try {
+            await window.markAllNotificationsRead();
+        } catch (_) {}
+    }
     loadNotifications();
 }
+
+window.loadNotifications = loadNotifications;
+window.markAllNotifRead = markAllNotifRead;
+
+// Listen for cross-component and storage notification updates
+window.addEventListener('primes_notification_updated', () => {
+    loadNotifications().catch(() => {});
+});
+window.addEventListener('primes_notification_created', () => {
+    loadNotifications().catch(() => {});
+});
+window.addEventListener('storage', (e) => {
+    if (e.key && e.key.startsWith('primes_notifications')) {
+        loadNotifications().catch(() => {});
+    }
+});
