@@ -2743,13 +2743,24 @@ function savePreferences() {
 }
 
 function saveNotifSettings() {
+    const pushToggle = document.getElementById('notifPush');
     const settings = {
+        notifPush:    pushToggle ? pushToggle.checked : true,
         notifOtp:     document.getElementById('notifOtp')?.checked,
         notifOrder:   document.getElementById('notifOrder')?.checked,
         notifBalance: document.getElementById('notifBalance')?.checked,
         notifPromo:   document.getElementById('notifPromo')?.checked,
     };
     localStorage.setItem('notifSettings', JSON.stringify(settings));
+
+    if (pushToggle && window.NuraPush) {
+        if (pushToggle.checked) {
+            window.NuraPush.optIn();
+        } else {
+            window.NuraPush.optOut();
+        }
+    }
+
     showToast('🔔 Notification settings saved!', 'success');
 }
 

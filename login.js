@@ -241,6 +241,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('primes_activity', JSON.stringify(activity.slice(0, 100)));
                 } catch (_) {}
 
+                // Associate with OneSignal push user identity
+                try {
+                    const uId = user.id || user._id || user.userId || user.user_id || user.email || user.username;
+                    if (window.NuraPush && typeof window.NuraPush.identifyUser === 'function' && uId) {
+                        window.NuraPush.identifyUser(String(uId).trim());
+                    }
+                } catch (_) {}
+
                 toast.show(result.message || 'Login successful! Redirecting...', 'success');
 
                 setTimeout(() => {

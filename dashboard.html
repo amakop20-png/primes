@@ -13,6 +13,10 @@
   <!-- Font Awesome -->
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
+  <!-- OneSignal Web Push SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <script src="onesignal-init.js" defer></script>
+
   <!-- CSS -->
   <link rel="stylesheet" href="styles.css?v=2.8">
 
@@ -600,6 +604,7 @@
       </div>
       <div class="stab-content" id="stab-notifs">
         <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Choose which alerts you want to receive.</p>
+        <div class="notif-row"><div><div class="notif-title">Web Push Notifications</div><div class="notif-sub">Receive instant browser alerts for orders, OTPs, and updates</div></div><label class="stoggle"><input type="checkbox" id="notifPush" checked><span class="stoggle-knob"></span></label></div>
         <div class="notif-row"><div><div class="notif-title">OTP Received</div><div class="notif-sub">Alert when a new OTP arrives on your number</div></div><label class="stoggle"><input type="checkbox" id="notifOtp" checked><span class="stoggle-knob"></span></label></div>
         <div class="notif-row"><div><div class="notif-title">Order Status Updates</div><div class="notif-sub">Notify on order completion or cancellation</div></div><label class="stoggle"><input type="checkbox" id="notifOrder" checked><span class="stoggle-knob"></span></label></div>
         <div class="notif-row"><div><div class="notif-title">Low Balance Warning</div><div class="notif-sub">Alert when your wallet balance is below ₦500</div></div><label class="stoggle"><input type="checkbox" id="notifBalance" checked><span class="stoggle-knob"></span></label></div>
