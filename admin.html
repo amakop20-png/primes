@@ -6,9 +6,26 @@
   <title>Admin Panel — NuraXQ</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <!-- OneSignal Web Push SDK -->
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  <script src="onesignal-init.js" defer></script>
+  <!-- start webpushr tracking code -->
+  <script>
+  (function(w,d,s,id) {
+      if(typeof(w.webpushr)!=='undefined') return;
+      w.webpushr=w.webpushr||function(){
+          (w.webpushr.q=w.webpushr.q||[]).push(arguments)
+      };
+      var js, fjs=d.getElementsByTagName(s)[0];
+      js=d.createElement(s);
+      js.id=id;
+      js.async=1;
+      js.src="https://cdn.webpushr.com/app.min.js";
+      fjs.parentNode.appendChild(js);
+  }(window,document,'script','webpushr-jssdk'));
+
+  webpushr('setup',{
+      'key':'BM23b9moGySmnAwvyGTR9UqyN5Klu4lm1O-kaaqulN5fL76PGJmyaYTbFaImOQLqq00bn0LuddyXUcpGa6Y92eA'
+  });
+  </script>
+  <!-- end webpushr tracking code -->
   <link rel="icon" type="image/png" href="nuraxq-logo.png">
   <link rel="stylesheet" href="admin.css">
 </head>

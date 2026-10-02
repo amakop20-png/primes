@@ -203,9 +203,6 @@ function openSettings() {
     const notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{}');
     const n = (id, def) => { const el = document.getElementById(id); if (el) el.checked = notifSettings[id] !== undefined ? notifSettings[id] : def; };
     n('notifOtp', true); n('notifOrder', true); n('notifBalance', true); n('notifPromo', false);
-    if (window.NuraPush && typeof window.NuraPush.syncSettingsUI === 'function') {
-        window.NuraPush.syncSettingsUI();
-    }
 
     const newPwEl = document.getElementById('settingsNewPw');
     if (newPwEl && !newPwEl._strengthWired) {
@@ -429,24 +426,13 @@ function savePreferences() {
 }
 
 function saveNotifSettings() {
-    const pushToggle = document.getElementById('notifPush');
     const settings = {
-        notifPush:    pushToggle ? pushToggle.checked : true,
         notifOtp:     document.getElementById('notifOtp')?.checked,
         notifOrder:   document.getElementById('notifOrder')?.checked,
         notifBalance: document.getElementById('notifBalance')?.checked,
         notifPromo:   document.getElementById('notifPromo')?.checked,
     };
     localStorage.setItem('notifSettings', JSON.stringify(settings));
-
-    if (pushToggle && window.NuraPush) {
-        if (pushToggle.checked) {
-            window.NuraPush.optIn();
-        } else {
-            window.NuraPush.optOut();
-        }
-    }
-
     if (typeof showToast === 'function') showToast('🔔 Notification settings saved!', 'success');
 }
 

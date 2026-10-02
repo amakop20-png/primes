@@ -70,11 +70,6 @@ function setSession(session) {
 }
 
 function logout() {
-    try {
-        if (window.NuraPush && typeof window.NuraPush.logoutUser === 'function') {
-            window.NuraPush.logoutUser();
-        }
-    } catch (_) {}
     clearAuth();
     localStorage.removeItem('primes_currency');
     window.location.href = 'login.html';

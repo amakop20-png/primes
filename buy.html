@@ -11,9 +11,26 @@
   <link rel="icon" type="image/png" href="nuraxq-logo.png">
   <link rel="apple-touch-icon" href="nuraxq-logo.png">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <!-- OneSignal Web Push SDK -->
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  <script src="onesignal-init.js" defer></script>
+  <!-- start webpushr tracking code -->
+  <script>
+  (function(w,d,s,id) {
+      if(typeof(w.webpushr)!=='undefined') return;
+      w.webpushr=w.webpushr||function(){
+          (w.webpushr.q=w.webpushr.q||[]).push(arguments)
+      };
+      var js, fjs=d.getElementsByTagName(s)[0];
+      js=d.createElement(s);
+      js.id=id;
+      js.async=1;
+      js.src="https://cdn.webpushr.com/app.min.js";
+      fjs.parentNode.appendChild(js);
+  }(window,document,'script','webpushr-jssdk'));
+
+  webpushr('setup',{
+      'key':'BM23b9moGySmnAwvyGTR9UqyN5Klu4lm1O-kaaqulN5fL76PGJmyaYTbFaImOQLqq00bn0LuddyXUcpGa6Y92eA'
+  });
+  </script>
+  <!-- end webpushr tracking code -->
 
   <style>
     /* ── Filter Bar ── */
@@ -1786,13 +1803,6 @@
       <!-- Tab: Notifications -->
       <div class="stab-content" id="stab-notifs">
         <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Choose which alerts you want to receive.</p>
-        <div class="notif-row">
-          <div>
-            <div class="notif-title">Web Push Notifications</div>
-            <div class="notif-sub">Receive instant browser alerts for orders, OTPs, and updates</div>
-          </div>
-          <label class="stoggle"><input type="checkbox" id="notifPush" checked><span class="stoggle-knob"></span></label>
-        </div>
         <div class="notif-row">
           <div>
             <div class="notif-title">OTP Received</div>
