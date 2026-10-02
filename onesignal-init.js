@@ -4,9 +4,12 @@
  * ============================================================================
  * Official OneSignal Web SDK (v16 User Model) integration.
  * - App ID: 316c0fd1-602f-4bf5-a5eb-8b434b00ff16
- * - Handles SDK initialization, subscription management (opt-in / opt-out),
- *   user identity association (login / logout), and permission flow.
+ * - Handles SDK initialization, dynamic subscription & user retrieval,
+ *   subscription management (opt-in / opt-out), user identity association
+ *   (login / logout), and push notification event handling.
  * - Does not disturb existing notification systems, dropdowns, or authentication.
+ * - Does not hard-code Subscription ID or OneSignal User ID as the identity
+ *   of every user; retrieves them dynamically from the SDK.
  * ============================================================================
  */
 
@@ -54,8 +57,9 @@
                 // Check if current user is already logged in with this ID
                 const currentExternalId = await OneSignal.User?.externalId;
                 if (currentExternalId !== String(userId)) {
-                    console.log('[OneSignal] Associating push subscription with user:', userId);
+                    console.log('[OneSignal] Associating push subscription with NuraXQ user:', userId);
                     await OneSignal.login(String(userId));
+                    logCurrentStatus('after-login');
                 }
             } catch (err) {
                 console.warn('[OneSignal] Login association failed:', err);
@@ -72,10 +76,105 @@
             try {
                 console.log('[OneSignal] Disassociating user identity on logout');
                 await OneSignal.logout();
+                logCurrentStatus('after-logout');
             } catch (err) {
                 console.warn('[OneSignal] Logout disassociation failed:', err);
             }
         });
+    }
+
+    /**
+     * Retrieve the current OneSignal User ID (OneSignal ID) dynamically from the SDK
+     * @returns {Promise<string|null>}
+     */
+    async function getOneSignalUserId() {
+        return new Promise((resolve) => {
+            window.OneSignalDeferred.push(function(OneSignal) {
+                try {
+                    const id = OneSignal.User?.onesignalId || null;
+                    resolve(id);
+                } catch (err) {
+                    console.warn('[OneSignal] Error getting onesignalId:', err);
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    /**
+     * Retrieve the current Push Subscription ID dynamically from the SDK
+     * @returns {Promise<string|null>}
+     */
+    async function getSubscriptionId() {
+        return new Promise((resolve) => {
+            window.OneSignalDeferred.push(function(OneSignal) {
+                try {
+                    const id = OneSignal.User?.PushSubscription?.id || null;
+                    resolve(id);
+                } catch (err) {
+                    console.warn('[OneSignal] Error getting subscription id:', err);
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    /**
+     * Retrieve full push details dynamically from the SDK
+     * @returns {Promise<{onesignalId: string|null, subscriptionId: string|null, optedIn: boolean, permission: boolean, token: string|null, externalId: string|null}>}
+     */
+    async function getDetails() {
+        return new Promise((resolve) => {
+            window.OneSignalDeferred.push(async function(OneSignal) {
+                try {
+                    const onesignalId = OneSignal.User?.onesignalId || null;
+                    const subscriptionId = OneSignal.User?.PushSubscription?.id || null;
+                    const optedIn = Boolean(OneSignal.User?.PushSubscription?.optedIn);
+                    const token = OneSignal.User?.PushSubscription?.token || null;
+                    const permission = Boolean(OneSignal.Notifications?.permission);
+                    let externalId = null;
+                    try {
+                        externalId = await OneSignal.User?.externalId;
+                    } catch (_) {}
+
+                    resolve({
+                        onesignalId,
+                        subscriptionId,
+                        optedIn,
+                        permission,
+                        token,
+                        externalId
+                    });
+                } catch (err) {
+                    console.warn('[OneSignal] Error getting full details:', err);
+                    resolve({
+                        onesignalId: null,
+                        subscriptionId: null,
+                        optedIn: false,
+                        permission: false,
+                        token: null,
+                        externalId: null
+                    });
+                }
+            });
+        });
+    }
+
+    /**
+     * Logs current OneSignal status and details for diagnostics/testing
+     */
+    async function logCurrentStatus(context = 'status') {
+        const details = await getDetails();
+        console.log(`[OneSignal:${context}]`, {
+            appId: ONESIGNAL_APP_ID,
+            subscriptionId: details.subscriptionId,
+            onesignalUserId: details.onesignalId,
+            optedIn: details.optedIn,
+            permissionGranted: details.permission,
+            externalUserId: details.externalId,
+            hasPushToken: Boolean(details.token)
+        });
+        return details;
     }
 
     /**
@@ -87,6 +186,7 @@
                 try {
                     const permission = await OneSignal.Notifications.requestPermission();
                     syncSettingsUI();
+                    logCurrentStatus('permission-requested');
                     resolve(permission);
                 } catch (err) {
                     console.warn('[OneSignal] Error requesting permission:', err);
@@ -104,13 +204,14 @@
             window.OneSignalDeferred.push(async function(OneSignal) {
                 try {
                     // Check browser permission first
-                    if (Notification && Notification.permission === 'default') {
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
                         await OneSignal.Notifications.requestPermission();
                     }
                     if (OneSignal.User && OneSignal.User.PushSubscription) {
                         await OneSignal.User.PushSubscription.optIn();
                     }
                     syncSettingsUI();
+                    logCurrentStatus('opted-in');
                     resolve(true);
                 } catch (err) {
                     console.warn('[OneSignal] Opt-in error:', err);
@@ -131,6 +232,7 @@
                         await OneSignal.User.PushSubscription.optOut();
                     }
                     syncSettingsUI();
+                    logCurrentStatus('opted-out');
                     resolve(true);
                 } catch (err) {
                     console.warn('[OneSignal] Opt-out error:', err);
@@ -202,7 +304,7 @@
                     }
                 });
 
-                console.log('[OneSignal] Initialized successfully.');
+                console.log('[OneSignal] Initialized successfully with App ID:', ONESIGNAL_APP_ID);
 
                 // Associate user if already logged in
                 const userId = getCurrentUserId();
@@ -213,12 +315,30 @@
                 // Listen for push subscription state changes
                 if (OneSignal.User && OneSignal.User.PushSubscription) {
                     OneSignal.User.PushSubscription.addEventListener('change', function(event) {
-                        console.log('[OneSignal] Push subscription status changed:', event?.current?.optedIn);
+                        console.log('[OneSignal] Push subscription status changed:', event?.current?.optedIn, {
+                            subscriptionId: event?.current?.id,
+                            token: event?.current?.token
+                        });
                         syncSettingsUI();
                     });
                 }
 
+                // Listen for user state changes (e.g. onesignalId resolution, externalId changes)
+                if (OneSignal.User && typeof OneSignal.User.addEventListener === 'function') {
+                    OneSignal.User.addEventListener('change', function(event) {
+                        console.log('[OneSignal] User identity state updated:', event);
+                    });
+                }
+
+                // Listen for incoming foreground push notifications so they work seamlessly
+                if (OneSignal.Notifications && typeof OneSignal.Notifications.addEventListener === 'function') {
+                    OneSignal.Notifications.addEventListener('foregroundWillDisplay', function(event) {
+                        console.log('[OneSignal] Push notification received in foreground:', event?.notification);
+                    });
+                }
+
                 syncSettingsUI();
+                logCurrentStatus('init-complete');
 
             } catch (err) {
                 console.error('[OneSignal] Initialization failed:', err);
@@ -236,6 +356,10 @@
         optIn: optIn,
         optOut: optOut,
         isSubscribed: isSubscribed,
+        getOneSignalUserId: getOneSignalUserId,
+        getSubscriptionId: getSubscriptionId,
+        getDetails: getDetails,
+        logCurrentStatus: logCurrentStatus,
         syncSettingsUI: syncSettingsUI,
         getCurrentUserId: getCurrentUserId
     };
