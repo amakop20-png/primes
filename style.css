@@ -194,18 +194,18 @@ header {
         border-radius: 9px;
         border: none;
         padding: 12px;
-      background: blue;
-        color: blue;
+      background: #7C3AED;
+        color: #ffffff;
       }
 
       .btn3:hover {
-        background-color:purple;
+        background-color: #5B21B6;
         color: white;
       }
 
       .btn3 a {
       
-        color: #a855f7;
+        color: #ffffff;
         text-decoration: none;
       }
 
@@ -237,12 +237,12 @@ header {
         border-radius: 9px;
         padding: 10px;
         background:white;
-        color: blue;
+        color: #7C3AED;
       }
 
       .btn5:hover {
-        background-color: purple;
-       color: #a855f7;
+        background-color: #7C3AED;
+       color: #ffffff;
       }
 
        .btn5 a{
@@ -417,7 +417,7 @@ header {
         content: "•";
         position: absolute;
         left: 0;
-        color: blue;
+        color: #7C3AED;
         font-weight: bold;
         font-size: 1.25rem;
       }
@@ -843,12 +843,12 @@ header {
       }
 
       .btn9-primary {
-        background: blue;
+        background: #7C3AED;
         color: white;
       }
 
       .btn9-primary:hover {
-        background: black;
+        background: #5B21B6;
         color: white;
       }
 

@@ -185,7 +185,6 @@ aside .top a:hover,
 aside .top a.active {
   background: var(--primary-light);
   color: var(--primary);
-  transform: translateX(5px);
 }
 
 /* CLOSE BUTTON */
@@ -235,7 +234,6 @@ aside .top a.active {
 ══════════════════════════════════════ */
 .container {
   padding: 24px 28px;
-  transition: 0.3s ease;
 }
 
 /* ══════════════════════════════════════

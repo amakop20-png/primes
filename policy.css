@@ -116,8 +116,8 @@
   height: 28px;
   padding: 0 6px;
   border-radius: 8px;
-  background: var(--brand-tint, #EAF1FF);
-  color: var(--brand, #155EEF);
+  background: var(--brand-tint, #EDE9FE);
+  color: var(--brand, #7C3AED);
   font-size: 0.85rem;
   font-weight: 700;
   flex-shrink: 0;
@@ -130,8 +130,8 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--brand-tint, #EAF1FF);
-  color: var(--brand, #155EEF);
+  background: var(--brand-tint, #EDE9FE);
+  color: var(--brand, #7C3AED);
   font-size: 1.15rem;
   flex-shrink: 0;
 }
@@ -187,7 +187,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--brand, #155EEF);
+  background: var(--brand, #7C3AED);
 }
 
 .policy-section li.check-item::before {
@@ -222,7 +222,7 @@
 /* ── Highlights & Callout Boxes ── */
 .policy-callout {
   background: var(--surface-sunk, #F8FAFC);
-  border-left: 4px solid var(--brand, #155EEF);
+  border-left: 4px solid var(--brand, #7C3AED);
   border-radius: 0 12px 12px 0;
   padding: 1.25rem 1.5rem;
   margin: 1.25rem 0;
@@ -262,7 +262,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--brand, #155EEF);
+  background: var(--brand, #7C3AED);
   color: #FFFFFF !important;
   font-weight: 600;
   font-size: 0.95rem;
@@ -270,13 +270,13 @@
   border-radius: 10px;
   text-decoration: none;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(21, 94, 239, 0.2);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.2);
 }
 
 .policy-email-btn:hover {
-  background: var(--brand-dark, #0E3FA6);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(21, 94, 239, 0.3);
+  background: var(--brand-dark, #5B21B6);
+  transform: none;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
 /* ── Dark Mode Overrides ── */
@@ -285,13 +285,13 @@ body.dark-theme .policy-logo {
 }
 
 body.dark-theme .policy-num {
-  background: rgba(76, 134, 255, 0.15);
-  color: #4C86FF;
+  background: rgba(168, 85, 247, 0.15);
+  color: #A78BFA;
 }
 
 body.dark-theme .policy-icon {
-  background: rgba(76, 134, 255, 0.15);
-  color: #4C86FF;
+  background: rgba(168, 85, 247, 0.15);
+  color: #A78BFA;
 }
 
 body.dark-theme .policy-icon.success {
@@ -314,7 +314,7 @@ body.dark-theme .policy-card {
 }
 
 body.dark-theme .policy-section li::before {
-  background: #4C86FF;
+  background: #A78BFA;
 }
 
 body.dark-theme .policy-section li.check-item::before {

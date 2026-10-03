@@ -94,7 +94,7 @@
 }
 
 .help-section h2:hover {
-  color: var(--brand, #155EEF);
+  color: var(--brand, #7C3AED);
 }
 
 .help-icon {
@@ -104,8 +104,8 @@
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  background: var(--brand-tint, #EAF1FF);
-  color: var(--brand, #155EEF);
+  background: var(--brand-tint, #EDE9FE);
+  color: var(--brand, #7C3AED);
   font-size: 1.2rem;
   flex-shrink: 0;
 }
@@ -160,7 +160,7 @@
 }
 
 .contact-email {
-  color: var(--brand, #155EEF);
+  color: var(--brand, #7C3AED);
   font-weight: 600;
   text-decoration: none;
 }
@@ -170,7 +170,7 @@
 }
 
 .header__nav .nav-link.active {
-  color: var(--brand, #155EEF);
+  color: var(--brand, #7C3AED);
   font-weight: 700;
 }
 
@@ -186,12 +186,12 @@ body.dark-theme .help-content {
 }
 
 body.dark-theme .help-icon {
-  background: rgba(76, 134, 255, 0.15);
-  color: #4C86FF;
+  background: rgba(168, 85, 247, 0.15);
+  color: #A78BFA;
 }
 
 body.dark-theme .help-section h2:hover {
-  color: #4C86FF;
+  color: #A78BFA;
 }
 
 body.dark-theme .contact-info {

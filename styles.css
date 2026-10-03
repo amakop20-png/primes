@@ -83,9 +83,9 @@ body {
     --border:        #E5E7EE;
 
     /* Brand palette */
-    --brand:         #155EEF;
-    --brand-dark:    #0E3FA6;
-    --brand-tint:    #EAF1FF;
+    --brand:         #7C3AED;
+    --brand-dark:    #5B21B6;
+    --brand-tint:    #EDE9FE;
 
     /* Footer / deep panels stay dark in both themes */
     --ink:           #0B0E17;
@@ -109,9 +109,9 @@ body.dark-theme {
     --muted:         #939AAE;
     --border:        #232A3B;
 
-    --brand:         #4C86FF;
-    --brand-dark:    #2F6BFF;
-    --brand-tint:    #172038;
+    --brand:         #a855f7;
+    --brand-dark:    #9333ea;
+    --brand-tint:    #2D1B54;
 
     --ink:           #05070C;
     --ink-text:      #E7E9F4;
@@ -120,7 +120,16 @@ body.dark-theme {
 
 /* ── Reset & base ── */
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html {
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
+}
+
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
 
 body {
     margin: 0;
@@ -130,7 +139,7 @@ body {
     font-size: 16px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
-    transition: background 0.3s ease, color 0.3s ease;
+    overflow-x: hidden;
 }
 
 h1, h2, h3, h4 {
@@ -198,7 +207,8 @@ button {
     transition: opacity 0.5s ease;
 }
 
-.loader-wrapper img {
+.loader-wrapper img,
+.loader-logo {
     width: 64px;
     height: 64px;
     object-fit: contain;
@@ -249,7 +259,8 @@ header {
   top: 0;
   z-index: 100;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  transition: width 0.3s ease, margin-left 0.3s ease;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .dash-header .header-left,
@@ -386,20 +397,20 @@ header {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--brand, #7C3AED), #2563eb);
+    background: linear-gradient(135deg, var(--brand, #7C3AED), #9333ea);
     color: #ffffff !important;
     box-shadow: 0 2px 8px color-mix(in srgb, var(--brand, #7C3AED) 30%, transparent);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--brand-dark, #6D28D9), #1d4ed8);
-    transform: translateY(-1.5px);
+    background: linear-gradient(135deg, var(--brand-dark, #6D28D9), #5B21B6);
+    transform: none;
     box-shadow: 0 4px 14px color-mix(in srgb, var(--brand, #7C3AED) 40%, transparent);
     color: #ffffff !important;
 }
 
 .btn-primary:active {
-    transform: translateY(0);
+    transform: none;
 }
 
 .btn-secondary {
@@ -413,11 +424,11 @@ header {
     background: var(--surface-sunk, #F8FAFC);
     border-color: color-mix(in srgb, var(--brand, #7C3AED) 30%, var(--border, #E2E8F0));
     color: var(--brand, #7C3AED) !important;
-    transform: translateY(-1.5px);
+    transform: none;
 }
 
 .btn-secondary:active {
-    transform: translateY(0);
+    transform: none;
 }
 
 .btn-large {
@@ -1794,7 +1805,8 @@ header {
 .logo-container img:hover,
 .nura-sq-logo:hover,
 .nuraxq-logo:hover {
-  transform: scale(1.03);
+  transform: none;
+  opacity: 0.95;
 }
 
 .sidebar-brand {
@@ -1819,12 +1831,13 @@ header {
   max-width: 32px;
   object-fit: contain;
   display: block;
-  transition: transform 0.25s ease;
+  transition: opacity 0.2s ease;
   flex-shrink: 0;
 }
 
 .sidebar-logo:hover {
-  transform: scale(1.03);
+  transform: none;
+  opacity: 0.95;
 }
 
 .match {
@@ -2027,6 +2040,8 @@ header {
   color: #ffffff !important;
   font-weight: 700;
   box-shadow: 0 1px 4px rgba(124, 58, 237, 0.3);
+  margin: 0 !important;
+  transform: none !important;
 }
 
 .currency-switch-toggle .cswitch-sym {
@@ -2516,7 +2531,7 @@ main > p {
 }
 
 .activities-card:hover {
-  transform: translateY(-3px);
+  transform: none;
   box-shadow: 0 20px 56px rgba(124,58,237,0.35);
 }
 
@@ -2590,7 +2605,7 @@ main > p {
 }
 
 .referral-card:hover {
-  transform: translateY(-3px);
+  transform: none;
   box-shadow: 0 12px 32px rgba(124,58,237,0.3);
 }
 
@@ -2678,7 +2693,7 @@ main > p {
 
 .action-card:hover,
 .action-card.is-selected {
-  transform: translateY(-4px);
+  transform: none;
   box-shadow: var(--shadow-md);
   border-color: var(--primary);
 }
@@ -2830,9 +2845,6 @@ main > p {
 /* ══════════════════════════════════════
    TRANSACTIONS CARD
 ══════════════════════════════════════ */
-.active {
-  margin-top: 28px;
-}
 
 .card {
   background: var(--surface);
@@ -3045,7 +3057,7 @@ main > p {
 
 .btn21:hover {
   background: rgba(255,255,255,0.28);
-  transform: translateY(-1px);
+  transform: none;
 }
 
 .btn12 {
@@ -3055,7 +3067,7 @@ main > p {
 }
 
 .btn12:hover {
-  transform: translateY(-1px);
+  transform: none;
   box-shadow: 0 6px 18px rgba(0,0,0,0.12);
 }
 
@@ -3069,7 +3081,7 @@ main > p {
 
 .btn0:hover {
   background: var(--primary-dark);
-  transform: translateY(-1px);
+  transform: none;
 }
 
 /* Harmonized button styles handled in primary button block */
@@ -3092,13 +3104,13 @@ main > p {
   justify-content: center;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: background var(--transition), color var(--transition), transform var(--transition);
+  transition: background var(--transition), color var(--transition);
 }
 
 .scroll-top:hover {
   background: var(--primary);
   color: #fff;
-  transform: translateY(-2px);
+  transform: none;
 }
 
 /* Currency switch hover */
@@ -3471,7 +3483,7 @@ main > p {
   color: white; box-shadow: 0 4px 14px rgba(124,58,237,0.3);
   width: 100%; justify-content: center;
 }
-.sbtn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.sbtn-primary:hover { opacity: 0.95; transform: none; }
 .sbtn-outline {
   background: var(--border-light); color: var(--text); border: 1.5px solid var(--border);
 }
@@ -3785,7 +3797,7 @@ main > p {
   background: var(--border-light);
   border-color: var(--primary);
   color: var(--primary);
-  transform: translateY(-1px);
+  transform: none;
 }
 
 .btn-wallet-action.primary {
@@ -3797,7 +3809,7 @@ main > p {
 
 .btn-wallet-action.primary:hover {
   opacity: 0.95;
-  transform: translateY(-1px);
+  transform: none;
   box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
 }
 
@@ -3921,7 +3933,7 @@ main > p {
 }
 
 .wallet-card-hero:hover {
-  transform: translateY(-2px);
+  transform: none;
   box-shadow: 0 14px 40px rgba(109, 40, 217, 0.32);
 }
 
@@ -4022,6 +4034,8 @@ main > p {
   color: #6d28d9 !important;
   font-weight: 700;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  margin: 0 !important;
+  transform: none !important;
 }
 
 .wcard-curr-btn:focus-visible {
@@ -4093,7 +4107,7 @@ main > p {
 
 .btn-hero-solid:hover {
   background: #f8fafc;
-  transform: translateY(-2px);
+  transform: none;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
 }
 
@@ -4142,7 +4156,7 @@ main > p {
 }
 
 .wallet-stat-card:hover {
-  transform: translateY(-2px);
+  transform: none;
   box-shadow: var(--shadow-md);
   border-color: var(--primary);
 }
@@ -4828,7 +4842,7 @@ body.dark-theme .brand-paypal { color: #38bdf8; background: rgba(56, 189, 248, 0
 }
 
 .compact-toast.toast-info {
-  border-left: 3px solid #3b82f6;
+  border-left: 3px solid #7c3aed;
 }
 
 .compact-toast.toast-warning {
@@ -5429,9 +5443,9 @@ body.dark-theme .brand-paypal { color: #38bdf8; background: rgba(56, 189, 248, 0
 }
 
 .vnum-card:hover {
-  transform: translateY(-2px);
+  transform: none;
   border-color: var(--primary, #7c3aed);
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.09);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
 }
 
 .vnum-card-top {
@@ -5471,8 +5485,8 @@ body.dark-theme .brand-paypal { color: #38bdf8; background: rgba(56, 189, 248, 0
 }
 
 .vnum-card-icon.available {
-  background: rgba(59, 130, 246, 0.12);
-  color: #3b82f6;
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--primary, #7c3aed);
 }
 
 .vnum-card-value {
