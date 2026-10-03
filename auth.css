@@ -87,16 +87,18 @@ body.dark-theme.auth-page::before {
 }
 
 .auth-header .logo .header__logo-text {
-  font-size: 1.3rem;
+  font-family: var(--font-display, 'Manrope', var(--font-body, 'Inter', sans-serif));
+  font-size: 1.35rem;
   font-weight: 800;
-  letter-spacing: -0.4px;
-  color: var(--text, #0F172A);
+  letter-spacing: -0.03em;
+  color: #7C3AED;
   line-height: 1;
   display: inline-block;
+  vertical-align: middle;
 }
 
 body.dark-theme .auth-header .logo .header__logo-text {
-  color: #F8FAFC;
+  color: #A78BFA;
 }
 
 .auth-back-link {
