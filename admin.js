@@ -73,9 +73,12 @@ function adminToast(msg, type = 'info') {
 
 function escapeHTML(str) {
   if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function copyToClipboard(text, label = 'Copied') {
@@ -177,7 +180,7 @@ function checkAdminAuth() {
   return false;
 }
 
-function handleAdminGateLogin(e) {
+async function handleAdminGateLogin(e) {
   if (e) e.preventDefault();
   const userIn = document.getElementById('adminGateUser');
   const passIn = document.getElementById('adminGatePass');
@@ -194,28 +197,41 @@ function handleAdminGateLogin(e) {
     return;
   }
 
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-spinner spinning"></i> Authenticating...';
+  }
+
+  // Attempt backend Admin API login (POST /api/admin/auth/login)
+  let apiSuccess = false;
+  if (typeof adminLoginApi === 'function') {
+    try {
+      await adminLoginApi(username, password);
+      apiSuccess = true;
+    } catch (_) {}
+  }
+
   const creds = getAdminCreds();
-  if (username.toLowerCase() === creds.username.toLowerCase() && password === creds.password) {
+  const localMatch = (username.toLowerCase() === creds.username.toLowerCase() && password === creds.password);
+
+  if (apiSuccess || localMatch) {
     if (errEl) errEl.style.display = 'none';
+    setAdminSession({ loggedIn: true, username: username || creds.username, at: new Date().toISOString() });
+    logActivity('config', `Administrator ${username || creds.username} signed in to Admin Console`);
+    adminToast('Admin authenticated successfully', 'success');
+
     if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<i class="ph ph-spinner spinning"></i> Authenticating...';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ph ph-sign-in"></i> Sign In to Admin Console';
     }
 
-    setTimeout(async () => {
-      setAdminSession({ loggedIn: true, username: creds.username, at: new Date().toISOString() });
-      logActivity('config', `Administrator ${creds.username} signed in to Admin Console`);
-      adminToast('Admin authenticated successfully', 'success');
-
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="ph ph-sign-in"></i> Sign In to Admin Console';
-      }
-
-      checkAdminAuth();
-      await refreshAll();
-    }, 350);
+    checkAdminAuth();
+    await refreshAll();
   } else {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ph ph-sign-in"></i> Sign In to Admin Console';
+    }
     if (errEl) errEl.style.display = 'flex';
     if (errMsg) errMsg.textContent = 'Invalid administrator credentials. Access denied.';
     if (passIn) {
@@ -242,7 +258,10 @@ function adminLogout() {
   openConfirmModal(
     'Log Out of Admin Console',
     'Are you sure you want to end your administrative session?',
-    () => {
+    async () => {
+      if (typeof adminLogoutApi === 'function') {
+        try { await adminLogoutApi(); } catch (_) {}
+      }
       setAdminSession(null);
       const gateOverlay = document.getElementById('adminGateOverlay');
       if (gateOverlay) gateOverlay.classList.remove('hidden');
@@ -296,12 +315,13 @@ function showSection(id, btn) {
   if (btn) btn.classList.add('active');
 
   const titles = {
-    overview:     'Dashboard Overview',
-    users:        'User Management',
-    orders:       'Order Auditing',
-    transactions: 'Platform Transactions',
-    activity:     'Platform Activity Log',
-    settings:     'Platform Administration Settings'
+    overview:      'Dashboard Overview',
+    users:         'User Management',
+    orders:        'Order Auditing',
+    transactions:  'Platform Transactions',
+    activity:      'Platform Activity Log',
+    announcements: 'Announcement System Manager',
+    settings:      'Platform Administration Settings'
   };
   const tb = document.getElementById('topbarTitle');
   if (tb) tb.textContent = titles[id] || 'Admin Console';
@@ -456,8 +476,28 @@ async function loadAllData() {
         setText('navTxBadge', cachedTxs.length);
       }
     } catch (_) {}
+
+    // 6. Connect live Admin API data (PDF pages 2-3)
+    if (typeof adminGetUsers === 'function') {
+      try {
+        const usersRes = await adminGetUsers({ limit: 100 });
+        const uList = usersRes?.users || usersRes?.data || (Array.isArray(usersRes) ? usersRes : null);
+        if (Array.isArray(uList) && uList.length) {
+          allUsers = uList.map(u => ({
+            id: u._id || u.id,
+            name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || u.username || 'User',
+            email: u.email || '',
+            phone: u.phoneNumber || u.phone || '—',
+            balance: String(u.balance || (u.wallet ? u.wallet.balance : 0) || 0),
+            role: u.role || 'user',
+            createdAt: u.createdAt || new Date().toISOString()
+          }));
+          localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
+        }
+      } catch (_) {}
+    }
   } catch (err) {
-    console.error('Error reading local admin data:', err);
+    console.error('Error reading admin data:', err);
     adminToast('Failed to load local records.', 'error');
   }
 }
@@ -1050,6 +1090,15 @@ async function fundUser() {
         localStorage.setItem('primes_transactions', JSON.stringify(txs.slice(0, 100)));
       } catch (_) {}
 
+      // Call Admin API (POST /api/admin/wallets/:userId/credit)
+      if (typeof adminCreditWallet === 'function' && target && (target.id || target._id)) {
+        try {
+          await adminCreditWallet(target.id || target._id, amount, 'Admin credit via Console');
+        } catch (apiErr) {
+          console.warn('[Admin API] Wallet credit endpoint status:', apiErr.message);
+        }
+      }
+
       logActivity('fund', `Admin credited ₦${amount.toLocaleString()} to ${email} (New balance: ₦${newBal.toLocaleString()})`);
 
       // Dispatch in-app notification to the funded user's notification box
@@ -1084,19 +1133,471 @@ async function fundUser() {
   }
 }
 
-async function makeAnnouncement() {
-  const msg = document.getElementById('announcementMessage')?.value.trim();
-  if (!msg) {
-    adminToast('Please enter an announcement message.', 'error');
+/* ════════════════════════════════════
+   ANNOUNCEMENT SYSTEM CONTROLLER
+   ════════════════════════════════════ */
+
+function getAdminAnnouncements() {
+  try {
+    const raw = localStorage.getItem('primes_announcements');
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) return list;
+    }
+  } catch (_) {}
+  return [];
+}
+
+function loadAdminAnnouncements() {
+  const announcements = getAdminAnnouncements();
+  const tbody = document.getElementById('announcementsTableBody');
+  const countEl = document.getElementById('annTotalCount');
+  const navBadge = document.getElementById('navAnnounceBadge');
+  
+  if (countEl) countEl.textContent = announcements.length;
+
+  const activeAnn = announcements.find(a => a.active);
+  if (navBadge) {
+    if (activeAnn) {
+      navBadge.textContent = 'Active';
+      navBadge.className = 'nav-badge';
+      navBadge.style.background = 'rgba(16, 185, 129, 0.2)';
+      navBadge.style.color = '#34d399';
+    } else {
+      navBadge.textContent = 'Off';
+      navBadge.className = 'nav-badge';
+      navBadge.style.background = 'rgba(156, 163, 175, 0.2)';
+      navBadge.style.color = '#9ca3af';
+    }
+  }
+
+  // Settings panel summary update
+  const settingsTitle = document.getElementById('settingsActiveAnnTitle');
+  const settingsBadge = document.getElementById('settingsActiveAnnBadge');
+  const settingsTips  = document.getElementById('settingsActiveAnnTips');
+
+  if (settingsTitle) {
+    if (activeAnn) {
+      settingsTitle.textContent = activeAnn.title || 'Important Announcement';
+      if (settingsBadge) {
+        settingsBadge.className = 'status-badge badge-received';
+        settingsBadge.innerHTML = '<i class="ph ph-check-circle"></i> Published';
+      }
+      if (settingsTips) {
+        const count = (activeAnn.content || activeAnn.message || '').split(/\r?\n/).filter(Boolean).length;
+        settingsTips.textContent = `${count} Tips Configured • Visible upon user login`;
+      }
+    } else {
+      settingsTitle.textContent = 'No Active Announcement';
+      if (settingsBadge) {
+        settingsBadge.className = 'status-badge badge-canceled';
+        settingsBadge.innerHTML = '<i class="ph ph-pause-circle"></i> Inactive';
+      }
+      if (settingsTips) {
+        settingsTips.textContent = 'Popup is currently disabled for users.';
+      }
+    }
+  }
+
+  if (!tbody) return;
+
+  if (!announcements.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-cell" style="text-align:center;padding:24px;color:var(--muted);">No announcements created yet. Click "Publish Announcement" above to create one.</td></tr>';
     return;
   }
 
-  const payload = JSON.stringify({ message: msg, id: Date.now() });
-  localStorage.setItem('global_announcement', payload);
+  tbody.innerHTML = announcements.map(ann => {
+    const isAct = Boolean(ann.active);
+    const statusHtml = isAct
+      ? `<span class="status-badge badge-received"><i class="ph ph-check-circle"></i> Published</span>`
+      : `<span class="status-badge badge-canceled"><i class="ph ph-pause-circle"></i> Disabled</span>`;
+    
+    const tipsList = (ann.content || ann.message || '').split(/\r?\n/).filter(Boolean);
+    const tipsCount = tipsList.length;
+    const tipsSubtitle = ann.subtitle || (tipsCount > 1 ? `Tips (${tipsCount})` : 'Notice');
+    const updatedDate = ann.updatedAt ? new Date(ann.updatedAt).toLocaleDateString(undefined, {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    }) : '—';
 
+    const waDisplay = ann.whatsappUrl ? `<a href="${escapeHTML(ann.whatsappUrl)}" target="_blank" style="color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-size:12px;"><i class="ph ph-whatsapp-logo"></i> Link</a>` : '<span style="color:var(--muted);font-size:12px;">Default</span>';
+
+    return `
+      <tr>
+        <td>${statusHtml}</td>
+        <td>
+          <div style="font-weight:700;color:var(--text);font-size:13px;">${escapeHTML(ann.title || 'Important Announcement')}</div>
+          <div style="font-size:11px;color:var(--accent);">${escapeHTML(tipsSubtitle)}</div>
+        </td>
+        <td>
+          <span style="font-weight:600;font-size:12px;color:var(--text);">${tipsCount} tips</span>
+        </td>
+        <td>${waDisplay}</td>
+        <td style="font-size:11px;color:var(--muted);white-space:nowrap;">${updatedDate}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="tbl-btn tbl-btn-view" onclick="previewAnnouncementById('${ann.id}')" title="Preview Popup"><i class="ph ph-eye"></i></button>
+          <button class="tbl-btn tbl-btn-view" onclick="editAnnouncement('${ann.id}')" title="Edit"><i class="ph ph-pencil-simple"></i></button>
+          <button class="tbl-btn ${isAct ? 'tbl-btn-del' : 'tbl-btn-fund'}" onclick="toggleAnnouncementStatus('${ann.id}')" title="${isAct ? 'Disable' : 'Publish'}">
+            <i class="ph ${isAct ? 'ph-pause' : 'ph-play'}"></i> ${isAct ? 'Disable' : 'Publish'}
+          </button>
+          <button class="tbl-btn tbl-btn-del" onclick="deleteAnnouncement('${ann.id}')" title="Delete"><i class="ph ph-trash"></i></button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function saveAdminAnnouncement() {
+  const title = (document.getElementById('annTitleInput')?.value || '').trim() || 'Important Announcement';
+  const subtitle = (document.getElementById('annSubtitleInput')?.value || '').trim();
+  const whatsappUrl = (document.getElementById('annWhatsappInput')?.value || '').trim() || 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq';
+  const content = (document.getElementById('annContentInput')?.value || '').trim();
+  const isActive = Boolean(document.getElementById('annActiveToggle')?.checked);
+  const editId = (document.getElementById('announcementEditId')?.value || '').trim();
+
+  if (!content) {
+    adminToast('Please enter announcement / tips content.', 'error');
+    return;
+  }
+
+  const tipsList = content.split(/\r?\n/).filter(Boolean);
+  const computedSubtitle = subtitle || (tipsList.length > 1 ? `Tips (${tipsList.length})` : 'Notice');
+
+  const payload = {
+    id: editId || ('ann_' + Date.now()),
+    title,
+    subtitle: computedSubtitle,
+    message: content,
+    content: content,
+    whatsappUrl,
+    active: isActive,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  // 1. Send announcement to actual Admin API / Backend
+  if (typeof publishAnnouncementToApi === 'function') {
+    try {
+      await publishAnnouncementToApi(payload);
+    } catch (err) {
+      console.warn('[Admin API] Publish announcement route status:', err.message);
+    }
+  }
+
+  // 2. Synchronize active state for immediate retrieval upon user login
+  if (isActive) {
+    try {
+      localStorage.setItem('primes_active_announcement', JSON.stringify(payload));
+      localStorage.setItem('global_announcement', JSON.stringify(payload));
+    } catch (_) {}
+  } else {
+    try {
+      const rawActive = localStorage.getItem('primes_active_announcement') || localStorage.getItem('global_announcement');
+      if (rawActive) {
+        const a = JSON.parse(rawActive);
+        if (a.id === payload.id) {
+          localStorage.removeItem('primes_active_announcement');
+          localStorage.removeItem('global_announcement');
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 3. Update announcements list
+  let announcements = getAdminAnnouncements();
+  if (editId) {
+    const idx = announcements.findIndex(a => a.id === editId);
+    if (idx !== -1) {
+      if (isActive) announcements.forEach(a => { if (a.id !== editId) a.active = false; });
+      announcements[idx] = { ...announcements[idx], ...payload };
+    } else {
+      if (isActive) announcements.forEach(a => a.active = false);
+      announcements.unshift(payload);
+    }
+  } else {
+    if (isActive) announcements.forEach(a => a.active = false);
+    announcements.unshift(payload);
+  }
+  localStorage.setItem('primes_announcements', JSON.stringify(announcements));
+
+  logActivity('config', `${isActive ? 'Published' : 'Updated'} announcement: "${title}"`);
+  adminToast(`Announcement ${isActive ? 'published' : 'saved'} successfully!`, 'success');
+
+  resetAnnouncementForm();
+  loadAdminAnnouncements();
+}
+
+function editAnnouncement(id) {
+  const announcements = getAdminAnnouncements();
+  const ann = announcements.find(a => a.id === id);
+  if (!ann) return;
+
+  const editIdEl = document.getElementById('announcementEditId');
+  if (editIdEl) editIdEl.value = ann.id;
+  const titleEl = document.getElementById('annTitleInput');
+  if (titleEl) titleEl.value = ann.title || 'Important Announcement';
+  const subEl = document.getElementById('annSubtitleInput');
+  if (subEl) subEl.value = ann.subtitle || '';
+  const waEl = document.getElementById('annWhatsappInput');
+  if (waEl) waEl.value = ann.whatsappUrl || '';
+  const contentEl = document.getElementById('annContentInput');
+  if (contentEl) contentEl.value = ann.content || ann.message || '';
+  const activeToggle = document.getElementById('annActiveToggle');
+  if (activeToggle) activeToggle.checked = Boolean(ann.active);
+
+  const panelTitle = document.getElementById('annFormPanelTitle');
+  if (panelTitle) panelTitle.textContent = 'Edit Announcement';
+  const modeBadge = document.getElementById('annFormModeBadge');
+  if (modeBadge) {
+    modeBadge.textContent = 'Editing';
+    modeBadge.className = 'status-badge badge-received';
+  }
+  const saveBtnText = document.getElementById('annSaveBtnText');
+  if (saveBtnText) saveBtnText.textContent = 'Save Changes';
+  const editIndicator = document.getElementById('annEditIndicator');
+  if (editIndicator) editIndicator.style.display = 'inline-flex';
+  const editingAnnIdText = document.getElementById('editingAnnIdText');
+  if (editingAnnIdText) editingAnnIdText.textContent = ann.id;
+  const cancelBtn = document.getElementById('annCancelBtn');
+  if (cancelBtn) cancelBtn.style.display = 'inline-flex';
+
+  titleEl?.focus();
+  titleEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function cancelEditAdminAnnouncement() {
+  resetAnnouncementForm();
+}
+
+function resetAnnouncementForm() {
+  const editIdEl = document.getElementById('announcementEditId');
+  if (editIdEl) editIdEl.value = '';
+  const titleEl = document.getElementById('annTitleInput');
+  if (titleEl) titleEl.value = 'Important Announcement';
+  const subEl = document.getElementById('annSubtitleInput');
+  if (subEl) subEl.value = '';
+  const waEl = document.getElementById('annWhatsappInput');
+  if (waEl) waEl.value = 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq';
+  const contentEl = document.getElementById('annContentInput');
+  if (contentEl) contentEl.value = '';
+  const activeToggle = document.getElementById('annActiveToggle');
+  if (activeToggle) activeToggle.checked = true;
+
+  const panelTitle = document.getElementById('annFormPanelTitle');
+  if (panelTitle) panelTitle.textContent = 'Create Announcement';
+  const modeBadge = document.getElementById('annFormModeBadge');
+  if (modeBadge) {
+    modeBadge.textContent = 'New';
+    modeBadge.className = 'status-badge badge-received';
+  }
+  const saveBtnText = document.getElementById('annSaveBtnText');
+  if (saveBtnText) saveBtnText.textContent = 'Publish Announcement';
+  const editIndicator = document.getElementById('annEditIndicator');
+  if (editIndicator) editIndicator.style.display = 'none';
+  const cancelBtn = document.getElementById('annCancelBtn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
+async function toggleAnnouncementStatus(id) {
+  const announcements = getAdminAnnouncements();
+  const ann = announcements.find(a => a.id === id);
+  if (!ann) return;
+
+  const willBeActive = !ann.active;
+  ann.active = willBeActive;
+  ann.updatedAt = new Date().toISOString();
+
+  if (willBeActive) {
+    announcements.forEach(a => { if (a.id !== id) a.active = false; });
+  }
+
+  // Push updated status to Admin API
+  if (typeof publishAnnouncementToApi === 'function') {
+    try {
+      await publishAnnouncementToApi(ann);
+    } catch (_) {}
+  }
+
+  if (willBeActive) {
+    localStorage.setItem('primes_active_announcement', JSON.stringify(ann));
+    localStorage.setItem('global_announcement', JSON.stringify(ann));
+    adminToast('Announcement published to user dashboard!', 'success');
+    logActivity('config', `Activated announcement: "${ann.title}"`);
+  } else {
+    localStorage.removeItem('primes_active_announcement');
+    localStorage.removeItem('global_announcement');
+    adminToast('Announcement deactivated.', 'info');
+    logActivity('config', `Disabled announcement: "${ann.title}"`);
+  }
+
+  localStorage.setItem('primes_announcements', JSON.stringify(announcements));
+  loadAdminAnnouncements();
+}
+
+function deleteAnnouncement(id) {
+  openConfirmModal(
+    'Delete Announcement',
+    'Are you sure you want to permanently delete this announcement? This action cannot be undone.',
+    async () => {
+      let announcements = getAdminAnnouncements();
+      announcements = announcements.filter(a => a.id !== id);
+      localStorage.setItem('primes_announcements', JSON.stringify(announcements));
+
+      const rawActive = localStorage.getItem('primes_active_announcement') || localStorage.getItem('global_announcement');
+      if (rawActive) {
+        try {
+          const a = JSON.parse(rawActive);
+          if (a.id === id) {
+            const nextActive = announcements.find(x => x.active === true);
+            if (nextActive) {
+              localStorage.setItem('primes_active_announcement', JSON.stringify(nextActive));
+              localStorage.setItem('global_announcement', JSON.stringify(nextActive));
+            } else {
+              localStorage.removeItem('primes_active_announcement');
+              localStorage.removeItem('global_announcement');
+            }
+          }
+        } catch (_) {}
+      }
+
+      adminToast('Announcement deleted successfully.', 'success');
+      logActivity('config', `Deleted announcement #${id}`);
+      resetAnnouncementForm();
+      loadAdminAnnouncements();
+    }
+  );
+}
+
+function previewCurrentAdminAnnouncement() {
+  const announcements = getAdminAnnouncements();
+  const activeAnn = announcements.find(a => a.active) || announcements[0];
+  if (activeAnn) {
+    if (typeof showAnnouncementModal === 'function') {
+      showAnnouncementModal(activeAnn, true);
+    } else {
+      adminShowPreviewModal(activeAnn);
+    }
+  } else {
+    adminToast('No announcement available to preview.', 'warning');
+  }
+}
+
+function previewFormAnnouncement() {
+  const title = (document.getElementById('annTitleInput')?.value || '').trim() || 'Important Announcement';
+  const subtitle = (document.getElementById('annSubtitleInput')?.value || '').trim();
+  const whatsappUrl = (document.getElementById('annWhatsappInput')?.value || '').trim() || 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq';
+  const content = (document.getElementById('annContentInput')?.value || '').trim() || `💡 Delete and reinstall WhatsApp before getting a number\n💡 Avoid Business WhatsApp. They ban faster... use normal WhatsApp instead\n💡 Ensure Your Time Zone & VPN matches the country of the number\n🔒 Use a fresh WhatsApp installation for better success rates\n⏰ Complete verification within the allocated time frame`;
+
+  const previewObj = {
+    id: 'preview',
+    title,
+    subtitle,
+    whatsappUrl,
+    content,
+    active: true
+  };
+
+  if (typeof showAnnouncementModal === 'function') {
+    showAnnouncementModal(previewObj, true);
+  } else {
+    adminShowPreviewModal(previewObj);
+  }
+}
+
+function previewAnnouncementById(id) {
+  const announcements = getAdminAnnouncements();
+  const ann = announcements.find(a => a.id === id);
+  if (!ann) return;
+
+  if (typeof showAnnouncementModal === 'function') {
+    showAnnouncementModal(ann, true);
+  } else {
+    adminShowPreviewModal(ann);
+  }
+}
+
+function adminShowPreviewModal(data) {
+  const modal = document.getElementById('announcementModal');
+  if (!modal) return;
+
+  const rawTitle = data.title || 'Important Announcement';
+  const titleClean = rawTitle.replace(/^📢\s*/, '').trim();
+  const titleTextEl = document.getElementById('announcementTitleText');
+  if (titleTextEl) titleTextEl.textContent = titleClean || 'Important Announcement';
+
+  const parseFn = typeof parseAnnouncementItems === 'function' ? parseAnnouncementItems : (c) => {
+    return String(c).split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
+      const m = line.match(/^(\p{Extended_Pictographic}|[💡🔒⏰📢⚠️✅📌🚀⭐🔥ℹ️✨])\s*(.*)$/u);
+      return m ? { icon: m[1], text: m[2] } : { icon: '💡', text: line };
+    });
+  };
+
+  const items = parseFn(data.content || '');
+  const subtitleEl = document.getElementById('announcementSubtitle');
+  if (subtitleEl) {
+    if (data.subtitle && data.subtitle.trim()) {
+      subtitleEl.textContent = data.subtitle.trim();
+    } else if (items.length > 1) {
+      subtitleEl.textContent = `Tips (${items.length})`;
+    } else {
+      subtitleEl.textContent = 'Tips (1)';
+    }
+  }
+
+  const contentBox = document.getElementById('announcementModalContent');
+  if (contentBox) {
+    contentBox.innerHTML = items.map((item, idx) => {
+      const colorClass = (idx % 2 === 0) ? 'ann-color-purple' : 'ann-color-amber';
+      return `
+        <div class="ann-item-row ${colorClass}">
+          <span class="ann-item-emoji">${item.icon || '💡'}</span>
+          <span class="ann-item-text">${escapeHTML(item.text)}</span>
+        </div>`;
+    }).join('');
+  }
+
+  const waBtn = document.getElementById('announcementWhatsappBtn');
+  if (waBtn) {
+    waBtn.href = data.whatsappUrl || '#';
+  }
+
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => modal.classList.add('show'));
+}
+
+function closeAnnouncementModal() {
+  const modal = document.getElementById('announcementModal');
+  if (modal) {
+    modal.classList.remove('show');
+    setTimeout(() => {
+      modal.style.display = 'none';
+    }, 250);
+  }
+}
+
+// Backward-compatible hook
+async function makeAnnouncement() {
+  const msg = document.getElementById('announcementMessage')?.value.trim();
+  if (!msg) {
+    saveAdminAnnouncement();
+    return;
+  }
+  const payload = {
+    id: 'ann_' + Date.now(),
+    title: 'Important Announcement',
+    subtitle: 'Tips (1)',
+    content: msg,
+    whatsappUrl: 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq',
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem('global_announcement', JSON.stringify(payload));
+  const list = getAdminAnnouncements();
+  list.unshift(payload);
+  localStorage.setItem('primes_announcements', JSON.stringify(list));
   logActivity('config', `Broadcast announcement: "${msg.slice(0, 40)}..."`);
   adminToast('Announcement broadcasted to all users!', 'success');
-  document.getElementById('announcementMessage').value = '';
+  loadAdminAnnouncements();
 }
 
 function confirmLogoutAllUsers() {
@@ -1161,6 +1662,7 @@ async function refreshAll() {
   renderOrdersTable(allOrders);
   renderActivityLog();
   loadSettingsForm();
+  loadAdminAnnouncements();
   checkProviderStatus();
 
   setTimeout(() => {

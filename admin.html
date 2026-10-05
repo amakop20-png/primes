@@ -107,6 +107,10 @@
       <a href="#" class="nav-link" data-section="activity" onclick="showSection('activity',this)">
         <i class="ph ph-clock-counter-clockwise"></i> Activity Log
       </a>
+      <a href="#" class="nav-link" data-section="announcements" onclick="showSection('announcements',this)">
+        <i class="ph ph-megaphone"></i> Announcements
+        <span class="nav-badge" id="navAnnounceBadge">Active</span>
+      </a>
       <a href="#" class="nav-link" data-section="settings" onclick="showSection('settings',this)">
         <i class="ph ph-gear"></i> Settings
       </a>
@@ -398,7 +402,116 @@
       </div>
     </section>
 
-    <!-- ═══ 6. SETTINGS ═══ -->
+    <!-- ═══ 6. ANNOUNCEMENTS ═══ -->
+    <section id="section-announcements" class="section">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+        <div>
+          <h1>Announcement Popup Manager</h1>
+          <p class="section-sub" style="font-size:13px;color:var(--muted);margin-top:4px;">Create, edit, publish, and manage popups broadcasted to users upon login.</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn-outline" onclick="previewCurrentAdminAnnouncement()">
+            <i class="ph ph-eye"></i> Preview Active Popup
+          </button>
+          <button class="btn-primary" onclick="resetAnnouncementForm()">
+            <i class="ph ph-plus-circle"></i> Create New Announcement
+          </button>
+        </div>
+      </div>
+
+      <div class="ann-manage-grid" style="margin-top:20px;">
+        <!-- Left: Create / Edit Form -->
+        <div class="panel">
+          <div class="panel-header">
+            <span><i class="ph ph-pencil-simple-line"></i> <span id="annFormPanelTitle">Create Announcement</span></span>
+            <span class="status-badge badge-received" id="annFormModeBadge">New</span>
+          </div>
+          <div class="panel-body">
+            <div id="annEditIndicator" style="display:none;" class="ann-edit-indicator">
+              <i class="ph ph-pencil-simple"></i> Editing Announcement (<span id="editingAnnIdText"></span>)
+            </div>
+
+            <input type="hidden" id="announcementEditId" value="">
+
+            <div class="sfield-group">
+              <label class="sfield-label" for="annTitleInput">Announcement Heading</label>
+              <input class="sfield-input" type="text" id="annTitleInput" placeholder="e.g. Important Announcement" value="Important Announcement">
+              <div class="ann-form-tip-helper">Centered heading (e.g. 📢 Important Announcement)</div>
+            </div>
+
+            <div class="sfield-group">
+              <label class="sfield-label" for="annSubtitleInput">Subtitle / Badge</label>
+              <input class="sfield-input" type="text" id="annSubtitleInput" placeholder="e.g. Tips (5)">
+              <div class="ann-form-tip-helper">Small subtitle under heading (leave blank to auto-count tips)</div>
+            </div>
+
+            <div class="sfield-group">
+              <label class="sfield-label" for="annWhatsappInput">WhatsApp Community Link</label>
+              <input class="sfield-input" type="url" id="annWhatsappInput" placeholder="https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq" value="https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq">
+              <div class="ann-form-tip-helper">Link opened by the "Join WhatsApp Community" button</div>
+            </div>
+
+            <div class="sfield-group">
+              <label class="sfield-label" for="annContentInput">Announcement Content / Tips (1 Per Line)</label>
+              <textarea class="sfield-input" id="annContentInput" rows="7" placeholder="💡 Delete and reinstall WhatsApp before getting a number&#10;💡 Avoid Business WhatsApp. They ban faster... use normal WhatsApp instead&#10;💡 Ensure Your Time Zone &amp; VPN matches the country of the number&#10;🔒 Use a fresh WhatsApp installation for better success rates&#10;⏰ Complete verification within the allocated time frame" style="resize:vertical;font-family:inherit;line-height:1.45;"></textarea>
+              <div class="ann-form-tip-helper">Enter items line by line. Start with emojis (💡, 🔒, ⏰, 📢) or bullets.</div>
+            </div>
+
+            <div class="sfield-group" style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-2);padding:12px 14px;border-radius:10px;margin-bottom:20px;">
+              <div>
+                <label class="sfield-label" style="margin-bottom:2px;" for="annActiveToggle">Publish Immediately</label>
+                <div style="font-size:11px;color:var(--muted);">When active, displays to users on dashboard login</div>
+              </div>
+              <label class="stoggle" style="margin-bottom:0;">
+                <input type="checkbox" id="annActiveToggle" checked>
+                <span class="stoggle-knob"></span>
+              </label>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn-primary" style="flex:1;" id="annSaveBtn" onclick="saveAdminAnnouncement()">
+                <i class="ph ph-floppy-disk"></i> <span id="annSaveBtnText">Publish Announcement</span>
+              </button>
+              <button class="btn-outline" type="button" onclick="previewFormAnnouncement()">
+                <i class="ph ph-eye"></i> Preview
+              </button>
+              <button class="btn-outline" type="button" id="annCancelBtn" style="display:none;" onclick="cancelEditAdminAnnouncement()">
+                <i class="ph ph-x"></i> Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Announcements List / Table -->
+        <div class="panel">
+          <div class="panel-header">
+            <span><i class="ph ph-list-dashes"></i> Announcement History &amp; Status</span>
+            <span style="font-size:12px;color:var(--muted);"><span id="annTotalCount">1</span> items</span>
+          </div>
+          <div class="panel-body" style="padding:0;">
+            <div class="table-responsive">
+              <table class="data-table" id="announcementsTable">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Heading</th>
+                    <th>Tips</th>
+                    <th>WhatsApp URL</th>
+                    <th>Last Updated</th>
+                    <th style="text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="announcementsTableBody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 7. SETTINGS ═══ -->
     <section id="section-settings" class="section">
       <div class="page-header">
         <h1>Platform Administration Settings</h1>
@@ -449,13 +562,26 @@
       <!-- Announcements & Global Actions -->
       <div class="two-col" style="margin-top:24px;">
         <div class="panel">
-          <div class="panel-header"><span><i class="ph ph-megaphone"></i> Broadcast Announcement</span></div>
+          <div class="panel-header"><span><i class="ph ph-megaphone"></i> Announcement System Manager</span></div>
           <div class="panel-body">
-            <div class="sfield-group">
-              <label class="sfield-label" for="announcementMessage">Announcement Message</label>
-              <textarea class="sfield-input" id="announcementMessage" rows="3" placeholder="Type platform announcement visible to all users..." style="resize:vertical;"></textarea>
+            <div id="settingsActiveAnnSummary" style="background:var(--surface-2);padding:14px;border-radius:10px;margin-bottom:14px;border:1px solid var(--border);">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;">Live Popup Status</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <strong id="settingsActiveAnnTitle" style="font-size:14px;color:var(--text);">Important Announcement</strong>
+                <span id="settingsActiveAnnBadge" class="status-badge badge-received">Published</span>
+              </div>
+              <div id="settingsActiveAnnTips" style="font-size:12px;color:var(--muted);margin-top:4px;">5 Tips Configured &bull; Shows upon user login</div>
             </div>
-            <button class="btn-primary" onclick="makeAnnouncement()"><i class="ph ph-paper-plane-right"></i> Broadcast to All Users</button>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn-primary" onclick="showSection('announcements', document.querySelector('[data-section=announcements]'))">
+                <i class="ph ph-sliders"></i> Open Announcement Manager
+              </button>
+              <button class="btn-outline" onclick="previewCurrentAdminAnnouncement()">
+                <i class="ph ph-eye"></i> Preview Popup
+              </button>
+            </div>
+            <!-- Hidden textarea for backward compatibility with makeAnnouncement -->
+            <textarea id="announcementMessage" style="display:none;"></textarea>
           </div>
         </div>
 
@@ -522,6 +648,39 @@
       <div class="modal-actions">
         <button class="btn-outline" onclick="closeModal('confirmModal')">Cancel</button>
         <button class="btn-primary" id="confirmModalBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Announcement Popup Modal (Live Preview) ── -->
+  <div id="announcementModal" class="ann-modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="announcementTitleText">
+    <div class="ann-modal-card">
+      <button class="ann-close-icon-btn" id="announcementCloseTopBtn" onclick="closeAnnouncementModal()" aria-label="Close Announcement">&times;</button>
+      
+      <div class="ann-header-wrap">
+        <h2 class="ann-heading-title" id="announcementTitle">
+          <span class="ann-icon-badge">📢</span>
+          <span id="announcementTitleText">Important Announcement</span>
+        </h2>
+        <div class="ann-heading-subtitle" id="announcementSubtitle">Tips (5)</div>
+      </div>
+
+      <div class="ann-content-box" id="announcementContentBox">
+        <div class="ann-items-list" id="announcementModalContent">
+          <!-- Announcement tips items dynamically injected -->
+        </div>
+      </div>
+
+      <div class="ann-actions-wrap">
+        <a href="#" target="_blank" rel="noopener noreferrer" class="ann-btn-whatsapp" id="announcementWhatsappBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;">
+            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.04 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.59 20.16 12.04 20.16C10.61 20.16 9.22 19.78 8.01 19.06L7.71 18.88L4.62 19.69L5.45 16.67L5.25 16.36C4.47 15.11 4.05 13.54 4.05 11.91C4.05 7.51 7.64 3.67 12.04 3.67ZM8.82 7.37C8.61 7.37 8.39 7.37 8.21 7.41C7.99 7.45 7.72 7.57 7.52 7.79C7.26 8.07 6.55 8.74 6.55 10.1C6.55 11.46 7.54 12.77 7.68 12.96C7.82 13.15 9.61 15.91 12.35 17.09C13 17.37 13.51 17.56 13.92 17.69C14.53 17.88 15.09 17.86 15.53 17.79C16.02 17.72 17.04 17.17 17.25 16.57C17.47 15.98 17.47 15.47 17.4 15.36C17.33 15.25 17.15 15.19 16.86 15.05C16.58 14.91 15.22 14.24 14.97 14.15C14.72 14.06 14.54 14.01 14.36 14.28C14.18 14.55 13.68 15.14 13.52 15.32C13.37 15.51 13.22 15.53 12.94 15.39C12.65 15.25 11.75 14.95 10.68 13.99C9.84 13.25 9.28 12.33 9.12 12.05C8.95 11.77 9.1 11.61 9.25 11.47C9.37 11.34 9.53 11.13 9.68 10.96C9.82 10.79 9.87 10.66 9.96 10.47C10.05 10.29 10.01 10.13 9.94 9.99C9.87 9.85 9.35 8.57 9.13 8.04C8.92 7.52 8.7 7.59 8.53 7.58L8.82 7.37Z"/>
+          </svg>
+          <span>Join WhatsApp Community</span>
+        </a>
+        <button class="ann-btn-close" id="announcementCloseBtn" onclick="closeAnnouncementModal()">
+          <span>✕ Close</span>
+        </button>
       </div>
     </div>
   </div>

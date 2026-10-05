@@ -30,6 +30,37 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify({ status: 'ok', service: 'webpushr-backend' }));
     }
 
+    // Active announcement query endpoint
+    if ((req.url === '/api/announcements/active' || req.url === '/api/announcements') && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({
+            success: true,
+            announcement: global.__activeServerAnnouncement || null
+        }));
+    }
+
+    // Announcement publication endpoint
+    if ((req.url === '/api/announcements' || req.url === '/api/admin/announcements') && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body || '{}');
+                global.__activeServerAnnouncement = {
+                    ...data,
+                    id: data.id || ('ann_' + Date.now()),
+                    updatedAt: new Date().toISOString()
+                };
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ success: true, announcement: global.__activeServerAnnouncement }));
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
     // Secure notification dispatch endpoint
     if (req.url === '/api/notify' && req.method === 'POST') {
         let body = '';

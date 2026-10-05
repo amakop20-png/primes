@@ -733,3 +733,352 @@ window.NuraAPI = {
     forgotPassword,
     resetPassword
 };
+
+/* ======================================================================
+   NURASMS ADMIN API CLIENT (Specification: NuraSMS Admin API v1)
+   Base URL: /api/admin
+====================================================================== */
+
+function getAdminAuthToken() {
+    return localStorage.getItem('primes_admin_token') || localStorage.getItem('primes_token') || null;
+}
+
+function setAdminAuthToken(token) {
+    if (token) localStorage.setItem('primes_admin_token', token);
+}
+
+function clearAdminAuthToken() {
+    localStorage.removeItem('primes_admin_token');
+}
+
+async function adminApiRequest(endpoint, options = {}) {
+    const method = (options.method || 'GET').toUpperCase();
+    const token = getAdminAuthToken();
+    const headers = {
+        'Accept': 'application/json'
+    };
+
+    if (options.body && typeof options.body === 'string') {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    if (options.headers) {
+        Object.assign(headers, options.headers);
+    }
+
+    const cleanEndpoint = endpoint.startsWith('/api/admin') 
+        ? endpoint 
+        : `/api/admin${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+
+    const url = `${API_BASE_URL}${cleanEndpoint}`;
+    const fetchOptions = { ...options, method, headers };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    fetchOptions.signal = controller.signal;
+
+    let response;
+    try {
+        response = await fetch(url, fetchOptions);
+    } catch (networkErr) {
+        clearTimeout(timeoutId);
+        const err = new Error('Admin API Network error: ' + networkErr.message);
+        err.status = 0;
+        err.isNetworkError = true;
+        console.warn(`[Admin API] Network error on ${method} ${cleanEndpoint}:`, networkErr.message);
+        throw err;
+    }
+    clearTimeout(timeoutId);
+
+    let data = null;
+    try {
+        const text = await response.text();
+        if (text) data = JSON.parse(text);
+    } catch (_) {
+        data = null;
+    }
+
+    if (!response.ok) {
+        const errMsg = data?.message || data?.error || `Admin API Error ${response.status}: ${response.statusText}`;
+        const err = new Error(errMsg);
+        err.status = response.status;
+        err.data = data;
+        console.warn(`[Admin API Error] ${response.status} ${method} ${cleanEndpoint}:`, errMsg);
+        throw err;
+    }
+
+    return data;
+}
+
+// ── Admin Authentication (PDF Page 1) ──
+async function adminLoginApi(email, password) {
+    const res = await adminApiRequest('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+    });
+    const token = res?.token || res?.accessToken || res?.data?.token;
+    if (token) {
+        setAdminAuthToken(token);
+    }
+    return res;
+}
+
+async function adminGetProfileApi() {
+    return await adminApiRequest('/auth/me');
+}
+
+async function adminLogoutApi() {
+    try {
+        await adminApiRequest('/auth/logout', { method: 'POST' });
+    } finally {
+        clearAdminAuthToken();
+    }
+}
+
+// ── Admin Dashboard Statistics (PDF Page 2) ──
+async function adminGetDashboardStats() {
+    return await adminApiRequest('/dashboard/stats');
+}
+
+// ── Admin User Management (PDF Page 2-3) ──
+async function adminGetUsers(params = {}) {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', params.page);
+    if (params.limit) q.set('limit', params.limit);
+    if (params.search) q.set('search', params.search);
+    if (params.isSuspended !== undefined) q.set('isSuspended', params.isSuspended);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return await adminApiRequest(`/users${qs}`);
+}
+
+async function adminGetUser(id) {
+    return await adminApiRequest(`/users/${encodeURIComponent(id)}`);
+}
+
+async function adminUpdateUser(id, body) {
+    return await adminApiRequest(`/users/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body)
+    });
+}
+
+async function adminSuspendUser(id, reason = '') {
+    return await adminApiRequest(`/users/${encodeURIComponent(id)}/suspend`, {
+        method: 'POST',
+        body: JSON.stringify({ reason })
+    });
+}
+
+async function adminUnsuspendUser(id) {
+    return await adminApiRequest(`/users/${encodeURIComponent(id)}/unsuspend`, {
+        method: 'POST'
+    });
+}
+
+// ── Admin Wallets Management (PDF Page 3-4) ──
+async function adminGetWallets(params = {}) {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', params.page);
+    if (params.limit) q.set('limit', params.limit);
+    if (params.isFrozen !== undefined) q.set('isFrozen', params.isFrozen);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return await adminApiRequest(`/wallets${qs}`);
+}
+
+async function adminGetUserWallet(userId) {
+    return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}`);
+}
+
+async function adminCreditWallet(userId, amount, reason = 'Admin credit') {
+    return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}/credit`, {
+        method: 'POST',
+        body: JSON.stringify({ amount, reason })
+    });
+}
+
+async function adminDebitWallet(userId, amount, reason = 'Admin debit') {
+    return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}/debit`, {
+        method: 'POST',
+        body: JSON.stringify({ amount, reason })
+    });
+}
+
+async function adminFreezeWallet(userId) {
+    return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}/freeze`, {
+        method: 'POST'
+    });
+}
+
+async function adminUnfreezeWallet(userId) {
+    return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}/unfreeze`, {
+        method: 'POST'
+    });
+}
+
+// ── Admin Transactions (PDF Page 4-5) ──
+async function adminGetTransactions(params = {}) {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', params.page);
+    if (params.limit) q.set('limit', params.limit);
+    if (params.user) q.set('user', params.user);
+    if (params.type) q.set('type', params.type);
+    if (params.status) q.set('status', params.status);
+    if (params.from) q.set('from', params.from);
+    if (params.to) q.set('to', params.to);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return await adminApiRequest(`/transactions${qs}`);
+}
+
+async function adminGetTransaction(id) {
+    return await adminApiRequest(`/transactions/${encodeURIComponent(id)}`);
+}
+
+async function adminUpdateTransactionStatus(id, status) {
+    return await adminApiRequest(`/transactions/${encodeURIComponent(id)}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+    });
+}
+
+// ── Admin Virtual Accounts (PDF Page 5) ──
+async function adminGetVirtualAccounts(params = {}) {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', params.page);
+    if (params.limit) q.set('limit', params.limit);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return await adminApiRequest(`/virtual-accounts${qs}`);
+}
+
+async function adminGetUserVirtualAccount(userId) {
+    return await adminApiRequest(`/virtual-accounts/${encodeURIComponent(userId)}`);
+}
+
+// ── Announcement API Endpoints (Admin & User) ──
+async function fetchActiveAnnouncementFromApi() {
+    // 1. Query public user active announcement endpoint from backend
+    try {
+        const data = await apiRequest('/api/announcements/active', {
+            method: 'GET',
+            suppressAuthRedirect: true
+        });
+        const ann = data?.announcement || data?.data || data;
+        if (ann && (ann.title || ann.message || ann.content) && ann.active !== false) {
+            return ann;
+        }
+    } catch (_) {
+        // Backend endpoint might be unreachable or pending deployment
+    }
+
+    // 2. Query admin announcement endpoint if admin token is present
+    try {
+        const adminData = await adminApiRequest('/announcements/active', {
+            method: 'GET'
+        });
+        const ann = adminData?.announcement || adminData?.data || adminData;
+        if (ann && (ann.title || ann.message || ann.content) && ann.active !== false) {
+            return ann;
+        }
+    } catch (_) {}
+
+    // 3. Query notification / microservice server if running
+    try {
+        const localRes = await fetch('http://localhost:3000/api/announcements/active');
+        if (localRes.ok) {
+            const localData = await localRes.json();
+            const ann = localData?.announcement;
+            if (ann && (ann.title || ann.message || ann.content) && ann.active !== false) {
+                return ann;
+            }
+        }
+    } catch (_) {}
+
+    // 4. Fallback to synchronized active announcement if network was offline
+    try {
+        const raw = localStorage.getItem('primes_active_announcement') || localStorage.getItem('global_announcement');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && (parsed.title || parsed.message || parsed.content) && parsed.active !== false) {
+                return parsed;
+            }
+        }
+    } catch (_) {}
+
+    return null;
+}
+
+async function publishAnnouncementToApi(announcementPayload) {
+    if (!announcementPayload) return null;
+
+    let res = null;
+    // 1. Post to Admin API / Backend
+    try {
+        res = await adminApiRequest('/announcements', {
+            method: 'POST',
+            body: JSON.stringify(announcementPayload)
+        });
+    } catch (err) {
+        console.info('[Admin Announcement API] Backend route notice:', err.status || err.message);
+    }
+
+    // 2. Also dispatch to local microservice if running
+    try {
+        await fetch('http://localhost:3000/api/announcements', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(announcementPayload)
+        });
+    } catch (_) {}
+
+    // 2. Save active announcement to synced state so user login can retrieve it immediately
+    if (announcementPayload.active !== false) {
+        try {
+            localStorage.setItem('primes_active_announcement', JSON.stringify(announcementPayload));
+            localStorage.setItem('global_announcement', JSON.stringify(announcementPayload));
+        } catch (_) {}
+    } else {
+        try {
+            localStorage.removeItem('primes_active_announcement');
+            const rawG = localStorage.getItem('global_announcement');
+            if (rawG) {
+                const g = JSON.parse(rawG);
+                if (g.id === announcementPayload.id) {
+                    localStorage.removeItem('global_announcement');
+                }
+            }
+        } catch (_) {}
+    }
+
+    return res || announcementPayload;
+}
+
+// Global exports
+window.getAdminAuthToken              = getAdminAuthToken;
+window.setAdminAuthToken              = setAdminAuthToken;
+window.clearAdminAuthToken            = clearAdminAuthToken;
+window.adminApiRequest                = adminApiRequest;
+window.adminLoginApi                  = adminLoginApi;
+window.adminGetProfileApi             = adminGetProfileApi;
+window.adminLogoutApi                 = adminLogoutApi;
+window.adminGetDashboardStats         = adminGetDashboardStats;
+window.adminGetUsers                  = adminGetUsers;
+window.adminGetUser                   = adminGetUser;
+window.adminUpdateUser                = adminUpdateUser;
+window.adminSuspendUser               = adminSuspendUser;
+window.adminUnsuspendUser             = adminUnsuspendUser;
+window.adminGetWallets                = adminGetWallets;
+window.adminGetUserWallet             = adminGetUserWallet;
+window.adminCreditWallet              = adminCreditWallet;
+window.adminDebitWallet               = adminDebitWallet;
+window.adminFreezeWallet              = adminFreezeWallet;
+window.adminUnfreezeWallet            = adminUnfreezeWallet;
+window.adminGetTransactions           = adminGetTransactions;
+window.adminGetTransaction            = adminGetTransaction;
+window.adminUpdateTransactionStatus   = adminUpdateTransactionStatus;
+window.adminGetVirtualAccounts        = adminGetVirtualAccounts;
+window.adminGetUserVirtualAccount     = adminGetUserVirtualAccount;
+window.fetchActiveAnnouncementFromApi = fetchActiveAnnouncementFromApi;
+window.publishAnnouncementToApi       = publishAnnouncementToApi;

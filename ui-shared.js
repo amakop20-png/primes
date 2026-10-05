@@ -617,44 +617,265 @@ window.addEventListener('storage', (e) => {
     }
 });
 
-// ── Announcements Logic ──
-async function checkForAnnouncements() {
-    let announcementPayload = null;
+// ── Production Announcement System ──
+let currentActiveAnnouncementId = null;
 
-    // Check local storage for administrative global announcements
-    const raw = localStorage.getItem('global_announcement');
-    if (raw) {
-        try {
-            announcementPayload = JSON.parse(raw);
-        } catch (e) {
-            announcementPayload = { message: raw, id: raw }; // Fallback for old string format
-        }
-    }
-
-    // Display the announcement if it hasn't been seen yet
-    if (announcementPayload && announcementPayload.message) {
-        const lastSeenId = localStorage.getItem('last_seen_announcement_id');
-        if (String(announcementPayload.id) !== lastSeenId) {
-            showAnnouncementModal(announcementPayload.message, announcementPayload.id);
-        }
-    }
+function escapeHTML(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
-function showAnnouncementModal(message, id) {
-    const modal = document.getElementById('announcementModal');
-    const content = document.getElementById('announcementModalContent');
-    if (modal && content) {
-        content.textContent = message;
-        modal.style.display = 'flex';
-        // Save to last seen so it doesn't pop up again
-        localStorage.setItem('last_seen_announcement_id', id);
-        localStorage.setItem('last_seen_announcement', message); // For backwards compatibility
+function getStoredAnnouncements() {
+    try {
+        const raw = localStorage.getItem('primes_announcements');
+        if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) return list;
+        }
+    } catch (_) {}
+    return [];
+}
+
+function getActiveAnnouncement() {
+    try {
+        const raw = localStorage.getItem('primes_active_announcement') || localStorage.getItem('global_announcement');
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed === 'string') {
+                return {
+                    id: 'legacy_' + parsed.slice(0, 8),
+                    title: 'Important Announcement',
+                    subtitle: 'Tips (1)',
+                    content: parsed,
+                    active: true
+                };
+            }
+            if (parsed && typeof parsed === 'object') {
+                if (!parsed.content && parsed.message) {
+                    parsed.content = parsed.message;
+                }
+                if (!parsed.title) {
+                    parsed.title = 'Important Announcement';
+                }
+                return parsed;
+            }
+        }
+    } catch (_) {}
+
+    // Check stored announcements from backend/admin
+    const list = getStoredAnnouncements();
+    const active = list.find(a => a.active === true);
+    if (active) return active;
+    return null;
+}
+
+function parseAnnouncementItems(content) {
+    if (!content) return [];
+    if (Array.isArray(content)) {
+        return content.map(item => typeof item === 'string' ? parseSingleItem(item) : item);
     }
+    const lines = String(content).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    return lines.map(line => parseSingleItem(line));
+}
+
+function parseSingleItem(line) {
+    if (!line) return { icon: '💡', text: '' };
+    // Match unicode emoji or known symbols at start
+    const emojiMatch = line.match(/^(\p{Extended_Pictographic}|[💡🔒⏰📢⚠️✅📌🚀⭐🔥ℹ️✨])\s*(.*)$/u);
+    if (emojiMatch) {
+        return {
+            icon: emojiMatch[1],
+            text: emojiMatch[2]
+        };
+    }
+    // Match bullet or numbered list
+    const bulletMatch = line.match(/^([-*•]|\d+\.)\s*(.*)$/);
+    if (bulletMatch) {
+        return {
+            icon: '💡',
+            text: bulletMatch[2]
+        };
+    }
+    return {
+        icon: '💡',
+        text: line
+    };
+}
+
+async function checkForAnnouncements() {
+    // 1. Strict guard: ONLY display after successful user authentication, when entering dashboard
+    const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('primes_token');
+    if (!token) {
+        return; // Do NOT display before login
+    }
+
+    // 2. Fetch latest active announcement from backend / API
+    let announcement = null;
+    if (typeof fetchActiveAnnouncementFromApi === 'function') {
+        try {
+            announcement = await fetchActiveAnnouncementFromApi();
+        } catch (_) {
+            announcement = null;
+        }
+    }
+
+    // Fallback: check synchronized active announcement from backend/admin
+    if (!announcement) {
+        announcement = getActiveAnnouncement();
+    }
+
+    // 3. If there is no active announcement:
+    // - Do nothing
+    // - Do not show an empty popup
+    // - Do not show an error to the user
+    if (!announcement || announcement.active === false) {
+        return;
+    }
+
+    const content = announcement.content || announcement.message;
+    if (!content || !String(content).trim()) {
+        return;
+    }
+
+    // 4. Client-side state: check if already dismissed by this authenticated user
+    const annId = announcement.id || announcement._id || ('ann_' + (announcement.title || 'active').replace(/\s+/g, '_'));
+    const session = typeof getSession === 'function' ? getSession() : null;
+    const userKey = (session?.email || session?.username || session?._id || 'user').toLowerCase().trim();
+    const dismissedKey = `primes_ann_dismissed_${userKey}_${annId}`;
+
+    if (localStorage.getItem(dismissedKey) === 'true') {
+        return; // Prevent repeated appearances after dismissal
+    }
+
+    // 5. Automatically display the announcement popup
+    showAnnouncementModal(announcement, false);
+}
+
+function showAnnouncementModal(payload, isPreview = false) {
+    const modal = document.getElementById('announcementModal');
+    if (!modal) return;
+
+    let data = payload;
+    if (typeof payload === 'string') {
+        data = {
+            id: 'raw_' + Date.now(),
+            title: 'Important Announcement',
+            subtitle: 'Tips (1)',
+            content: payload,
+            active: true
+        };
+    }
+
+    const rawTitle = data.title || 'Important Announcement';
+    const titleClean = rawTitle.replace(/^📢\s*/, '').trim();
+    const titleTextEl = document.getElementById('announcementTitleText');
+    if (titleTextEl) {
+        titleTextEl.textContent = titleClean || 'Important Announcement';
+    }
+
+    const items = parseAnnouncementItems(data.content || data.message || '');
+    const subtitleEl = document.getElementById('announcementSubtitle');
+    if (subtitleEl) {
+        if (data.subtitle && data.subtitle.trim()) {
+            subtitleEl.textContent = data.subtitle.trim();
+            subtitleEl.style.display = 'block';
+        } else if (items.length > 1) {
+            subtitleEl.textContent = `Tips (${items.length})`;
+            subtitleEl.style.display = 'block';
+        } else {
+            subtitleEl.textContent = 'Tips (1)';
+            subtitleEl.style.display = 'block';
+        }
+    }
+
+    const contentBox = document.getElementById('announcementModalContent');
+    if (contentBox) {
+        if (items.length > 0) {
+            contentBox.innerHTML = items.map((item, idx) => {
+                const colorClass = (idx % 2 === 0) ? 'ann-color-purple' : 'ann-color-amber';
+                return `
+                <div class="ann-item-row ${colorClass}">
+                    <span class="ann-item-emoji">${item.icon || '💡'}</span>
+                    <span class="ann-item-text">${escapeHTML(item.text)}</span>
+                </div>`;
+            }).join('');
+        } else {
+            contentBox.innerHTML = `
+                <div class="ann-item-row ann-color-purple">
+                    <span class="ann-item-emoji">📢</span>
+                    <span class="ann-item-text">${escapeHTML(data.content || data.message || 'No announcement details.')}</span>
+                </div>
+            `;
+        }
+    }
+
+    const waBtn = document.getElementById('announcementWhatsappBtn');
+    if (waBtn) {
+        const waUrl = data.whatsappUrl || 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq';
+        waBtn.href = waUrl;
+        waBtn.target = '_blank';
+        waBtn.rel = 'noopener noreferrer';
+    }
+
+    if (!isPreview) {
+        currentActiveAnnouncementId = data.id || 'default';
+    } else {
+        currentActiveAnnouncementId = null;
+    }
+
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => {
+        modal.classList.add('show');
+    });
 }
 
 function closeAnnouncementModal() {
     const modal = document.getElementById('announcementModal');
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 260);
+    }
+
+    if (currentActiveAnnouncementId) {
+        try {
+            const session = typeof getSession === 'function' ? getSession() : null;
+            const userKey = session?.email || session?.username || 'user';
+            localStorage.setItem(`primes_ann_dismissed_${userKey}_${currentActiveAnnouncementId}`, 'true');
+            localStorage.setItem('last_seen_announcement_id', String(currentActiveAnnouncementId));
+        } catch (_) {}
+        currentActiveAnnouncementId = null;
     }
 }
+
+// Global modal backdrop click & Escape key listener
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('announcementModal');
+    if (modal && e.target === modal) {
+        closeAnnouncementModal();
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('announcementModal');
+        if (modal && modal.classList.contains('show')) {
+            closeAnnouncementModal();
+        }
+    }
+});
+
+// Explicit window exports
+window.checkForAnnouncements       = checkForAnnouncements;
+window.showAnnouncementModal       = showAnnouncementModal;
+window.closeAnnouncementModal      = closeAnnouncementModal;
+window.parseAnnouncementItems      = parseAnnouncementItems;
+window.getActiveAnnouncement       = getActiveAnnouncement;
+window.getStoredAnnouncements      = getStoredAnnouncements;
+

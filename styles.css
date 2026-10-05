@@ -2468,8 +2468,11 @@ aside .top a.active span i {
 ══════════════════════════════════════ */
 .container {
   margin-left: 260px;
-  padding: 32px 28px;
+  width: calc(100% - 260px);
+  max-width: 1440px;
+  padding: 32px 36px 48px;
   min-height: 100vh;
+  box-sizing: border-box;
 }
 
 main h1 {
@@ -2500,7 +2503,8 @@ main > p {
   color: white;
   border-radius: 20px;
   padding: 24px;
-  max-width: 300px;
+  width: 100%;
+  box-sizing: border-box;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
@@ -3568,6 +3572,8 @@ main > p {
 
   .container {
     margin-left: 0;
+    width: 100%;
+    max-width: 100%;
     padding: 20px 16px;
   }
 
@@ -3919,13 +3925,13 @@ main > p {
   background: linear-gradient(135deg, #581c87 0%, #6d28d9 45%, #7c3aed 100%);
   color: #ffffff;
   border-radius: 20px;
-  padding: 22px 26px;
+  padding: 24px 28px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 32px rgba(109, 40, 217, 0.25);
   position: relative;
   overflow: hidden;
-  max-width: 480px;
+  max-width: 560px;
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.18);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -4444,26 +4450,30 @@ body.dark-theme .badge-usd {
 /* Country Cards Grid */
 .country-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .country-card {
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 16px;
-  padding: 18px;
+  padding: 18px 20px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-height: 172px;
   box-shadow: var(--shadow-sm);
   position: relative;
+  box-sizing: border-box;
 }
 
 .country-card:hover {
-  transform: translateY(-3px);
+  transform: none;
   border-color: var(--primary);
   box-shadow: 0 8px 24px rgba(124, 58, 237, 0.14);
 }
@@ -4471,26 +4481,29 @@ body.dark-theme .badge-usd {
 .country-card.is-selected {
   border-color: var(--primary);
   background: var(--primary-light);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.16);
 }
 
 .country-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   margin-bottom: 12px;
 }
 
 .country-flag-box {
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
   background: var(--border-light);
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .country-dial-badge {
@@ -4500,7 +4513,8 @@ body.dark-theme .badge-usd {
   background: var(--primary-light);
   padding: 4px 10px;
   border-radius: 8px;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 body.dark-theme .country-dial-badge {
@@ -4512,21 +4526,23 @@ body.dark-theme .country-dial-badge {
   font-size: 15px;
   font-weight: 800;
   color: var(--text);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .country-card-meta {
   font-size: 12px;
   color: var(--muted);
-  margin-bottom: 16px;
+  margin-bottom: 14px;
+  line-height: 1.3;
 }
 
 .btn-select-country {
   width: 100%;
-  padding: 9px 12px;
+  height: 38px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--border-light);
@@ -4540,6 +4556,7 @@ body.dark-theme .country-dial-badge {
   gap: 6px;
   transition: all 0.2s ease;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .country-card:hover .btn-select-country {
@@ -5520,5 +5537,291 @@ body.dark-theme .vnum-card-value {
 .btn-copy-ref-badge:active {
   transform: scale(0.97);
 }
+
+/* ══════════════════════════════════════
+   NURAXQ PRODUCTION ANNOUNCEMENT POPUP MODAL
+   ══════════════════════════════════════ */
+.ann-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 22, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 100000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ann-modal-backdrop.show {
+  display: flex !important;
+  opacity: 1 !important;
+}
+
+.ann-modal-card {
+  background: var(--surface, #ffffff);
+  color: var(--text, #1f2937);
+  border-radius: 22px;
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100vh - 40px);
+  padding: 26px 22px 22px;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(124, 58, 237, 0.08);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  transform: scale(0.92) translateY(18px);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+  overflow: hidden;
+}
+
+.ann-modal-backdrop.show .ann-modal-card {
+  transform: scale(1) translateY(0);
+}
+
+/* Close Icon top right */
+.ann-close-icon-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(100, 116, 139, 0.08);
+  color: var(--muted, #64748B);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.ann-close-icon-btn:hover {
+  background: rgba(124, 58, 237, 0.14);
+  color: var(--primary, #7C3AED);
+  transform: rotate(90deg);
+}
+
+/* Header */
+.ann-header-wrap {
+  text-align: center;
+  margin-top: 2px;
+  margin-bottom: 14px;
+}
+
+.ann-heading-title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--primary, #7C3AED);
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.ann-heading-subtitle {
+  margin-top: 4px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--accent, #9333ea);
+  letter-spacing: 0.2px;
+}
+
+/* Content Box (Separated announcement/tips area) */
+.ann-content-box {
+  background: var(--bg, #F8FAFC);
+  border-radius: 14px;
+  border: 1px solid var(--border, #E2E8F0);
+  border-left: 4.5px solid var(--primary, #7C3AED);
+  padding: 16px 14px 14px;
+  max-height: 250px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+}
+
+/* Custom sleek scrollbar for tips box */
+.ann-content-box::-webkit-scrollbar {
+  width: 5px;
+}
+.ann-content-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ann-content-box::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.25);
+  border-radius: 10px;
+}
+
+/* Tip / Item Row */
+.ann-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  line-height: 1.48;
+  color: var(--text, #1E293B);
+  font-weight: 500;
+}
+
+.ann-item-row:last-child {
+  margin-bottom: 0;
+}
+
+.ann-item-row.ann-color-purple .ann-item-text {
+  color: #7C3AED;
+  font-weight: 600;
+}
+
+.ann-item-row.ann-color-amber .ann-item-text {
+  color: #D97706;
+  font-weight: 600;
+}
+
+body.dark-theme .ann-item-row.ann-color-purple .ann-item-text {
+  color: #C4B5FD;
+}
+
+body.dark-theme .ann-item-row.ann-color-amber .ann-item-text {
+  color: #FBBF24;
+}
+
+.ann-item-emoji {
+  font-size: 16px;
+  line-height: 1.2;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ann-item-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* Actions */
+.ann-actions-wrap {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ann-btn-whatsapp {
+  background: #25D366;
+  background: linear-gradient(135deg, #25D366 0%, #1DA851 100%);
+  color: #ffffff !important;
+  border-radius: 12px;
+  padding: 13px 18px;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.ann-btn-whatsapp:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.45);
+  filter: brightness(1.04);
+}
+
+.ann-btn-close {
+  background: #64748B;
+  color: #ffffff !important;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.ann-btn-close:hover {
+  background: #475569;
+  transform: translateY(-1px);
+}
+
+/* Dark mode overrides */
+body.dark-theme .ann-modal-card {
+  background: var(--surface, #15122A);
+  color: var(--text, #F3F4F6);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+body.dark-theme .ann-heading-title {
+  color: #C4B5FD;
+}
+body.dark-theme .ann-heading-subtitle {
+  color: #A78BFA;
+}
+body.dark-theme .ann-content-box {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--border, #231F3A);
+  border-left-color: #8B5CF6;
+}
+body.dark-theme .ann-item-row {
+  color: #E2E8F0;
+}
+body.dark-theme .ann-close-icon-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: #9CA3AF;
+}
+body.dark-theme .ann-close-icon-btn:hover {
+  background: rgba(139, 92, 246, 0.2);
+  color: #C4B5FD;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .ann-modal-card {
+    padding: 20px 16px 18px;
+    border-radius: 18px;
+    max-height: calc(100vh - 32px);
+  }
+  .ann-heading-title {
+    font-size: 19px;
+  }
+  .ann-content-box {
+    padding: 14px 12px 12px;
+    max-height: 220px;
+  }
+  .ann-item-row {
+    font-size: 13px;
+    gap: 8px;
+  }
+  .ann-btn-whatsapp {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  .ann-btn-close {
+    padding: 11px 14px;
+    font-size: 13.5px;
+  }
+}
+
 
 
