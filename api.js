@@ -808,8 +808,36 @@ function clearAdminAuthToken() {
     localStorage.removeItem('primes_admin_token');
 }
 
+const unavailableAdminEndpoints = new Set();
+
+function clearUnavailableAdminEndpoints() {
+    unavailableAdminEndpoints.clear();
+}
+
+function isAdminEndpointUnavailable(endpoint) {
+    if (!endpoint) return false;
+    const clean = endpoint.startsWith('/api/admin') 
+        ? endpoint 
+        : `/api/admin${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    return unavailableAdminEndpoints.has(clean.split('?')[0]);
+}
+
 async function adminApiRequest(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
+    const cleanEndpoint = endpoint.startsWith('/api/admin') 
+        ? endpoint 
+        : `/api/admin${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    const basePath = cleanEndpoint.split('?')[0];
+
+    // If endpoint is confirmed unavailable (404), suppress repeated network calls
+    if (unavailableAdminEndpoints.has(basePath)) {
+        const notFoundErr = new Error(`Admin endpoint ${basePath} is unavailable on server (404)`);
+        notFoundErr.status = 404;
+        notFoundErr.isNotFound = true;
+        notFoundErr.suppressed = true;
+        throw notFoundErr;
+    }
+
     const token = getAdminAuthToken();
     const headers = {
         'Accept': 'application/json'
@@ -832,10 +860,6 @@ async function adminApiRequest(endpoint, options = {}) {
         Object.assign(headers, options.headers);
     }
 
-    const cleanEndpoint = endpoint.startsWith('/api/admin') 
-        ? endpoint 
-        : `/api/admin${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
-
     const url = `${API_BASE_URL}${cleanEndpoint}`;
     const fetchOptions = { ...options, method, headers, body: bodyPayload };
 
@@ -855,6 +879,11 @@ async function adminApiRequest(endpoint, options = {}) {
         throw err;
     }
     clearTimeout(timeoutId);
+
+    // If server responds with 404, record the endpoint to stop repeated loops
+    if (response.status === 404) {
+        unavailableAdminEndpoints.add(basePath);
+    }
 
     let data = null;
     let responseText = '';
@@ -886,7 +915,12 @@ async function adminApiRequest(endpoint, options = {}) {
         err.status = response.status;
         err.data = data;
         err.rawText = responseText;
-        console.warn(`[Admin API Error] ${response.status} ${method} ${cleanEndpoint}:`, errMsg);
+        if (response.status === 404) {
+            err.isNotFound = true;
+            console.info(`[Admin API] Route ${cleanEndpoint} returned 404 Not Found. Further requests to ${basePath} are suppressed.`);
+        } else {
+            console.warn(`[Admin API Error] ${response.status} ${method} ${cleanEndpoint}:`, errMsg);
+        }
         throw err;
     }
 
@@ -1050,46 +1084,8 @@ async function adminGetUserVirtualAccount(userId) {
     return await adminApiRequest(`/virtual-accounts/${encodeURIComponent(userId)}`);
 }
 
-// ── Announcement API Endpoints (Admin & User) ──
+// ── Announcement Storage System (Application State) ──
 async function fetchActiveAnnouncementFromApi() {
-    // 1. Query public user active announcement endpoint from backend
-    try {
-        const data = await apiRequest('/api/announcements/active', {
-            method: 'GET',
-            suppressAuthRedirect: true
-        });
-        const ann = data?.announcement || data?.data || data;
-        if (ann && (ann.title || ann.message || ann.content) && ann.active !== false) {
-            return ann;
-        }
-    } catch (_) {
-        // Backend endpoint might be unreachable or pending deployment
-    }
-
-    // 2. Query admin announcement endpoint if admin token is present
-    try {
-        const adminData = await adminApiRequest('/announcements/active', {
-            method: 'GET'
-        });
-        const ann = adminData?.announcement || adminData?.data || adminData;
-        if (ann && (ann.title || ann.message || ann.content) && ann.active !== false) {
-            return ann;
-        }
-    } catch (_) {}
-
-    // 3. Query notification / microservice server if running
-    try {
-        const localRes = await fetch('http://localhost:3000/api/announcements/active');
-        if (localRes.ok) {
-            const localData = await localRes.json();
-            const ann = localData?.announcement;
-            if (ann && (ann.title || ann.message || ann.content) && ann.active !== false) {
-                return ann;
-            }
-        }
-    } catch (_) {}
-
-    // 4. Fallback to synchronized active announcement if network was offline
     try {
         const raw = localStorage.getItem('primes_active_announcement') || localStorage.getItem('global_announcement');
         if (raw) {
@@ -1106,27 +1102,6 @@ async function fetchActiveAnnouncementFromApi() {
 async function publishAnnouncementToApi(announcementPayload) {
     if (!announcementPayload) return null;
 
-    let res = null;
-    // 1. Post to Admin API / Backend
-    try {
-        res = await adminApiRequest('/announcements', {
-            method: 'POST',
-            body: JSON.stringify(announcementPayload)
-        });
-    } catch (err) {
-        console.info('[Admin Announcement API] Backend route notice:', err.status || err.message);
-    }
-
-    // 2. Also dispatch to local microservice if running
-    try {
-        await fetch('http://localhost:3000/api/announcements', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(announcementPayload)
-        });
-    } catch (_) {}
-
-    // 2. Save active announcement to synced state so user login can retrieve it immediately
     if (announcementPayload.active !== false) {
         try {
             localStorage.setItem('primes_active_announcement', JSON.stringify(announcementPayload));
@@ -1145,13 +1120,27 @@ async function publishAnnouncementToApi(announcementPayload) {
         } catch (_) {}
     }
 
-    return res || announcementPayload;
+    // Keep announcement history in localStorage
+    try {
+        const list = JSON.parse(localStorage.getItem('primes_announcements') || '[]');
+        const idx = list.findIndex(a => a.id === announcementPayload.id);
+        if (idx !== -1) {
+            list[idx] = { ...list[idx], ...announcementPayload };
+        } else {
+            list.unshift(announcementPayload);
+        }
+        localStorage.setItem('primes_announcements', JSON.stringify(list));
+    } catch (_) {}
+
+    return announcementPayload;
 }
 
 // Global exports
 window.getAdminAuthToken              = getAdminAuthToken;
 window.setAdminAuthToken              = setAdminAuthToken;
 window.clearAdminAuthToken            = clearAdminAuthToken;
+window.clearUnavailableAdminEndpoints = clearUnavailableAdminEndpoints;
+window.isAdminEndpointUnavailable     = isAdminEndpointUnavailable;
 window.adminApiRequest                = adminApiRequest;
 window.adminRegisterApi               = adminRegisterApi;
 window.adminLoginApi                  = adminLoginApi;
@@ -1175,4 +1164,5 @@ window.adminUpdateTransactionStatus   = adminUpdateTransactionStatus;
 window.adminGetVirtualAccounts        = adminGetVirtualAccounts;
 window.adminGetUserVirtualAccount     = adminGetUserVirtualAccount;
 window.fetchActiveAnnouncementFromApi = fetchActiveAnnouncementFromApi;
-window.publishAnnouncementToApi       = publishAnnouncementToApi;window.isAdmin = isAdmin;
+window.publishAnnouncementToApi       = publishAnnouncementToApi;
+window.isAdmin                        = isAdmin;

@@ -385,10 +385,18 @@ function showSection(id, btn) {
 
   // Section specific triggers
   if (id === 'wallets') {
-    loadAdminWallets();
+    if (!allWallets.length && (!window.isAdminEndpointUnavailable || !window.isAdminEndpointUnavailable('/api/admin/wallets'))) {
+      loadAdminWallets();
+    } else {
+      filterAdminWallets();
+    }
   }
-  if (id === 'transactions' && !allTransactions.length) {
-    loadBackendTransactions();
+  if (id === 'transactions') {
+    if (!allTransactions.length && (!window.isAdminEndpointUnavailable || !window.isAdminEndpointUnavailable('/api/admin/transactions'))) {
+      loadBackendTransactions();
+    } else {
+      filterBackendTransactions();
+    }
   }
 }
 
@@ -432,7 +440,13 @@ async function checkProviderStatus() {
 /* ════════════════════════════════════
    DATA LOAD & STORAGE SYNC
 ════════════════════════════════════ */
+let isDataLoading = false;
+let isDataLoaded  = false;
+
 async function loadAllData() {
+  if (isDataLoading) return;
+  isDataLoading = true;
+
   try {
     // 1. Fetch live dashboard statistics directly from Admin API (GET /api/admin/dashboard/stats - PDF Page 2)
     if (typeof adminGetDashboardStats === 'function') {
@@ -449,7 +463,9 @@ async function loadAllData() {
           }
         }
       } catch (statsErr) {
-        console.warn('[Admin] Dashboard stats API notice:', statsErr.message);
+        if (!statsErr?.suppressed) {
+          console.warn('[Admin] Dashboard stats API notice:', statsErr.message);
+        }
       }
     }
 
@@ -476,7 +492,9 @@ async function loadAllData() {
           }));
         }
       } catch (err) {
-        console.warn('[Admin] Live users API notice:', err.message);
+        if (!err?.suppressed) {
+          console.warn('[Admin] Live users API notice:', err.message);
+        }
       }
     }
 
@@ -490,7 +508,9 @@ async function loadAllData() {
           setText('navWalletsBadge', allWallets.length);
         }
       } catch (wErr) {
-        console.warn('[Admin] Live wallets API notice:', wErr.message);
+        if (!wErr?.suppressed) {
+          console.warn('[Admin] Live wallets API notice:', wErr.message);
+        }
       }
     }
 
@@ -503,7 +523,9 @@ async function loadAllData() {
           allVirtualAccounts = vaList;
         }
       } catch (vaErr) {
-        console.warn('[Admin] Live virtual accounts API notice:', vaErr.message);
+        if (!vaErr?.suppressed) {
+          console.warn('[Admin] Live virtual accounts API notice:', vaErr.message);
+        }
       }
     }
 
@@ -519,12 +541,14 @@ async function loadAllData() {
       } catch (_) {}
     }
 
-    // 6. Fetch announcements from backend API
-    await loadAdminAnnouncements();
+    // 6. Load announcements from stored state
+    loadAdminAnnouncements();
 
+    isDataLoaded = true;
   } catch (err) {
     console.error('Error fetching backend data:', err);
-    adminToast('Failed to load backend records.', 'error');
+  } finally {
+    isDataLoading = false;
   }
 }
 
@@ -886,28 +910,38 @@ function quickFundUser(email) {
 ════════════════════════════════════ */
 async function loadAdminWallets() {
   const tbody = document.getElementById('walletsTbody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Syncing wallets from Admin API...</td></tr>';
+  if (tbody && !allWallets.length) tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Syncing wallets from Admin API...</td></tr>';
 
   try {
     if (typeof adminGetWallets === 'function') {
-      const wRes = await adminGetWallets({ limit: 100 });
-      const wList = wRes?.wallets || wRes?.data || (Array.isArray(wRes) ? wRes : []);
-      if (Array.isArray(wList)) {
-        allWallets = wList;
-        setText('navWalletsBadge', allWallets.length);
+      try {
+        const wRes = await adminGetWallets({ limit: 100 });
+        const wList = wRes?.wallets || wRes?.data || (Array.isArray(wRes) ? wRes : []);
+        if (Array.isArray(wList)) {
+          allWallets = wList;
+          setText('navWalletsBadge', allWallets.length);
+        }
+      } catch (wErr) {
+        if (!wErr?.suppressed) console.warn('[Admin] Live wallets notice:', wErr.message);
       }
     }
     if (typeof adminGetVirtualAccounts === 'function') {
-      const vaRes = await adminGetVirtualAccounts({ limit: 100 });
-      const vaList = vaRes?.virtualAccounts || vaRes?.data || (Array.isArray(vaRes) ? vaRes : []);
-      if (Array.isArray(vaList)) {
-        allVirtualAccounts = vaList;
+      try {
+        const vaRes = await adminGetVirtualAccounts({ limit: 100 });
+        const vaList = vaRes?.virtualAccounts || vaRes?.data || (Array.isArray(vaRes) ? vaRes : []);
+        if (Array.isArray(vaList)) {
+          allVirtualAccounts = vaList;
+        }
+      } catch (vaErr) {
+        if (!vaErr?.suppressed) console.warn('[Admin] Live virtual accounts notice:', vaErr.message);
       }
     }
     filterAdminWallets();
   } catch (err) {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="empty-cell" style="color:var(--red);">Failed to sync wallets: ${escapeHTML(err.message)}</td></tr>`;
-    adminToast('Could not load wallets.', 'error');
+    if (tbody && !allWallets.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No wallets recorded yet.</td></tr>';
+    }
+    filterAdminWallets();
   }
 }
 
@@ -1143,32 +1177,19 @@ async function checkLiveOrderStatus(orderId) {
 ════════════════════════════════════ */
 async function loadBackendTransactions() {
   const tbody = document.getElementById('transactionsTbody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">Syncing transactions from backend...</td></tr>';
+  if (tbody && !allTransactions.length) tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">Syncing transactions from backend...</td></tr>';
 
   try {
     let txList = [];
-    // 1. Try documented Admin API GET /transactions first (PDF page 4-5)
+    // Only documented Admin API GET /transactions (PDF page 4-5)
     if (typeof adminGetTransactions === 'function') {
       try {
         const res = await adminGetTransactions({ limit: 50 });
         if (res && (res.transactions || res.data || Array.isArray(res))) {
           txList = res.transactions || res.data || (Array.isArray(res) ? res : []);
         }
-      } catch (_) {}
-    }
-
-    // 2. Try customer/platform GET /api/get-transactions fallback
-    if (!txList.length && typeof apiRequest === 'function') {
-      try {
-        const res = await apiRequest('/api/get-transactions?page=1&limit=50&currency=NGN', {
-          method: 'GET',
-          suppressAuthRedirect: true
-        });
-        if (res && (res.data || res.transactions)) {
-          txList = res.data || res.transactions || [];
-        }
-      } catch (reqErr) {
-        console.warn('[Admin] Live backend get-transactions notice:', reqErr.message);
+      } catch (tErr) {
+        if (!tErr?.suppressed) console.warn('[Admin] adminGetTransactions notice:', tErr.message);
       }
     }
 
@@ -1176,10 +1197,10 @@ async function loadBackendTransactions() {
     setText('navTxBadge', allTransactions.length);
 
     filterBackendTransactions();
-    adminToast('Backend transactions synchronized.', 'success');
   } catch (err) {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="empty-cell" style="color:var(--red);">Failed to sync transactions: ${escapeHTML(err.message)}</td></tr>`;
-    adminToast('Could not load transactions from backend.', 'error');
+    if (tbody && !allTransactions.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">No transactions found.</td></tr>';
+    }
   }
 }
 
@@ -1539,6 +1560,16 @@ async function handleCreateAdmin() {
    ════════════════════════════════════ */
 
 function getAdminAnnouncements() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('primes_announcements') || '[]');
+    if (Array.isArray(stored) && stored.length) {
+      stored.forEach(item => {
+        if (!allAnnouncements.some(a => a.id === item.id)) {
+          allAnnouncements.push(item);
+        }
+      });
+    }
+  } catch (_) {}
   return allAnnouncements;
 }
 
@@ -2054,13 +2085,16 @@ async function refreshAll() {
   const btn = document.getElementById('refreshBtn');
   if (btn) btn.classList.add('spinning');
 
+  if (typeof clearUnavailableAdminEndpoints === 'function') {
+    clearUnavailableAdminEndpoints();
+  }
+
   await loadAllData();
   renderOverview();
   renderUsersTable(allUsers);
   renderOrdersTable(allOrders);
   renderActivityLog();
   loadSettingsForm();
-  loadAdminAnnouncements();
   checkProviderStatus();
 
   setTimeout(() => {
