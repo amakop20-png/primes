@@ -10,22 +10,49 @@
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   <!-- start webpushr tracking code -->
   <script>
-  (function(w,d,s,id) {
-      if(typeof(w.webpushr)!=='undefined') return;
-      w.webpushr=w.webpushr||function(){
-          (w.webpushr.q=w.webpushr.q||[]).push(arguments)
-      };
-      var js, fjs=d.getElementsByTagName(s)[0];
-      js=d.createElement(s);
-      js.id=id;
-      js.async=1;
-      js.src="https://cdn.webpushr.com/app.min.js";
-      fjs.parentNode.appendChild(js);
-  }(window,document,'script','webpushr-jssdk'));
+  (function() {
+    window.addEventListener('unhandledrejection', function(event) {
+      if (event.reason && (
+        String(event.reason).includes('webpushr') ||
+        String(event.reason?.stack || '').includes('webpushr') ||
+        String(event.reason?.message || '').includes('Failed to fetch')
+      )) {
+        console.warn('[Webpushr] Network request handled gracefully:', event.reason?.message || event.reason);
+        event.preventDefault();
+      }
+    });
 
-  webpushr('setup',{
-      'key':'BM23b9moGySmnAwvyGTR9UqyN5Klu4lm1O-kaaqulN5fL76PGJmyaYTbFaImOQLqq00bn0LuddyXUcpGa6Y92eA'
-  });
+    try {
+      const isLocalHost = ['localhost', '127.0.0.1', ''].includes(window.location.hostname) || window.location.protocol === 'file:';
+      if (isLocalHost) {
+        console.warn('[Webpushr] Local development environment detected (' + (window.location.origin || 'local') + '). Webpushr bell/prompt is suppressed locally to prevent CORS rejections.');
+        window.webpushr = window.webpushr || function() {};
+        return;
+      }
+
+      (function(w,d,s,id) {
+          if(typeof(w.webpushr)!=='undefined') return;
+          w.webpushr=w.webpushr||function(){
+              (w.webpushr.q=w.webpushr.q||[]).push(arguments)
+          };
+          var js, fjs=d.getElementsByTagName(s)[0];
+          js=d.createElement(s);
+          js.id=id;
+          js.async=1;
+          js.src="https://cdn.webpushr.com/app.min.js";
+          js.onerror = function(e) {
+              console.warn('[Webpushr] SDK script failed to load:', e);
+          };
+          fjs.parentNode.appendChild(js);
+      }(window,document,'script','webpushr-jssdk'));
+
+      webpushr('setup',{
+          'key':'BM23b9moGySmnAwvyGTR9UqyN5Klu4lm1O-kaaqulN5fL76PGJmyaYTbFaImOQLqq00bn0LuddyXUcpGa6Y92eA'
+      });
+    } catch (error) {
+      console.warn('[Webpushr] Initialization failed:', error);
+    }
+  })();
   </script>
   <!-- end webpushr tracking code -->
 </head>

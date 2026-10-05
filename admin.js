@@ -2,21 +2,24 @@
    ADMIN.JS — NuraXQ Production Administration Console Engine
    ══════════════════════════════════════════════════════════════════════ */
 
-// ── Storage Keys ──
+// ── Storage Keys (UI Preferences & Auth Session Only) ──
 const KEY_CONFIG        = 'primes_platform_config';
-const KEY_USERS         = 'primes_users';
-const KEY_ORDERS        = 'primes_orders';
 const KEY_ACTIVITY      = 'primes_activity';
 const KEY_ADMIN_CREDS   = 'primes_admin_credentials';
 const KEY_ADMIN_SESSION = 'primes_admin_session';
 
-// ── In-Memory State ──
-let allUsers        = [];
-let allOrders       = [];
-let allActivity     = [];
-let allTransactions = [];
-let allAnnouncements = [];
-let pendingAction   = null;
+// ── In-Memory State (Backend Admin API is the Single Source of Truth) ──
+let allUsers            = [];
+let allWallets          = [];
+let allVirtualAccounts  = [];
+let allOrders           = [];
+let allActivity         = [];
+let allTransactions     = [];
+let allAnnouncements    = [];
+let latestDashboardStats = null;
+let currentViewingUser  = null;
+let currentViewingTxId  = null;
+let pendingAction       = null;
 
 /* ════════════════════════════════════
    FORMATTING & UTILITY HELPERS
@@ -153,6 +156,17 @@ function checkAdminAuth() {
     const roleEl = document.getElementById('sidebarAdminRole');
     if (nameEl) nameEl.textContent = adminSess.username || 'Admin';
     if (roleEl) roleEl.textContent = 'Super Admin';
+
+    // Hydrate live profile from Admin API GET /auth/me (PDF Page 1)
+    if (typeof adminGetProfileApi === 'function') {
+      adminGetProfileApi().then(res => {
+        const p = res?.admin || res?.user || res?.data || res;
+        if (p && (p.name || p.username || p.email)) {
+          if (nameEl) nameEl.textContent = p.name || p.username || p.email;
+          if (roleEl && p.role) roleEl.textContent = String(p.role).toLowerCase() === 'superadmin' ? 'Super Admin' : 'Admin';
+        }
+      }).catch(() => {});
+    }
     return true;
   }
 
@@ -165,6 +179,15 @@ function checkAdminAuth() {
     const roleEl = document.getElementById('sidebarAdminRole');
     if (nameEl) nameEl.textContent = adminUser;
     if (roleEl) roleEl.textContent = String(userSession.role || '').toLowerCase() === 'superadmin' ? 'Super Admin' : 'Admin';
+
+    if (typeof adminGetProfileApi === 'function') {
+      adminGetProfileApi().then(res => {
+        const p = res?.admin || res?.user || res?.data || res;
+        if (p && (p.name || p.username || p.email)) {
+          if (nameEl) nameEl.textContent = p.name || p.username || p.email;
+        }
+      }).catch(() => {});
+    }
     return true;
   }
 
@@ -346,6 +369,7 @@ function showSection(id, btn) {
   const titles = {
     overview:      'Dashboard Overview',
     users:         'User Management',
+    wallets:       'Wallets & Virtual Accounts',
     orders:        'Order Auditing',
     transactions:  'Platform Transactions',
     activity:      'Platform Activity Log',
@@ -360,6 +384,9 @@ function showSection(id, btn) {
   }
 
   // Section specific triggers
+  if (id === 'wallets') {
+    loadAdminWallets();
+  }
   if (id === 'transactions' && !allTransactions.length) {
     loadBackendTransactions();
   }
@@ -407,7 +434,26 @@ async function checkProviderStatus() {
 ════════════════════════════════════ */
 async function loadAllData() {
   try {
-    // 1. Fetch live users directly from Admin API (GET /api/admin/users)
+    // 1. Fetch live dashboard statistics directly from Admin API (GET /api/admin/dashboard/stats - PDF Page 2)
+    if (typeof adminGetDashboardStats === 'function') {
+      try {
+        const stats = await adminGetDashboardStats();
+        if (stats) {
+          latestDashboardStats = stats;
+          if (Array.isArray(stats.recentUsers) && stats.recentUsers.length) {
+            allUsers = stats.recentUsers;
+          }
+          if (Array.isArray(stats.recentTransactions) && stats.recentTransactions.length) {
+            allTransactions = stats.recentTransactions;
+            setText('navTxBadge', allTransactions.length);
+          }
+        }
+      } catch (statsErr) {
+        console.warn('[Admin] Dashboard stats API notice:', statsErr.message);
+      }
+    }
+
+    // 2. Fetch live users directly from Admin API (GET /api/admin/users - PDF Page 2)
     if (typeof adminGetUsers === 'function') {
       try {
         const usersRes = await adminGetUsers({ limit: 100 });
@@ -415,11 +461,17 @@ async function loadAllData() {
         if (Array.isArray(uList) && uList.length) {
           allUsers = uList.map(u => ({
             id: u._id || u.id,
+            _id: u._id || u.id,
+            firstName: u.firstName || '',
+            lastName: u.lastName || '',
+            username: u.username || '',
             name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || u.username || 'User',
             email: u.email || '',
             phone: u.phoneNumber || u.phone || '—',
+            phoneNumber: u.phoneNumber || u.phone || '',
             balance: String(u.balance || (u.wallet ? u.wallet.balance : 0) || 0),
             role: u.role || 'user',
+            isSuspended: Boolean(u.isSuspended),
             createdAt: u.createdAt || new Date().toISOString()
           }));
         }
@@ -428,40 +480,34 @@ async function loadAllData() {
       }
     }
 
-    // 2. Fetch live dashboard statistics directly from Admin API (GET /api/admin/dashboard/stats)
-    if (typeof adminGetDashboardStats === 'function') {
+    // 3. Fetch live wallets directly from Admin API (GET /api/admin/wallets - PDF Page 3)
+    if (typeof adminGetWallets === 'function') {
       try {
-        const stats = await adminGetDashboardStats();
-        if (stats) {
-          if (Array.isArray(stats.recentUsers) && !allUsers.length) {
-            allUsers = stats.recentUsers;
-          }
-          if (Array.isArray(stats.recentTransactions)) {
-            allTransactions = stats.recentTransactions;
-            setText('navTxBadge', allTransactions.length);
-          }
+        const wRes = await adminGetWallets({ limit: 100 });
+        const wList = wRes?.wallets || wRes?.data || (Array.isArray(wRes) ? wRes : null);
+        if (Array.isArray(wList)) {
+          allWallets = wList;
+          setText('navWalletsBadge', allWallets.length);
         }
-      } catch (_) {}
+      } catch (wErr) {
+        console.warn('[Admin] Live wallets API notice:', wErr.message);
+      }
     }
 
-    // 3. Fallback to session user only if API returned no user records
-    if (!allUsers.length) {
+    // 4. Fetch live virtual accounts directly from Admin API (GET /api/admin/virtual-accounts - PDF Page 5)
+    if (typeof adminGetVirtualAccounts === 'function') {
       try {
-        const userSession = typeof getSession === 'function' ? getSession() : null;
-        if (userSession && (userSession.email || userSession.username)) {
-          allUsers = [{
-            name: userSession.name || userSession.username || 'Admin User',
-            email: userSession.email || 'admin@nuraxq.com',
-            phone: userSession.phone || '—',
-            balance: String(userSession.balance || 0),
-            role: userSession.role || 'admin',
-            createdAt: userSession.loggedAt || new Date().toISOString()
-          }];
+        const vaRes = await adminGetVirtualAccounts({ limit: 100 });
+        const vaList = vaRes?.virtualAccounts || vaRes?.data || (Array.isArray(vaRes) ? vaRes : null);
+        if (Array.isArray(vaList)) {
+          allVirtualAccounts = vaList;
         }
-      } catch (_) {}
+      } catch (vaErr) {
+        console.warn('[Admin] Live virtual accounts API notice:', vaErr.message);
+      }
     }
 
-    // 4. Preload live backend transactions
+    // 5. Preload live backend transactions (GET /api/admin/transactions - PDF Page 4-5)
     if (typeof adminGetTransactions === 'function') {
       try {
         const txRes = await adminGetTransactions({ limit: 50 });
@@ -473,7 +519,7 @@ async function loadAllData() {
       } catch (_) {}
     }
 
-    // 5. Fetch announcements from backend API
+    // 6. Fetch announcements from backend API
     await loadAdminAnnouncements();
 
   } catch (err) {
@@ -511,10 +557,13 @@ function renderOverview() {
   const todayRev    = allOrders.filter(o => isToday(o.createdAt)).reduce((s, o) => s + (parseFloat(o.amountNGN) || 0), 0);
   const totalUserWallets = allUsers.reduce((s, u) => s + (parseFloat(u.balance) || 0), 0);
 
-  setText('totalUsers',        usersFiltered.length.toLocaleString());
-  setText('activeUsers',       activeSet.size.toLocaleString());
+  const displayUserCount = latestDashboardStats?.usersCount ?? latestDashboardStats?.totalUsers ?? usersFiltered.length;
+  const displayWalletTotal = latestDashboardStats?.walletsTotal ?? latestDashboardStats?.totalWalletsBalance ?? totalUserWallets;
+
+  setText('totalUsers',        displayUserCount.toLocaleString());
+  setText('activeUsers',       (latestDashboardStats?.activeUsersCount ?? activeSet.size).toLocaleString());
   setText('totalOrders',       ordersFiltered.length.toLocaleString());
-  setText('totalUserWallets',  '₦' + Math.round(totalUserWallets).toLocaleString());
+  setText('totalUserWallets',  '₦' + Math.round(displayWalletTotal).toLocaleString());
   setText('signupsToday',      signupsToday.toLocaleString());
   setText('newUsersThisWeek',  '+' + newThisWeek + ' this week');
   setText('signupsWeek',       '+' + newThisWeek + ' this week');
@@ -522,10 +571,12 @@ function renderOverview() {
   setText('totalRevenue',      '₦' + Math.round(totalRev).toLocaleString());
   setText('revenueToday',      '+₦' + Math.round(todayRev).toLocaleString() + ' today');
 
-  setText('navUsersBadge',  allUsers.length);
-  setText('navOrdersBadge', allOrders.length);
+  setText('navUsersBadge',    allUsers.length);
+  setText('navWalletsBadge',  allWallets.length);
+  setText('navOrdersBadge',   allOrders.length);
+  setText('navTxBadge',       allTransactions.length);
 
-  renderRecentUsers(usersFiltered);
+  renderRecentUsers(latestDashboardStats?.recentUsers || usersFiltered);
   renderRecentOrders(ordersFiltered);
 }
 
@@ -588,103 +639,238 @@ function renderRecentOrders(list = allOrders) {
 }
 
 /* ════════════════════════════════════
-   USER MANAGEMENT
+   USER MANAGEMENT (Admin API PDF Page 2-3)
 ════════════════════════════════════ */
 function renderUsersTable(users = allUsers) {
   const tbody = document.getElementById('usersTbody');
   if (!tbody) return;
 
   if (!users.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">No matching users found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No matching users found.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = users.map((u, i) => `
+  tbody.innerHTML = users.map((u, i) => {
+    const isSusp = Boolean(u.isSuspended);
+    const uid = u.id || u._id || u.email;
+    return `
     <tr>
       <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
       <td>
         <div style="font-weight:600;color:var(--text);">${escapeHTML(u.name || u.username || 'User')}</div>
         <div style="font-size:12px;color:var(--muted);">${escapeHTML(u.email || '—')}</div>
       </td>
-      <td style="font-size:12px;color:var(--muted);font-family:monospace;">${escapeHTML(u.phone || '—')}</td>
+      <td style="font-size:12px;color:var(--muted);font-family:monospace;">${escapeHTML(u.phone || u.phoneNumber || '—')}</td>
       <td style="color:var(--green);font-weight:700;">₦${parseFloat(u.balance || 0).toLocaleString()}</td>
       <td><span class="status-badge ${u.role === 'admin' ? 'badge-finished' : 'badge-received'}">${escapeHTML(u.role || 'user')}</span></td>
-      <td style="font-size:12px;color:var(--muted);">${fmtDate(u.createdAt)}</td>
       <td>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="tbl-btn tbl-btn-view" onclick="viewUser('${escapeHTML(u.email)}')"><i class="ph ph-eye"></i> View</button>
-          <button class="tbl-btn tbl-btn-fund" onclick="quickFundUser('${escapeHTML(u.email)}')"><i class="ph ph-plus"></i> Fund</button>
-          <button class="tbl-btn tbl-btn-del" onclick="confirmDeleteUser('${escapeHTML(u.email)}')"><i class="ph ph-trash"></i> Delete</button>
+        ${isSusp
+          ? '<span class="status-badge badge-banned"><i class="ph ph-prohibit"></i> Suspended</span>'
+          : '<span class="status-badge badge-received"><i class="ph ph-check-circle"></i> Active</span>'}
+      </td>
+      <td style="font-size:12px;color:var(--muted);">${fmtDate(u.createdAt)}</td>
+      <td style="text-align:right;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="tbl-btn tbl-btn-view" onclick="viewUser('${escapeHTML(uid)}')"><i class="ph ph-eye"></i> View</button>
+          <button class="tbl-btn tbl-btn-fund" onclick="quickFundUser('${escapeHTML(u.email || uid)}')"><i class="ph ph-plus"></i> Fund</button>
+          <button class="tbl-btn ${isSusp ? 'tbl-btn-fund' : 'tbl-btn-del'}" onclick="toggleUserSuspension('${escapeHTML(uid)}', ${isSusp})" title="${isSusp ? 'Unsuspend' : 'Suspend'}">
+            <i class="ph ${isSusp ? 'ph-check-circle' : 'ph-prohibit'}"></i> ${isSusp ? 'Unsuspend' : 'Suspend'}
+          </button>
         </div>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function filterUsers() {
   const q = (document.getElementById('userSearch')?.value || '').toLowerCase().trim();
-  if (!q) {
-    renderUsersTable(allUsers);
-    return;
-  }
-  const filtered = allUsers.filter(u =>
-    (u.name || '').toLowerCase().includes(q) ||
-    (u.username || '').toLowerCase().includes(q) ||
-    (u.email || '').toLowerCase().includes(q) ||
-    (u.phone || '').toLowerCase().includes(q)
-  );
+  const statusFilter = (document.getElementById('userStatusFilter')?.value || '').toLowerCase().trim();
+
+  const filtered = allUsers.filter(u => {
+    const matchQ = !q ||
+      (u.name || '').toLowerCase().includes(q) ||
+      (u.username || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.phone || u.phoneNumber || '').toLowerCase().includes(q) ||
+      String(u.id || u._id || '').toLowerCase().includes(q);
+
+    let matchStatus = true;
+    if (statusFilter === 'active') matchStatus = !u.isSuspended;
+    else if (statusFilter === 'suspended') matchStatus = Boolean(u.isSuspended);
+
+    return matchQ && matchStatus;
+  });
+
   renderUsersTable(filtered);
 }
 
-function refreshUsersData() {
-  loadAllData();
-  renderUsersTable(allUsers);
+async function refreshUsersData() {
+  await loadAllData();
+  filterUsers();
   adminToast('User list refreshed.', 'info');
 }
 
-function viewUser(email) {
-  const u = allUsers.find(x => x.email === email);
-  if (!u) {
-    adminToast('User details not found.', 'error');
-    return;
-  }
-
-  const userOrders = allOrders.filter(o => (o.userEmail === email || o.userName === u.name));
+async function viewUser(idOrEmail) {
+  let u = allUsers.find(x => String(x.id || x._id) === String(idOrEmail) || x.email === idOrEmail);
+  const userId = u?.id || u?._id || idOrEmail;
 
   const body = document.getElementById('userModalBody');
   if (body) {
+    body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);grid-column:1/-1;"><i class="ph ph-spinner spinning"></i> Fetching live user record from Admin API...</div>';
+  }
+  showModal('userModal');
+
+  let liveUser = u;
+  let liveWallet = null;
+  let liveVA = null;
+
+  // Direct Admin API endpoint calls (PDF Pages 2, 3, 5)
+  if (typeof adminGetUser === 'function' && userId && userId !== '—') {
+    try {
+      const res = await adminGetUser(userId);
+      if (res) liveUser = res.user || res.data || res;
+    } catch (err) {
+      console.warn('[Admin] adminGetUser notice:', err.message);
+    }
+  }
+
+  if (typeof adminGetUserWallet === 'function' && userId && userId !== '—') {
+    try {
+      const wRes = await adminGetUserWallet(userId);
+      if (wRes) liveWallet = wRes.wallet || wRes.data || wRes;
+    } catch (_) {}
+  }
+
+  if (typeof adminGetUserVirtualAccount === 'function' && userId && userId !== '—') {
+    try {
+      const vaRes = await adminGetUserVirtualAccount(userId);
+      if (vaRes) liveVA = vaRes.virtualAccount || vaRes.data || vaRes;
+    } catch (_) {}
+  }
+
+  if (!liveUser) {
+    if (body) body.innerHTML = '<div class="empty-cell" style="grid-column:1/-1;color:var(--red);">User not found.</div>';
+    return;
+  }
+
+  currentViewingUser = liveUser;
+  const uid = liveUser._id || liveUser.id || userId;
+  const uName = [liveUser.firstName, liveUser.lastName].filter(Boolean).join(' ') || liveUser.name || liveUser.username || 'User';
+  const uBal = liveWallet ? liveWallet.balance : (liveUser.balance || (liveUser.wallet ? liveUser.wallet.balance : 0) || 0);
+  const isSusp = Boolean(liveUser.isSuspended);
+  const isFrozen = Boolean(liveWallet?.isFrozen);
+
+  if (body) {
     body.innerHTML = `
       <div class="modal-field">
+        <div class="modal-field-label">User ID</div>
+        <div class="modal-field-value" style="font-family:monospace;font-size:12px;">${escapeHTML(String(uid))}</div>
+      </div>
+      <div class="modal-field">
         <div class="modal-field-label">Full Name</div>
-        <div class="modal-field-value">${escapeHTML(u.name || '—')}</div>
+        <div class="modal-field-value">${escapeHTML(uName)}</div>
       </div>
       <div class="modal-field">
         <div class="modal-field-label">Email Address</div>
-        <div class="modal-field-value">${escapeHTML(u.email || '—')}</div>
+        <div class="modal-field-value">${escapeHTML(liveUser.email || '—')}</div>
       </div>
       <div class="modal-field">
         <div class="modal-field-label">Phone Number</div>
-        <div class="modal-field-value">${escapeHTML(u.phone || '—')}</div>
+        <div class="modal-field-value">${escapeHTML(liveUser.phoneNumber || liveUser.phone || '—')}</div>
       </div>
       <div class="modal-field">
         <div class="modal-field-label">Account Balance</div>
-        <div class="modal-field-value" style="color:var(--green);font-weight:700;">₦${parseFloat(u.balance || 0).toLocaleString()}</div>
+        <div class="modal-field-value" style="color:var(--green);font-weight:700;">₦${parseFloat(uBal || 0).toLocaleString()}</div>
       </div>
       <div class="modal-field">
         <div class="modal-field-label">Account Role</div>
-        <div class="modal-field-value">${escapeHTML(u.role || 'user')}</div>
+        <div class="modal-field-value">${escapeHTML(liveUser.role || 'user')}</div>
       </div>
       <div class="modal-field">
-        <div class="modal-field-label">Total Orders Placed</div>
-        <div class="modal-field-value">${userOrders.length}</div>
+        <div class="modal-field-label">Account Status</div>
+        <div class="modal-field-value">${isSusp ? '<span class="status-badge badge-banned">Suspended</span>' : '<span class="status-badge badge-received">Active</span>'}</div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-field-label">Wallet Status</div>
+        <div class="modal-field-value">${isFrozen ? '<span class="status-badge badge-canceled">Frozen</span>' : '<span class="status-badge badge-received">Active</span>'}</div>
+      </div>
+      <div class="modal-field full-width">
+        <div class="modal-field-label">Dedicated Virtual Account</div>
+        <div class="modal-field-value" style="font-size:12px;">
+          ${liveVA && liveVA.accountNumber ? `
+            <strong>${escapeHTML(liveVA.bankName || 'Wema Bank')}</strong>: 
+            <code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-family:monospace;">${escapeHTML(liveVA.accountNumber)}</code> 
+            (${escapeHTML(liveVA.accountName || uName)})
+          ` : '<span style="color:var(--muted);">No virtual account generated yet</span>'}
+        </div>
       </div>
       <div class="modal-field full-width">
         <div class="modal-field-label">Registration Date</div>
-        <div class="modal-field-value">${fmt(u.createdAt)}</div>
+        <div class="modal-field-value">${fmt(liveUser.createdAt)}</div>
+      </div>
+      <div class="modal-field full-width" style="margin-top:10px;padding-top:14px;border-top:1px solid var(--border);">
+        <div class="modal-field-label" style="margin-bottom:8px;">Administrative Actions</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="tbl-btn ${isSusp ? 'tbl-btn-fund' : 'tbl-btn-del'}" onclick="toggleUserSuspension('${escapeHTML(uid)}', ${isSusp})">
+            <i class="ph ${isSusp ? 'ph-check-circle' : 'ph-prohibit'}"></i> ${isSusp ? 'Unsuspend User' : 'Suspend User'}
+          </button>
+          <button class="tbl-btn ${isFrozen ? 'tbl-btn-fund' : 'tbl-btn-del'}" onclick="toggleWalletFreeze('${escapeHTML(uid)}', ${isFrozen})">
+            <i class="ph ${isFrozen ? 'ph-lock-key-open' : 'ph-lock-key'}"></i> ${isFrozen ? 'Unfreeze Wallet' : 'Freeze Wallet'}
+          </button>
+          <button class="tbl-btn tbl-btn-fund" onclick="closeModal('userModal');quickFundUser('${escapeHTML(liveUser.email || uid)}')">
+            <i class="ph ph-arrows-down-up"></i> Adjust Wallet
+          </button>
+        </div>
       </div>
     `;
   }
-  showModal('userModal');
+}
+
+async function toggleUserSuspension(userId, currentlySuspended) {
+  if (currentlySuspended) {
+    openConfirmModal(
+      'Unsuspend User Account',
+      'Are you sure you want to lift the suspension for this user account?',
+      async () => {
+        try {
+          if (typeof adminUnsuspendUser === 'function') {
+            await adminUnsuspendUser(userId);
+          }
+          adminToast('User account unsuspended successfully.', 'success');
+          logActivity('config', `Unsuspended user account ${userId}`);
+          await loadAllData();
+          filterUsers();
+          if (document.getElementById('userModal')?.classList.contains('show')) {
+            viewUser(userId);
+          }
+        } catch (err) {
+          adminToast(err.message || 'Failed to unsuspend user.', 'error');
+        }
+      }
+    );
+  } else {
+    openConfirmModal(
+      'Suspend User Account',
+      'Are you sure you want to suspend this user account? The user will be blocked from purchasing numbers or using platform services.',
+      async () => {
+        try {
+          if (typeof adminSuspendUser === 'function') {
+            await adminSuspendUser(userId, 'Administrative suspension via Console');
+          }
+          adminToast('User account suspended.', 'warning');
+          logActivity('config', `Suspended user account ${userId}`);
+          await loadAllData();
+          filterUsers();
+          if (document.getElementById('userModal')?.classList.contains('show')) {
+            viewUser(userId);
+          }
+        } catch (err) {
+          adminToast(err.message || 'Failed to suspend user.', 'error');
+        }
+      }
+    );
+  }
 }
 
 function quickFundUser(email) {
@@ -695,21 +881,138 @@ function quickFundUser(email) {
   if (amtInput) amtInput.focus();
 }
 
-function confirmDeleteUser(email) {
-  openConfirmModal(
-    'Delete User Account',
-    `Are you sure you want to completely remove user ${email}? This will delete their local profile record.`,
-    () => {
-      try {
-        allUsers = allUsers.filter(u => u.email !== email);
-        logActivity('user_delete', `Deleted user account: ${email}`);
-        adminToast('User account removed successfully.', 'success');
-        refreshAll();
-      } catch (err) {
-        adminToast(err.message || 'Failed to delete user.', 'error');
+/* ════════════════════════════════════
+   WALLETS & VIRTUAL ACCOUNTS (Admin API PDF Pages 3-5)
+════════════════════════════════════ */
+async function loadAdminWallets() {
+  const tbody = document.getElementById('walletsTbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Syncing wallets from Admin API...</td></tr>';
+
+  try {
+    if (typeof adminGetWallets === 'function') {
+      const wRes = await adminGetWallets({ limit: 100 });
+      const wList = wRes?.wallets || wRes?.data || (Array.isArray(wRes) ? wRes : []);
+      if (Array.isArray(wList)) {
+        allWallets = wList;
+        setText('navWalletsBadge', allWallets.length);
       }
     }
-  );
+    if (typeof adminGetVirtualAccounts === 'function') {
+      const vaRes = await adminGetVirtualAccounts({ limit: 100 });
+      const vaList = vaRes?.virtualAccounts || vaRes?.data || (Array.isArray(vaRes) ? vaRes : []);
+      if (Array.isArray(vaList)) {
+        allVirtualAccounts = vaList;
+      }
+    }
+    filterAdminWallets();
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="empty-cell" style="color:var(--red);">Failed to sync wallets: ${escapeHTML(err.message)}</td></tr>`;
+    adminToast('Could not load wallets.', 'error');
+  }
+}
+
+function filterAdminWallets() {
+  const filter = (document.getElementById('walletFrozenFilter')?.value || '').toLowerCase().trim();
+  let list = allWallets;
+  if (filter === 'active') {
+    list = allWallets.filter(w => !w.isFrozen);
+  } else if (filter === 'frozen') {
+    list = allWallets.filter(w => Boolean(w.isFrozen));
+  }
+  renderWalletsTable(list);
+}
+
+function renderWalletsTable(wallets = allWallets) {
+  const tbody = document.getElementById('walletsTbody');
+  if (!tbody) return;
+
+  if (!wallets.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No wallets recorded yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = wallets.map((w, i) => {
+    const uObj = w.user && typeof w.user === 'object' ? w.user : allUsers.find(u => String(u.id || u._id) === String(w.user || w.userId));
+    const uName = uObj ? ([uObj.firstName, uObj.lastName].filter(Boolean).join(' ') || uObj.name || uObj.username || uObj.email || 'User') : (w.user || 'User');
+    const uEmail = uObj?.email || '';
+    const isFroz = Boolean(w.isFrozen);
+    const statusBadge = isFroz
+      ? '<span class="status-badge badge-canceled"><i class="ph ph-lock-key"></i> Frozen</span>'
+      : '<span class="status-badge badge-received"><i class="ph ph-check-circle"></i> Active</span>';
+    
+    const uid = uObj?.id || uObj?._id || w.user?._id || w.user?.id || w.user || w.userId;
+    const va = allVirtualAccounts.find(v => String(v.user?._id || v.user?.id || v.user || v.userId) === String(uid));
+    const vaDisplay = va && va.accountNumber
+      ? `<span style="font-family:monospace;font-weight:600;">${escapeHTML(va.accountNumber)}</span> <span style="font-size:11px;color:var(--muted);">(${escapeHTML(va.bankName || 'Wema')})</span>`
+      : '<span style="color:var(--muted);font-size:12px;">None</span>';
+
+    return `
+      <tr>
+        <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
+        <td>
+          <div style="font-weight:600;color:var(--text);">${escapeHTML(uName)}</div>
+          ${uEmail ? `<div style="font-size:12px;color:var(--muted);">${escapeHTML(uEmail)}</div>` : ''}
+        </td>
+        <td style="color:var(--green);font-weight:700;">₦${parseFloat(w.balance || 0).toLocaleString()}</td>
+        <td>${statusBadge}</td>
+        <td>${vaDisplay}</td>
+        <td style="text-align:right;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="tbl-btn ${isFroz ? 'tbl-btn-fund' : 'tbl-btn-del'}" onclick="toggleWalletFreeze('${escapeHTML(uid)}', ${isFroz})">
+              <i class="ph ${isFroz ? 'ph-lock-key-open' : 'ph-lock-key'}"></i> ${isFroz ? 'Unfreeze' : 'Freeze'}
+            </button>
+            <button class="tbl-btn tbl-btn-fund" onclick="quickFundUser('${escapeHTML(uEmail || uid)}')">
+              <i class="ph ph-arrows-down-up"></i> Adjust
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function toggleWalletFreeze(userId, currentlyFrozen) {
+  if (currentlyFrozen) {
+    openConfirmModal(
+      'Unfreeze Wallet',
+      'Are you sure you want to unfreeze this wallet? The user will be able to perform transactions again.',
+      async () => {
+        try {
+          if (typeof adminUnfreezeWallet === 'function') {
+            await adminUnfreezeWallet(userId);
+          }
+          adminToast('Wallet unfrozen successfully.', 'success');
+          logActivity('config', `Unfroze wallet for user ${userId}`);
+          await loadAdminWallets();
+          if (document.getElementById('userModal')?.classList.contains('show')) {
+            viewUser(userId);
+          }
+        } catch (err) {
+          adminToast(err.message || 'Failed to unfreeze wallet.', 'error');
+        }
+      }
+    );
+  } else {
+    openConfirmModal(
+      'Freeze Wallet',
+      'Are you sure you want to freeze this wallet? All balance deductions and fundings on this wallet will be blocked.',
+      async () => {
+        try {
+          if (typeof adminFreezeWallet === 'function') {
+            await adminFreezeWallet(userId);
+          }
+          adminToast('Wallet frozen.', 'warning');
+          logActivity('config', `Froze wallet for user ${userId}`);
+          await loadAdminWallets();
+          if (document.getElementById('userModal')?.classList.contains('show')) {
+            viewUser(userId);
+          }
+        } catch (err) {
+          adminToast(err.message || 'Failed to freeze wallet.', 'error');
+        }
+      }
+    );
+  }
 }
 
 /* ════════════════════════════════════
@@ -835,12 +1138,12 @@ async function checkLiveOrderStatus(orderId) {
 }
 
 /* ════════════════════════════════════
-   BACKEND TRANSACTIONS AUDITING
-   Directly communicates with real backend GET /api/get-transactions
+   BACKEND TRANSACTIONS AUDITING (Admin API PDF Page 4-5)
+   Directly communicates with real backend /api/admin/transactions
 ════════════════════════════════════ */
 async function loadBackendTransactions() {
   const tbody = document.getElementById('transactionsTbody');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Syncing transactions from backend...</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">Syncing transactions from backend...</td></tr>';
 
   try {
     let txList = [];
@@ -854,7 +1157,7 @@ async function loadBackendTransactions() {
       } catch (_) {}
     }
 
-    // 2. Try customer/platform GET /api/get-transactions
+    // 2. Try customer/platform GET /api/get-transactions fallback
     if (!txList.length && typeof apiRequest === 'function') {
       try {
         const res = await apiRequest('/api/get-transactions?page=1&limit=50&currency=NGN', {
@@ -872,31 +1175,152 @@ async function loadBackendTransactions() {
     allTransactions = Array.isArray(txList) ? txList : [];
     setText('navTxBadge', allTransactions.length);
 
-    if (!tbody) return;
+    filterBackendTransactions();
+    adminToast('Backend transactions synchronized.', 'success');
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="empty-cell" style="color:var(--red);">Failed to sync transactions: ${escapeHTML(err.message)}</td></tr>`;
+    adminToast('Could not load transactions from backend.', 'error');
+  }
+}
 
-    if (!allTransactions.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No platform transactions recorded yet.</td></tr>';
-      return;
+function filterBackendTransactions() {
+  const typeFilter = (document.getElementById('txTypeFilter')?.value || '').toLowerCase().trim();
+  const statusFilter = (document.getElementById('txStatusFilter')?.value || '').toLowerCase().trim();
+
+  const filtered = allTransactions.filter(t => {
+    let matchType = true;
+    if (typeFilter) {
+      matchType = String(t.type || '').toLowerCase() === typeFilter;
     }
 
-    tbody.innerHTML = allTransactions.map((t, i) => `
+    let matchStatus = true;
+    if (statusFilter) {
+      matchStatus = String(t.status || '').toLowerCase() === statusFilter;
+    }
+
+    return matchType && matchStatus;
+  });
+
+  renderTransactionsTable(filtered);
+}
+
+function renderTransactionsTable(transactions = allTransactions) {
+  const tbody = document.getElementById('transactionsTbody');
+  if (!tbody) return;
+
+  if (!transactions.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">No platform transactions match the selected filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = transactions.map((t, i) => {
+    const txId = t._id || t.id || t.reference || '';
+    const ref = t.reference || txId || '—';
+    const isCredit = String(t.type || '').toLowerCase() === 'credit' || String(t.type || '').toUpperCase() === 'DEPOSIT';
+
+    return `
       <tr>
         <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
         <td>
-          <span style="font-family:monospace;font-size:12px;">${escapeHTML(t.reference || t.id || t._id || '—')}</span>
-          <button class="copy-btn" onclick="copyToClipboard('${escapeHTML(t.reference || t.id || '')}', 'Reference')" title="Copy"><i class="ph ph-copy"></i></button>
+          <span style="font-family:monospace;font-size:12px;">${escapeHTML(ref)}</span>
+          <button class="copy-btn" onclick="copyToClipboard('${escapeHTML(ref)}', 'Reference')" title="Copy"><i class="ph ph-copy"></i></button>
         </td>
-        <td><span class="status-badge badge-received">${escapeHTML(t.type || 'DEPOSIT')}</span></td>
-        <td style="color:var(--green);font-weight:700;">₦${parseFloat(t.amount || 0).toLocaleString()}</td>
+        <td>
+          <span class="status-badge ${isCredit ? 'badge-received' : 'badge-banned'}">
+            ${escapeHTML(t.type || 'CREDIT')}
+          </span>
+        </td>
+        <td style="color:${isCredit ? 'var(--green)' : 'var(--amber)'};font-weight:700;">₦${parseFloat(t.amount || 0).toLocaleString()}</td>
         <td>${statusBadge(t.status || 'SUCCESS')}</td>
         <td style="font-size:12px;color:var(--muted);">${fmt(t.createdAt || t.date)}</td>
+        <td style="text-align:right;">
+          <button class="tbl-btn tbl-btn-view" onclick="viewTransactionDetails('${escapeHTML(txId)}')"><i class="ph ph-eye"></i> Details</button>
+        </td>
       </tr>
-    `).join('');
+    `;
+  }).join('');
+}
 
-    adminToast('Backend transactions synchronized.', 'success');
+async function viewTransactionDetails(id) {
+  currentViewingTxId = id;
+  const body = document.getElementById('txModalBody');
+  if (body) {
+    body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);grid-column:1/-1;"><i class="ph ph-spinner spinning"></i> Fetching transaction details...</div>';
+  }
+  showModal('txModal');
+
+  let tx = allTransactions.find(t => String(t._id || t.id || t.reference) === String(id));
+
+  if (typeof adminGetTransaction === 'function' && id) {
+    try {
+      const res = await adminGetTransaction(id);
+      if (res) {
+        tx = res.transaction || res.data || res;
+      }
+    } catch (_) {}
+  }
+
+  if (!tx) {
+    if (body) body.innerHTML = '<div class="empty-cell" style="grid-column:1/-1;color:var(--red);">Transaction not found.</div>';
+    return;
+  }
+
+  const uObj = tx.user && typeof tx.user === 'object' ? tx.user : allUsers.find(u => String(u.id || u._id) === String(tx.user));
+  const uDisplay = uObj ? ([uObj.firstName, uObj.lastName].filter(Boolean).join(' ') || uObj.name || uObj.email || tx.user) : (tx.user || '—');
+
+  if (body) {
+    body.innerHTML = `
+      <div class="modal-field">
+        <div class="modal-field-label">Transaction ID / Ref</div>
+        <div class="modal-field-value" style="font-family:monospace;font-size:12px;">${escapeHTML(String(tx._id || tx.id || tx.reference || '—'))}</div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-field-label">User</div>
+        <div class="modal-field-value">${escapeHTML(uDisplay)}</div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-field-label">Type</div>
+        <div class="modal-field-value"><span class="status-badge badge-received">${escapeHTML(tx.type || 'CREDIT')}</span></div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-field-label">Amount</div>
+        <div class="modal-field-value" style="color:var(--green);font-weight:700;">₦${parseFloat(tx.amount || 0).toLocaleString()}</div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-field-label">Current Status</div>
+        <div class="modal-field-value">${statusBadge(tx.status || 'SUCCESS')}</div>
+      </div>
+      <div class="modal-field">
+        <div class="modal-field-label">Date &amp; Time</div>
+        <div class="modal-field-value" style="font-size:12px;color:var(--muted);">${fmt(tx.createdAt || tx.date)}</div>
+      </div>
+      <div class="modal-field full-width">
+        <div class="modal-field-label">Description / Narration</div>
+        <div class="modal-field-value" style="font-size:12px;color:var(--muted);">${escapeHTML(tx.description || tx.narration || tx.reason || '—')}</div>
+      </div>
+    `;
+  }
+
+  const sel = document.getElementById('txNewStatusSelect');
+  if (sel && tx.status) {
+    sel.value = String(tx.status).toLowerCase();
+  }
+}
+
+async function submitTxStatusUpdate() {
+  if (!currentViewingTxId) return;
+  const newStatus = document.getElementById('txNewStatusSelect')?.value || 'success';
+
+  try {
+    if (typeof adminUpdateTransactionStatus === 'function') {
+      await adminUpdateTransactionStatus(currentViewingTxId, newStatus);
+    }
+    adminToast(`Transaction status updated to ${newStatus}.`, 'success');
+    logActivity('config', `Updated transaction ${currentViewingTxId} status to ${newStatus}`);
+    closeModal('txModal');
+    await loadBackendTransactions();
   } catch (err) {
-    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="empty-cell" style="color:var(--red);">Failed to sync transactions: ${escapeHTML(err.message)}</td></tr>`;
-    adminToast('Could not load transactions from backend.', 'error');
+    adminToast(err.message || 'Failed to update transaction status.', 'error');
   }
 }
 
@@ -1027,44 +1451,86 @@ function savePlatformConfig() {
 }
 
 async function fundUser() {
-  const email  = document.getElementById('fundUserSelect')?.value;
-  const amount = parseFloat(document.getElementById('fundAmount')?.value);
+  const email     = document.getElementById('fundUserSelect')?.value;
+  const amount    = parseFloat(document.getElementById('fundAmount')?.value);
+  const operation = document.getElementById('fundOperation')?.value || 'credit';
+  const reason    = (document.getElementById('fundReason')?.value || '').trim() || `Admin ${operation} via Console`;
 
   if (!email) {
     adminToast('Please select a valid user.', 'error');
     return;
   }
   if (isNaN(amount) || amount <= 0) {
-    adminToast('Please enter a credit amount greater than 0.', 'error');
+    adminToast('Please enter an amount greater than 0.', 'error');
     return;
   }
 
   try {
-    let target = allUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
-    if (target) {
-      const previousBal = parseFloat(target.balance || 0);
-      const newBal = previousBal + amount;
-      target.balance = String(newBal);
+    let target = allUsers.find(u => (u.email && u.email.toLowerCase() === email.toLowerCase()) || String(u.id || u._id) === String(email));
+    const userId = target?.id || target?._id || email;
 
-      // Call Admin API (POST /api/admin/wallets/:userId/credit)
-      if (typeof adminCreditWallet === 'function' && target && (target.id || target._id)) {
-        try {
-          await adminCreditWallet(target.id || target._id, amount, 'Admin credit via Console');
-        } catch (apiErr) {
-          console.warn('[Admin API] Wallet credit endpoint status:', apiErr.message);
-        }
+    if (operation === 'debit') {
+      if (typeof adminDebitWallet === 'function' && userId) {
+        await adminDebitWallet(userId, amount, reason);
       }
-
-      logActivity('fund', `Admin credited ₦${amount.toLocaleString()} to ${email} (New balance: ₦${newBal.toLocaleString()})`);
-      adminToast(`Successfully funded ₦${amount.toLocaleString()} to ${email}`, 'success');
-
-      document.getElementById('fundAmount').value = '';
-      refreshAll();
+      logActivity('fund', `Admin debited ₦${amount.toLocaleString()} from ${target?.email || userId}. Reason: ${reason}`);
+      adminToast(`Successfully debited ₦${amount.toLocaleString()} from user account.`, 'success');
     } else {
-      adminToast('User not found in system records.', 'error');
+      if (typeof adminCreditWallet === 'function' && userId) {
+        await adminCreditWallet(userId, amount, reason);
+      }
+      logActivity('fund', `Admin credited ₦${amount.toLocaleString()} to ${target?.email || userId}. Reason: ${reason}`);
+      adminToast(`Successfully credited ₦${amount.toLocaleString()} to user account.`, 'success');
+    }
+
+    const amtIn = document.getElementById('fundAmount');
+    if (amtIn) amtIn.value = '';
+    const rIn = document.getElementById('fundReason');
+    if (rIn) rIn.value = '';
+
+    await loadAllData();
+    renderOverview();
+    renderUsersTable(allUsers);
+    loadSettingsForm();
+  } catch (err) {
+    adminToast(err.message || `Failed to ${operation} user wallet.`, 'error');
+  }
+}
+
+async function handleCreateAdmin() {
+  const setupKey = (document.getElementById('newAdminSetupKey')?.value || '').trim();
+  const name     = (document.getElementById('newAdminName')?.value || '').trim();
+  const email    = (document.getElementById('newAdminEmail')?.value || '').trim();
+  const password = (document.getElementById('newAdminPass')?.value || '').trim();
+  const role     = (document.getElementById('newAdminRole')?.value || 'admin').trim();
+
+  if (!name || !email || !password) {
+    adminToast('Please fill in name, email, and password for the new administrator.', 'error');
+    return;
+  }
+  if (password.length < 6) {
+    adminToast('Password must be at least 6 characters.', 'error');
+    return;
+  }
+
+  try {
+    if (typeof adminRegisterApi === 'function') {
+      await adminRegisterApi({ name, email, password, role, setupKey });
+      adminToast(`Administrator ${email} registered successfully!`, 'success');
+      logActivity('config', `Created admin account: ${email} (${role})`);
+      const nEl = document.getElementById('newAdminName');
+      if (nEl) nEl.value = '';
+      const eEl = document.getElementById('newAdminEmail');
+      if (eEl) eEl.value = '';
+      const pEl = document.getElementById('newAdminPass');
+      if (pEl) pEl.value = '';
+      const kEl = document.getElementById('newAdminSetupKey');
+      if (kEl) kEl.value = '';
+    } else {
+      throw new Error('adminRegisterApi function is not defined.');
     }
   } catch (err) {
-    adminToast(err.message || 'Failed to fund user.', 'error');
+    adminToast(err.message || 'Failed to create admin account.', 'error');
   }
 }
 

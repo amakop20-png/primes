@@ -165,29 +165,14 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
-                // ── NuraSMS Login Call — via loginUser() from api.js,
-                // which already wraps apiRequest('/api/login', ...) with
-                // suppressAuthRedirect: true baked in (FIX #4). A 401 here
-                // (wrong credentials) throws a plain "invalid login" error
-                // instead of triggering apiRequest's normal "session
-                // expired, clear token, redirect to login.html" flow —
-                // which would make no sense while already on this page.
-                const result = await loginUser(loginInputValue, passwordValue);
-
-                // ── Clear ALL stale auth / session / order / wallet state
-                // before writing the new session (FIX #3 — was manually
-                // removing only 3 keys; now uses the shared clearAuth()
-                // from api.js so nothing stale survives).
+                // Clear any stale local auth state before attempting authentication
                 clearAuth();
+
+                // ── NuraSMS Login Call — via loginUser() from api.js
+                const result = await loginUser(loginInputValue, passwordValue);
 
                 const token = result.accessToken || result.token || result.access_token || result.data?.token || result.data?.accessToken;
 
-                // FIX #2: only treat this as a successful login — and only
-                // redirect — if we actually got a token back. Previously
-                // the redirect ran unconditionally, so a response missing
-                // a token would still send the user to dashboard.html,
-                // where requireAuth() would immediately bounce them back
-                // here with no explanation.
                 if (!token) {
                     toast.show('Login succeeded but no session token was returned. Please try again.', 'error');
                     return;
@@ -195,9 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 setAuthToken(token);
 
-                // FIX #5: use the shared setSession() from api.js so the
-                // stored shape matches what signup.js writes, but still
-                // include the computed display name login.js relies on.
                 const user = result.user || result.data?.user || result.data || {};
                 const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || user.name || 'User';
                 const sessionData = {
@@ -233,40 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     sessionStorage.setItem('just_logged_in', 'true');
                 } catch (_) {}
 
-                // Sync with admin dashboard records
-                try {
-                    const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
-                    const userEmail = (user.email || '').toLowerCase();
-                    let found = false;
-                    for (let u of users) {
-                        if ((u.email && u.email.toLowerCase() === userEmail) || (u.name && u.name === displayName)) {
-                            u.name = displayName;
-                            u.phone = user.phone || u.phone;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found && (userEmail || displayName)) {
-                        users.unshift({
-                            name: displayName,
-                            email: userEmail || `${user.username}@davessocial.com`,
-                            phone: user.phone || '—',
-                            balance: String(user.balance || 0),
-                            createdAt: new Date().toISOString()
-                        });
-                    }
-                    localStorage.setItem('primes_users', JSON.stringify(users));
-
-                    const activity = JSON.parse(localStorage.getItem('primes_activity') || '[]');
-                    activity.unshift({
-                        type: 'login',
-                        message: `User logged in: ${displayName}`,
-                        username: displayName,
-                        timestamp: new Date().toISOString()
-                    });
-                    localStorage.setItem('primes_activity', JSON.stringify(activity.slice(0, 100)));
-                } catch (_) {}
-
                 // Initialize welcome notification if user inbox has no items yet
                 try {
                     const userEmail = (user.email || '').toLowerCase().trim();
@@ -287,13 +235,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 setTimeout(() => {
                     window.location.href = isUserAdmin ? 'admin.html' : 'dashboard.html';
-                }, 1500);
+                }, 1200);
 
             } catch (error) {
                 console.error('Login error:', error);
-                // apiRequest() already produces a clean, user-friendly
-                // message for every status code it knows about.
-                toast.show(error.message || 'Something went wrong. Please try again.', 'error');
+                const displayMsg = error.message || 'Invalid credentials. Please verify your details.';
+                toast.show(displayMsg, 'error');
             } finally {
                 if (btnLabel) btnLabel.textContent = originalText;
                 else submitBtn.textContent = originalText;

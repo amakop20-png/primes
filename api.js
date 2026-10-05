@@ -121,11 +121,18 @@ async function apiRequest(endpoint, options = {}) {
     const token  = getAuthToken();
     const headers = {};
 
-    if (options.body && typeof options.body === 'string') {
+    let requestBody = options.body;
+    if (requestBody && typeof requestBody === 'object') {
+        requestBody = JSON.stringify(requestBody);
         headers['Content-Type'] = 'application/json';
+    } else if (requestBody && typeof requestBody === 'string') {
+        if (!headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
+        }
     }
 
-    if (token) {
+    const isAuthRoute = endpoint.includes('/login') || endpoint.includes('/signup') || endpoint.includes('/register');
+    if (token && !isAuthRoute) {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -133,7 +140,7 @@ async function apiRequest(endpoint, options = {}) {
         Object.assign(headers, options.headers);
     }
 
-    const fetchOptions = { ...options, method };
+    const fetchOptions = { ...options, method, body: requestBody };
     delete fetchOptions.suppressAuthRedirect;
     fetchOptions.headers = headers;
 
@@ -170,13 +177,20 @@ async function apiRequest(endpoint, options = {}) {
 
     let data = {};
     let textResponse = '';
+    const contentType = response.headers.get('content-type') || '';
     try {
-        textResponse = await response.text();
-        if (textResponse) {
-            data = JSON.parse(textResponse);
+        if (contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            textResponse = await response.text();
+            try {
+                data = JSON.parse(textResponse);
+            } catch (_) {
+                data = {};
+            }
         }
     } catch (_) {
-        // Non-JSON response
+        data = {};
     }
 
     if (!response.ok) {
@@ -490,14 +504,21 @@ async function loginUser(identifier, password) {
         pwd = identifier.password !== undefined ? identifier.password : password;
     }
     const cleanId = String(id || '').trim();
+    const isEmail = cleanId.includes('@');
+
+    const body = {
+        identifier: cleanId,
+        password: pwd
+    };
+    if (isEmail) {
+        body.email = cleanId;
+    } else {
+        body.username = cleanId;
+    }
+
     return await apiRequest('/api/login', {
         method: 'POST',
-        body: JSON.stringify({
-            identifier: cleanId,
-            email: cleanId,
-            username: cleanId,
-            password: pwd
-        }),
+        body,
         suppressAuthRedirect: true
     });
 }
@@ -794,11 +815,16 @@ async function adminApiRequest(endpoint, options = {}) {
         'Accept': 'application/json'
     };
 
-    if (options.body && typeof options.body === 'string') {
+    let bodyPayload = options.body;
+    if (bodyPayload && typeof bodyPayload === 'object') {
+        bodyPayload = JSON.stringify(bodyPayload);
+        headers['Content-Type'] = 'application/json';
+    } else if (bodyPayload && typeof bodyPayload === 'string') {
         headers['Content-Type'] = 'application/json';
     }
 
-    if (token) {
+    const isAdminAuthRoute = endpoint.includes('/auth/login') || endpoint.includes('/auth/register');
+    if (token && !isAdminAuthRoute) {
         headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -811,7 +837,7 @@ async function adminApiRequest(endpoint, options = {}) {
         : `/api/admin${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
     const url = `${API_BASE_URL}${cleanEndpoint}`;
-    const fetchOptions = { ...options, method, headers };
+    const fetchOptions = { ...options, method, headers, body: bodyPayload };
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -831,18 +857,35 @@ async function adminApiRequest(endpoint, options = {}) {
     clearTimeout(timeoutId);
 
     let data = null;
+    let responseText = '';
+    const contentType = response.headers.get('content-type') || '';
     try {
-        const text = await response.text();
-        if (text) data = JSON.parse(text);
+        if (contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            responseText = await response.text();
+            try {
+                data = JSON.parse(responseText);
+            } catch (_) {
+                data = null;
+            }
+        }
     } catch (_) {
         data = null;
     }
 
     if (!response.ok) {
-        const errMsg = data?.message || data?.error || `Admin API Error ${response.status}: ${response.statusText}`;
+        let errMsg = data?.message || data?.error || data?.msg;
+        if (!errMsg && responseText && !responseText.trim().startsWith('<')) {
+            errMsg = responseText.trim();
+        }
+        if (!errMsg) {
+            errMsg = `Admin API Error ${response.status}: ${response.statusText || 'Request failed'}`;
+        }
         const err = new Error(errMsg);
         err.status = response.status;
         err.data = data;
+        err.rawText = responseText;
         console.warn(`[Admin API Error] ${response.status} ${method} ${cleanEndpoint}:`, errMsg);
         throw err;
     }

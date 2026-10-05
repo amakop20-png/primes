@@ -96,6 +96,10 @@
         <i class="ph ph-users"></i> Users
         <span class="nav-badge" id="navUsersBadge">0</span>
       </a>
+      <a href="#" class="nav-link" data-section="wallets" onclick="showSection('wallets',this)">
+        <i class="ph ph-wallet"></i> Wallets
+        <span class="nav-badge" id="navWalletsBadge">0</span>
+      </a>
       <a href="#" class="nav-link" data-section="orders" onclick="showSection('orders',this)">
         <i class="ph ph-receipt"></i> Orders
         <span class="nav-badge" id="navOrdersBadge">0</span>
@@ -267,6 +271,11 @@
             <i class="ph ph-magnifying-glass"></i>
             <input type="text" id="userSearch" placeholder="Search by name, email, phone..." oninput="filterUsers()">
           </div>
+          <select id="userStatusFilter" onchange="filterUsers()" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="active">Active Only</option>
+            <option value="suspended">Suspended Only</option>
+          </select>
           <button class="btn-outline" onclick="refreshUsersData()"><i class="ph ph-arrows-clockwise"></i> Refresh</button>
         </div>
       </div>
@@ -282,12 +291,50 @@
                   <th>Phone Number</th>
                   <th>Wallet Balance</th>
                   <th>Account Role</th>
+                  <th>Status</th>
                   <th>Registered</th>
-                  <th>Actions</th>
+                  <th style="text-align:right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="usersTbody">
-                <tr><td colspan="7" class="empty-cell">Loading users...</td></tr>
+                <tr><td colspan="8" class="empty-cell">Loading users...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ WALLETS & VIRTUAL ACCOUNTS (PDF Pages 3-5) ═══ -->
+    <section id="section-wallets" class="section">
+      <div class="page-header">
+        <h1>Wallets &amp; Virtual Accounts</h1>
+        <div class="header-actions">
+          <select id="walletFrozenFilter" onchange="filterAdminWallets()" class="filter-select">
+            <option value="">All Wallets</option>
+            <option value="active">Active Wallets</option>
+            <option value="frozen">Frozen Wallets</option>
+          </select>
+          <button class="btn-outline" onclick="loadAdminWallets()"><i class="ph ph-arrows-clockwise"></i> Refresh Wallets</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-body" style="padding:0;">
+          <div class="table-responsive">
+            <table class="data-table" id="walletsTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>User Details</th>
+                  <th>Balance</th>
+                  <th>Wallet Status</th>
+                  <th>Virtual Account</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="walletsTbody">
+                <tr><td colspan="6" class="empty-cell">Loading wallets and virtual accounts...</td></tr>
               </tbody>
             </table>
           </div>
@@ -343,11 +390,22 @@
       </div>
     </section>
 
-    <!-- ═══ 4. TRANSACTIONS ═══ -->
+    <!-- ═══ 4. TRANSACTIONS (PDF Pages 4-5) ═══ -->
     <section id="section-transactions" class="section">
       <div class="page-header">
         <h1>Platform Transactions</h1>
         <div class="header-actions">
+          <select id="txTypeFilter" onchange="filterBackendTransactions()" class="filter-select">
+            <option value="">All Types</option>
+            <option value="credit">Credits (Deposits)</option>
+            <option value="debit">Debits</option>
+          </select>
+          <select id="txStatusFilter" onchange="filterBackendTransactions()" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="success">Success</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+          </select>
           <button class="btn-outline" onclick="loadBackendTransactions()"><i class="ph ph-arrows-clockwise"></i> Sync Backend Transactions</button>
         </div>
       </div>
@@ -359,15 +417,16 @@
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Transaction ID</th>
+                  <th>Transaction Reference / ID</th>
                   <th>Type</th>
                   <th>Amount</th>
                   <th>Status</th>
-                  <th>Date & Time</th>
+                  <th>Date &amp; Time</th>
+                  <th style="text-align:right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="transactionsTbody">
-                <tr><td colspan="6" class="empty-cell">Loading transactions...</td></tr>
+                <tr><td colspan="7" class="empty-cell">Loading transactions...</td></tr>
               </tbody>
             </table>
           </div>
@@ -555,19 +614,61 @@
           </div>
         </div>
 
-        <!-- Fund User Wallet -->
+        <!-- Fund / Debit User Wallet (PDF Pages 3-4) -->
         <div class="panel">
-          <div class="panel-header"><span><i class="ph ph-wallet"></i> Fund User Balance</span></div>
+          <div class="panel-header"><span><i class="ph ph-wallet"></i> Wallet Credit &amp; Debit Management</span></div>
           <div class="panel-body">
+            <div class="sfield-group">
+              <label class="sfield-label" for="fundOperation">Operation</label>
+              <select class="sfield-input" id="fundOperation">
+                <option value="credit">Credit Balance (+)</option>
+                <option value="debit">Debit Balance (-)</option>
+              </select>
+            </div>
             <div class="sfield-group">
               <label class="sfield-label" for="fundUserSelect">Select Target User</label>
               <select class="sfield-input" id="fundUserSelect"></select>
             </div>
             <div class="sfield-group">
-              <label class="sfield-label" for="fundAmount">Credit Amount (₦)</label>
-              <input class="sfield-input" type="number" id="fundAmount" placeholder="e.g. 5000" min="100">
+              <label class="sfield-label" for="fundAmount">Amount (₦)</label>
+              <input class="sfield-input" type="number" id="fundAmount" placeholder="e.g. 5000" min="1">
             </div>
-            <button class="btn-primary" onclick="fundUser()"><i class="ph ph-plus-circle"></i> Add Funds to Wallet</button>
+            <div class="sfield-group">
+              <label class="sfield-label" for="fundReason">Reason (Optional)</label>
+              <input class="sfield-input" type="text" id="fundReason" placeholder="e.g. Bonus, Account Funding, Adjustment">
+            </div>
+            <button class="btn-primary" onclick="fundUser()"><i class="ph ph-arrows-down-up"></i> Apply Wallet Adjustment</button>
+          </div>
+        </div>
+
+        <!-- Create Admin Account (PDF Page 1) -->
+        <div class="panel">
+          <div class="panel-header"><span><i class="ph ph-user-plus"></i> Register Administrator Account</span></div>
+          <div class="panel-body">
+            <div class="sfield-group">
+              <label class="sfield-label" for="newAdminSetupKey">Setup Key (Header: x-admin-setup-key)</label>
+              <input class="sfield-input" type="text" id="newAdminSetupKey" placeholder="Enter setup key">
+            </div>
+            <div class="sfield-group">
+              <label class="sfield-label" for="newAdminName">Admin Name</label>
+              <input class="sfield-input" type="text" id="newAdminName" placeholder="e.g. John Doe">
+            </div>
+            <div class="sfield-group">
+              <label class="sfield-label" for="newAdminEmail">Admin Email</label>
+              <input class="sfield-input" type="email" id="newAdminEmail" placeholder="admin@domain.com">
+            </div>
+            <div class="sfield-group">
+              <label class="sfield-label" for="newAdminPass">Admin Password</label>
+              <input class="sfield-input" type="password" id="newAdminPass" placeholder="Min 6 characters">
+            </div>
+            <div class="sfield-group">
+              <label class="sfield-label" for="newAdminRole">Admin Role</label>
+              <select class="sfield-input" id="newAdminRole">
+                <option value="admin">admin</option>
+                <option value="superadmin">superadmin</option>
+              </select>
+            </div>
+            <button class="btn-primary" onclick="handleCreateAdmin()"><i class="ph ph-shield-plus"></i> Create Admin Account</button>
           </div>
         </div>
       </div>
@@ -648,6 +749,27 @@
       <div id="orderModalBody" class="modal-body-grid"></div>
       <div class="modal-actions">
         <button class="btn-outline" onclick="closeModal('orderModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Transaction Detail & Status Update Modal (PDF Page 5) ── -->
+  <div class="modal-overlay" id="txModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('txModal')" aria-label="Close modal"><i class="ph ph-x"></i></button>
+      <h2 class="modal-title"><i class="ph ph-arrows-left-right"></i> Transaction Details</h2>
+      <div id="txModalBody" class="modal-body-grid"></div>
+      <div class="modal-actions" style="margin-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="font-size:12px;font-weight:700;color:var(--text);">Update Status:</label>
+          <select id="txNewStatusSelect" class="filter-select" style="padding:6px 12px;font-size:12px;">
+            <option value="success">success</option>
+            <option value="pending">pending</option>
+            <option value="failed">failed</option>
+          </select>
+          <button class="btn-primary" onclick="submitTxStatusUpdate()" style="padding:7px 14px;font-size:12px;">Save Status</button>
+        </div>
+        <button class="btn-outline" onclick="closeModal('txModal')">Close</button>
       </div>
     </div>
   </div>
