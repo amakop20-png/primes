@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // FIX #5: use the shared setSession() from api.js so the
                 // stored shape matches what signup.js writes, but still
                 // include the computed display name login.js relies on.
-                const user = result.user || {};
+                const user = result.user || result.data?.user || result.data || {};
                 const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || user.name || 'User';
                 const sessionData = {
                     ...user,
@@ -206,6 +206,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     loggedAt: new Date().toISOString()
                 };
                 setSession(sessionData);
+
+                // Check admin status robustly
+                const isUserAdmin = (typeof isAdmin === 'function' && isAdmin(user)) ||
+                                    String(user.role || '').toLowerCase() === 'admin' ||
+                                    String(user.role || '').toLowerCase() === 'superadmin' ||
+                                    user.isAdmin === true ||
+                                    user.is_admin === true;
+
+                if (isUserAdmin) {
+                    if (typeof setAdminAuthToken === 'function' && token) {
+                        setAdminAuthToken(token);
+                    }
+                    try {
+                        localStorage.setItem('primes_admin_session', JSON.stringify({
+                            loggedIn: true,
+                            username: displayName || user.username || user.email || 'Admin',
+                            role: user.role || 'admin',
+                            at: new Date().toISOString()
+                        }));
+                    } catch (_) {}
+                }
+
+                // Mark session flag so automatic user announcement popup checks immediately upon landing on dashboard
+                try {
+                    sessionStorage.setItem('just_logged_in', 'true');
+                } catch (_) {}
 
                 // Sync with admin dashboard records
                 try {
@@ -260,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 toast.show(result.message || 'Login successful! Redirecting...', 'success');
 
                 setTimeout(() => {
-                    window.location.href = user.role === 'admin' ? 'admin.html' : 'dashboard.html';
+                    window.location.href = isUserAdmin ? 'admin.html' : 'dashboard.html';
                 }, 1500);
 
             } catch (error) {

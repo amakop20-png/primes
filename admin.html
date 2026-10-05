@@ -446,6 +446,18 @@
             </div>
 
             <div class="sfield-group">
+              <label class="sfield-label" for="annCategorySelect">Announcement Type / Category</label>
+              <select class="sfield-input" id="annCategorySelect">
+                <option value="tips">💡 Tips & Guidance</option>
+                <option value="notice">📢 General Notice</option>
+                <option value="maintenance">🔧 Maintenance & Downtime</option>
+                <option value="promo">🎁 Special Promotion</option>
+                <option value="security">🔒 Security Alert</option>
+              </select>
+              <div class="ann-form-tip-helper">Classifies the announcement for users and audit logs</div>
+            </div>
+
+            <div class="sfield-group">
               <label class="sfield-label" for="annWhatsappInput">WhatsApp Community Link</label>
               <input class="sfield-input" type="url" id="annWhatsappInput" placeholder="https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq" value="https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq">
               <div class="ann-form-tip-helper">Link opened by the "Join WhatsApp Community" button</div>
@@ -494,6 +506,7 @@
                 <thead>
                   <tr>
                     <th>Status</th>
+                    <th>Category</th>
                     <th>Heading</th>
                     <th>Tips</th>
                     <th>WhatsApp URL</th>

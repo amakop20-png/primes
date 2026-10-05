@@ -76,6 +76,42 @@ function logout() {
     window.location.href = 'login.html';
 }
 
+function isAdmin(userObj) {
+    let u = userObj;
+    if (!u) {
+        if (typeof getSession === 'function') {
+            u = getSession();
+        } else {
+            try {
+                u = JSON.parse(localStorage.getItem('primes_session') || 'null');
+            } catch (_) {
+                u = null;
+            }
+        }
+    }
+    if (!u) {
+        try {
+            const rawAdmin = localStorage.getItem('primes_admin_session');
+            if (rawAdmin) {
+                const parsed = JSON.parse(rawAdmin);
+                if (parsed && parsed.loggedIn) return true;
+            }
+        } catch (_) {}
+        const adminTok = localStorage.getItem('primes_admin_token');
+        if (adminTok) return true;
+        return false;
+    }
+
+    const role = String(u.role || u.user_role || u.userRole || '').toLowerCase().trim();
+    if (role === 'admin' || role === 'superadmin' || role === 'super_admin' || role === 'owner') {
+        return true;
+    }
+    if (u.isAdmin === true || u.is_admin === true || u.admin === true) {
+        return true;
+    }
+    return false;
+}
+
 /* ==========================================
    CENTRALIZED FETCH WRAPPER
 ========================================== */
@@ -1081,4 +1117,4 @@ window.adminUpdateTransactionStatus   = adminUpdateTransactionStatus;
 window.adminGetVirtualAccounts        = adminGetVirtualAccounts;
 window.adminGetUserVirtualAccount     = adminGetUserVirtualAccount;
 window.fetchActiveAnnouncementFromApi = fetchActiveAnnouncementFromApi;
-window.publishAnnouncementToApi       = publishAnnouncementToApi;
+window.publishAnnouncementToApi       = publishAnnouncementToApi;window.isAdmin = isAdmin;

@@ -15,6 +15,7 @@ let allUsers        = [];
 let allOrders       = [];
 let allActivity     = [];
 let allTransactions = [];
+let allAnnouncements = [];
 let pendingAction   = null;
 
 /* ════════════════════════════════════
@@ -132,7 +133,10 @@ function setAdminSession(sess) {
 function isUserAdminRole() {
   try {
     const userSession = typeof getSession === 'function' ? getSession() : JSON.parse(localStorage.getItem('primes_session') || 'null');
-    return userSession && (userSession.role === 'admin' || userSession.role === 'superadmin');
+    if (typeof isAdmin === 'function') return isAdmin(userSession);
+    if (!userSession) return false;
+    const r = String(userSession.role || '').toLowerCase();
+    return r === 'admin' || r === 'superadmin' || userSession.isAdmin === true || userSession.is_admin === true;
   } catch (_) {
     return false;
   }
@@ -160,7 +164,7 @@ function checkAdminAuth() {
     const nameEl = document.getElementById('sidebarAdminName');
     const roleEl = document.getElementById('sidebarAdminRole');
     if (nameEl) nameEl.textContent = adminUser;
-    if (roleEl) roleEl.textContent = userSession.role === 'superadmin' ? 'Super Admin' : 'Admin';
+    if (roleEl) roleEl.textContent = String(userSession.role || '').toLowerCase() === 'superadmin' ? 'Super Admin' : 'Admin';
     return true;
   }
 
@@ -202,22 +206,47 @@ async function handleAdminGateLogin(e) {
     btn.innerHTML = '<i class="ph ph-spinner spinning"></i> Authenticating...';
   }
 
-  // Attempt backend Admin API login (POST /api/admin/auth/login)
+  // 1. Attempt backend Admin API login (POST /api/admin/auth/login)
   let apiSuccess = false;
+  let adminDisplayName = '';
   if (typeof adminLoginApi === 'function') {
     try {
-      await adminLoginApi(username, password);
+      const res = await adminLoginApi(username, password);
       apiSuccess = true;
+      const u = res?.user || res?.data?.user || res?.data;
+      if (u) adminDisplayName = u.name || u.firstName || u.username || u.email;
     } catch (_) {}
   }
 
+  // 2. If dedicated admin endpoint was rejected, attempt user login with admin role
+  if (!apiSuccess && typeof loginUser === 'function') {
+    try {
+      const uRes = await loginUser(username, password);
+      const u = uRes?.user || uRes?.data?.user || uRes?.data;
+      const isAdm = (typeof isAdmin === 'function' && isAdmin(u)) ||
+                    String(u?.role || '').toLowerCase() === 'admin' ||
+                    String(u?.role || '').toLowerCase() === 'superadmin' ||
+                    u?.isAdmin === true || u?.is_admin === true;
+      if (isAdm) {
+        apiSuccess = true;
+        const uTok = uRes?.token || uRes?.accessToken || uRes?.data?.token;
+        if (uTok && typeof setAdminAuthToken === 'function') {
+          setAdminAuthToken(uTok);
+        }
+        adminDisplayName = u.name || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username || u.email;
+      }
+    } catch (_) {}
+  }
+
+  // 3. Fallback to local admin credentials
   const creds = getAdminCreds();
   const localMatch = (username.toLowerCase() === creds.username.toLowerCase() && password === creds.password);
 
   if (apiSuccess || localMatch) {
     if (errEl) errEl.style.display = 'none';
-    setAdminSession({ loggedIn: true, username: username || creds.username, at: new Date().toISOString() });
-    logActivity('config', `Administrator ${username || creds.username} signed in to Admin Console`);
+    const finalAdminName = adminDisplayName || username || creds.username;
+    setAdminSession({ loggedIn: true, username: finalAdminName, at: new Date().toISOString() });
+    logActivity('config', `Administrator ${finalAdminName} signed in to Admin Console`);
     adminToast('Admin authenticated successfully', 'success');
 
     if (btn) {
@@ -378,106 +407,7 @@ async function checkProviderStatus() {
 ════════════════════════════════════ */
 async function loadAllData() {
   try {
-    allUsers    = JSON.parse(localStorage.getItem(KEY_USERS) || '[]');
-    allOrders   = JSON.parse(localStorage.getItem(KEY_ORDERS) || '[]');
-    allActivity = JSON.parse(localStorage.getItem(KEY_ACTIVITY) || '[]');
-
-    // 1. Sync orders from primes_active_orders into allOrders
-    try {
-      const activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
-      if (Array.isArray(activeOrders) && activeOrders.length) {
-        let changed = false;
-        activeOrders.forEach(ao => {
-          const id = String(ao.id || ao.orderId || '');
-          if (id && !allOrders.some(o => String(o.orderId || o.id) === id)) {
-            allOrders.unshift({
-              orderId: id,
-              id: id,
-              service: ao.product || ao.service || '—',
-              product: ao.product || '—',
-              country: ao.country || '—',
-              phone: ao.phone || '—',
-              amountNGN: ao.amountNGN || 0,
-              status: ao.status || 'PENDING',
-              createdAt: ao.createdAt ? (typeof ao.createdAt === 'number' ? new Date(ao.createdAt).toISOString() : ao.createdAt) : new Date().toISOString()
-            });
-            changed = true;
-          }
-        });
-        if (changed) {
-          localStorage.setItem(KEY_ORDERS, JSON.stringify(allOrders));
-        }
-      }
-    } catch (_) {}
-
-    // 2. Sync logged-in user from primes_session into allUsers
-    try {
-      const userSession = typeof getSession === 'function' ? getSession() : JSON.parse(localStorage.getItem('primes_session') || 'null');
-      if (userSession && (userSession.email || userSession.username)) {
-        const email = (userSession.email || '').toLowerCase();
-        const name = userSession.name || userSession.username || 'User';
-        const exists = allUsers.some(u => (u.email && u.email.toLowerCase() === email) || (u.name && u.name === name));
-        if (!exists) {
-          allUsers.unshift({
-            name: name,
-            email: email || `${userSession.username || 'user'}@nuraxq.com`,
-            phone: userSession.phone || '—',
-            balance: String(userSession.balance || 0),
-            role: userSession.role || 'admin',
-            createdAt: userSession.loggedAt || userSession.createdAt || new Date().toISOString()
-          });
-          localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
-        }
-      }
-    } catch (_) {}
-
-    // 3. Ensure default platform admin is in allUsers if empty
-    if (!allUsers.length) {
-      allUsers = [
-        {
-          name: 'NuraXQ Super Admin',
-          email: 'admin@nuraxq.com',
-          phone: '+234 800 000 0000',
-          balance: '25000',
-          role: 'admin',
-          createdAt: new Date().toISOString()
-        }
-      ];
-      localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
-    }
-
-    // 4. Sync authoritative wallet balance if available
-    const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('primes_token');
-    if (token && typeof apiRequest === 'function') {
-      try {
-        const wb = await apiRequest('/api/get-wallet-balance?currency=NGN', {
-          method: 'GET',
-          suppressAuthRedirect: true
-        });
-        const bal = typeof normalizeWalletBalance === 'function' ? normalizeWalletBalance(wb, 'NGN') : parseFloat(wb?.balance || wb?.ngnBalance || 0);
-        if (!isNaN(bal) && bal >= 0) {
-          const userSession = typeof getSession === 'function' ? getSession() : null;
-          if (userSession && userSession.email) {
-            const u = allUsers.find(x => x.email && x.email.toLowerCase() === userSession.email.toLowerCase());
-            if (u) {
-              u.balance = String(bal);
-              localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
-            }
-          }
-        }
-      } catch (_) {}
-    }
-
-    // 5. Pre-load cached transactions if available
-    try {
-      const cachedTxs = JSON.parse(localStorage.getItem('primes_transactions') || '[]');
-      if (Array.isArray(cachedTxs) && cachedTxs.length) {
-        allTransactions = cachedTxs;
-        setText('navTxBadge', cachedTxs.length);
-      }
-    } catch (_) {}
-
-    // 6. Connect live Admin API data (PDF pages 2-3)
+    // 1. Fetch live users directly from Admin API (GET /api/admin/users)
     if (typeof adminGetUsers === 'function') {
       try {
         const usersRes = await adminGetUsers({ limit: 100 });
@@ -492,13 +422,63 @@ async function loadAllData() {
             role: u.role || 'user',
             createdAt: u.createdAt || new Date().toISOString()
           }));
-          localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
+        }
+      } catch (err) {
+        console.warn('[Admin] Live users API notice:', err.message);
+      }
+    }
+
+    // 2. Fetch live dashboard statistics directly from Admin API (GET /api/admin/dashboard/stats)
+    if (typeof adminGetDashboardStats === 'function') {
+      try {
+        const stats = await adminGetDashboardStats();
+        if (stats) {
+          if (Array.isArray(stats.recentUsers) && !allUsers.length) {
+            allUsers = stats.recentUsers;
+          }
+          if (Array.isArray(stats.recentTransactions)) {
+            allTransactions = stats.recentTransactions;
+            setText('navTxBadge', allTransactions.length);
+          }
         }
       } catch (_) {}
     }
+
+    // 3. Fallback to session user only if API returned no user records
+    if (!allUsers.length) {
+      try {
+        const userSession = typeof getSession === 'function' ? getSession() : null;
+        if (userSession && (userSession.email || userSession.username)) {
+          allUsers = [{
+            name: userSession.name || userSession.username || 'Admin User',
+            email: userSession.email || 'admin@nuraxq.com',
+            phone: userSession.phone || '—',
+            balance: String(userSession.balance || 0),
+            role: userSession.role || 'admin',
+            createdAt: userSession.loggedAt || new Date().toISOString()
+          }];
+        }
+      } catch (_) {}
+    }
+
+    // 4. Preload live backend transactions
+    if (typeof adminGetTransactions === 'function') {
+      try {
+        const txRes = await adminGetTransactions({ limit: 50 });
+        const txList = txRes?.transactions || txRes?.data || (Array.isArray(txRes) ? txRes : null);
+        if (Array.isArray(txList) && txList.length) {
+          allTransactions = txList;
+          setText('navTxBadge', allTransactions.length);
+        }
+      } catch (_) {}
+    }
+
+    // 5. Fetch announcements from backend API
+    await loadAdminAnnouncements();
+
   } catch (err) {
-    console.error('Error reading admin data:', err);
-    adminToast('Failed to load local records.', 'error');
+    console.error('Error fetching backend data:', err);
+    adminToast('Failed to load backend records.', 'error');
   }
 }
 
@@ -722,7 +702,6 @@ function confirmDeleteUser(email) {
     () => {
       try {
         allUsers = allUsers.filter(u => u.email !== email);
-        localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
         logActivity('user_delete', `Deleted user account: ${email}`);
         adminToast('User account removed successfully.', 'success');
         refreshAll();
@@ -847,7 +826,6 @@ async function checkLiveOrderStatus(orderId) {
       const existing = allOrders.find(x => String(x.orderId || x.id) === String(orderId));
       if (existing) {
         existing.status = o.status;
-        localStorage.setItem(KEY_ORDERS, JSON.stringify(allOrders));
         renderOrdersTable(allOrders);
       }
     }
@@ -865,32 +843,43 @@ async function loadBackendTransactions() {
   if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Syncing transactions from backend...</td></tr>';
 
   try {
-    let result = null;
-    const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('primes_token');
-
-    if (token && typeof apiRequest === 'function') {
+    let txList = [];
+    // 1. Try documented Admin API GET /transactions first (PDF page 4-5)
+    if (typeof adminGetTransactions === 'function') {
       try {
-        result = await apiRequest('/api/get-transactions?page=1&limit=50&currency=NGN', {
+        const res = await adminGetTransactions({ limit: 50 });
+        if (res && (res.transactions || res.data || Array.isArray(res))) {
+          txList = res.transactions || res.data || (Array.isArray(res) ? res : []);
+        }
+      } catch (_) {}
+    }
+
+    // 2. Try customer/platform GET /api/get-transactions
+    if (!txList.length && typeof apiRequest === 'function') {
+      try {
+        const res = await apiRequest('/api/get-transactions?page=1&limit=50&currency=NGN', {
           method: 'GET',
           suppressAuthRedirect: true
         });
+        if (res && (res.data || res.transactions)) {
+          txList = res.data || res.transactions || [];
+        }
       } catch (reqErr) {
-        console.warn('[Admin] Live backend get-transactions warning:', reqErr.message);
+        console.warn('[Admin] Live backend get-transactions notice:', reqErr.message);
       }
     }
 
-    const txList = (result && (result.data || result.transactions)) || JSON.parse(localStorage.getItem('primes_transactions') || '[]') || [];
-    allTransactions = txList;
-    setText('navTxBadge', txList.length);
+    allTransactions = Array.isArray(txList) ? txList : [];
+    setText('navTxBadge', allTransactions.length);
 
     if (!tbody) return;
 
-    if (!txList.length) {
+    if (!allTransactions.length) {
       tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No platform transactions recorded yet.</td></tr>';
       return;
     }
 
-    tbody.innerHTML = txList.map((t, i) => `
+    tbody.innerHTML = allTransactions.map((t, i) => `
       <tr>
         <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
         <td>
@@ -904,12 +893,7 @@ async function loadBackendTransactions() {
       </tr>
     `).join('');
 
-    if (result && (result.data || result.transactions)) {
-      localStorage.setItem('primes_transactions', JSON.stringify(txList));
-      adminToast('Backend transactions synchronized.', 'success');
-    } else {
-      adminToast('Transactions loaded.', 'info');
-    }
+    adminToast('Backend transactions synchronized.', 'success');
   } catch (err) {
     if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="empty-cell" style="color:var(--red);">Failed to sync transactions: ${escapeHTML(err.message)}</td></tr>`;
     adminToast('Could not load transactions from backend.', 'error');
@@ -1061,34 +1045,6 @@ async function fundUser() {
       const previousBal = parseFloat(target.balance || 0);
       const newBal = previousBal + amount;
       target.balance = String(newBal);
-      localStorage.setItem(KEY_USERS, JSON.stringify(allUsers));
-
-      // Sync active session if currently logged-in user was funded
-      try {
-        const sess = typeof getSession === 'function' ? getSession() : JSON.parse(localStorage.getItem('primes_session') || 'null');
-        if (sess && sess.email && sess.email.toLowerCase() === email.toLowerCase()) {
-          sess.balance = newBal;
-          if (typeof setSession === 'function') setSession(sess);
-          else localStorage.setItem('primes_session', JSON.stringify(sess));
-          localStorage.setItem('_actual_ngn_balance', String(newBal));
-          localStorage.setItem('_walletBalance_NGN', String(newBal));
-          localStorage.setItem('_walletBalance', String(newBal));
-        }
-      } catch (_) {}
-
-      // Record transaction
-      try {
-        const txs = JSON.parse(localStorage.getItem('primes_transactions') || '[]');
-        txs.unshift({
-          reference: 'ADM-' + Date.now().toString(36).toUpperCase(),
-          type: 'CREDIT (ADMIN)',
-          amount: amount,
-          status: 'SUCCESS',
-          createdAt: new Date().toISOString(),
-          userEmail: email
-        });
-        localStorage.setItem('primes_transactions', JSON.stringify(txs.slice(0, 100)));
-      } catch (_) {}
 
       // Call Admin API (POST /api/admin/wallets/:userId/credit)
       if (typeof adminCreditWallet === 'function' && target && (target.id || target._id)) {
@@ -1100,27 +1056,6 @@ async function fundUser() {
       }
 
       logActivity('fund', `Admin credited ₦${amount.toLocaleString()} to ${email} (New balance: ₦${newBal.toLocaleString()})`);
-
-      // Dispatch in-app notification to the funded user's notification box
-      try {
-        const notifKey = `primes_notifications_${email.toLowerCase().trim()}`;
-        const existingNotifs = JSON.parse(localStorage.getItem(notifKey) || '[]');
-        const newNotif = {
-          id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-          userId: email,
-          userEmail: email.toLowerCase(),
-          title: 'Wallet Credited',
-          message: `Admin credited ₦${amount.toLocaleString()} to your wallet. New balance: ₦${newBal.toLocaleString()}.`,
-          type: 'wallet',
-          createdAt: new Date().toISOString(),
-          read: false
-        };
-        existingNotifs.unshift(newNotif);
-        localStorage.setItem(notifKey, JSON.stringify(existingNotifs.slice(0, 100)));
-        window.dispatchEvent(new CustomEvent('primes_notification_created', { detail: newNotif }));
-        window.dispatchEvent(new CustomEvent('primes_notification_updated', { detail: existingNotifs }));
-      } catch (_) {}
-
       adminToast(`Successfully funded ₦${amount.toLocaleString()} to ${email}`, 'success');
 
       document.getElementById('fundAmount').value = '';
@@ -1138,17 +1073,25 @@ async function fundUser() {
    ════════════════════════════════════ */
 
 function getAdminAnnouncements() {
-  try {
-    const raw = localStorage.getItem('primes_announcements');
-    if (raw) {
-      const list = JSON.parse(raw);
-      if (Array.isArray(list)) return list;
-    }
-  } catch (_) {}
-  return [];
+  return allAnnouncements;
 }
 
-function loadAdminAnnouncements() {
+async function loadAdminAnnouncements() {
+  // Query backend active announcement endpoint directly
+  if (typeof fetchActiveAnnouncementFromApi === 'function') {
+    try {
+      const active = await fetchActiveAnnouncementFromApi();
+      if (active && (active.title || active.content || active.message)) {
+        const idx = allAnnouncements.findIndex(a => a.id === active.id);
+        if (idx !== -1) {
+          allAnnouncements[idx] = active;
+        } else {
+          allAnnouncements.unshift(active);
+        }
+      }
+    } catch (_) {}
+  }
+
   const announcements = getAdminAnnouncements();
   const tbody = document.getElementById('announcementsTableBody');
   const countEl = document.getElementById('annTotalCount');
@@ -1202,7 +1145,7 @@ function loadAdminAnnouncements() {
   if (!tbody) return;
 
   if (!announcements.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-cell" style="text-align:center;padding:24px;color:var(--muted);">No announcements created yet. Click "Publish Announcement" above to create one.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-cell" style="text-align:center;padding:24px;color:var(--muted);">No announcements created yet. Click "Publish Announcement" above to create one.</td></tr>';
     return;
   }
 
@@ -1211,6 +1154,15 @@ function loadAdminAnnouncements() {
     const statusHtml = isAct
       ? `<span class="status-badge badge-received"><i class="ph ph-check-circle"></i> Published</span>`
       : `<span class="status-badge badge-canceled"><i class="ph ph-pause-circle"></i> Disabled</span>`;
+
+    const catMap = {
+      tips: '💡 Tips & Guidance',
+      notice: '📢 Notice',
+      maintenance: '🔧 Maintenance',
+      promo: '🎁 Promotion',
+      security: '🔒 Security Alert'
+    };
+    const catDisplay = `<span style="font-size:12px;font-weight:600;color:var(--text);">${escapeHTML(catMap[ann.category] || ann.category || '💡 Tips')}</span>`;
     
     const tipsList = (ann.content || ann.message || '').split(/\r?\n/).filter(Boolean);
     const tipsCount = tipsList.length;
@@ -1224,6 +1176,7 @@ function loadAdminAnnouncements() {
     return `
       <tr>
         <td>${statusHtml}</td>
+        <td>${catDisplay}</td>
         <td>
           <div style="font-weight:700;color:var(--text);font-size:13px;">${escapeHTML(ann.title || 'Important Announcement')}</div>
           <div style="font-size:11px;color:var(--accent);">${escapeHTML(tipsSubtitle)}</div>
@@ -1249,6 +1202,7 @@ function loadAdminAnnouncements() {
 async function saveAdminAnnouncement() {
   const title = (document.getElementById('annTitleInput')?.value || '').trim() || 'Important Announcement';
   const subtitle = (document.getElementById('annSubtitleInput')?.value || '').trim();
+  const category = (document.getElementById('annCategorySelect')?.value || '').trim() || 'tips';
   const whatsappUrl = (document.getElementById('annWhatsappInput')?.value || '').trim() || 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq';
   const content = (document.getElementById('annContentInput')?.value || '').trim();
   const isActive = Boolean(document.getElementById('annActiveToggle')?.checked);
@@ -1266,6 +1220,7 @@ async function saveAdminAnnouncement() {
     id: editId || ('ann_' + Date.now()),
     title,
     subtitle: computedSubtitle,
+    category,
     message: content,
     content: content,
     whatsappUrl,
@@ -1283,26 +1238,22 @@ async function saveAdminAnnouncement() {
     }
   }
 
-  // 2. Synchronize active state for immediate retrieval upon user login
+  // 2. Dispatch admin announcement notification event
   if (isActive) {
     try {
-      localStorage.setItem('primes_active_announcement', JSON.stringify(payload));
-      localStorage.setItem('global_announcement', JSON.stringify(payload));
-    } catch (_) {}
-  } else {
-    try {
-      const rawActive = localStorage.getItem('primes_active_announcement') || localStorage.getItem('global_announcement');
-      if (rawActive) {
-        const a = JSON.parse(rawActive);
-        if (a.id === payload.id) {
-          localStorage.removeItem('primes_active_announcement');
-          localStorage.removeItem('global_announcement');
-        }
-      }
+      const adminNotif = {
+        id: 'admin_ann_' + (payload.id || Date.now()),
+        title: `📢 ${payload.title || 'Announcement'}`,
+        message: (payload.content || payload.message || '').slice(0, 300),
+        type: payload.category || 'system',
+        createdAt: new Date().toISOString(),
+        read: false
+      };
+      window.dispatchEvent(new CustomEvent('primes_notification_created', { detail: adminNotif }));
     } catch (_) {}
   }
 
-  // 3. Update announcements list
+  // 3. Update in-memory announcements list
   let announcements = getAdminAnnouncements();
   if (editId) {
     const idx = announcements.findIndex(a => a.id === editId);
@@ -1317,7 +1268,6 @@ async function saveAdminAnnouncement() {
     if (isActive) announcements.forEach(a => a.active = false);
     announcements.unshift(payload);
   }
-  localStorage.setItem('primes_announcements', JSON.stringify(announcements));
 
   logActivity('config', `${isActive ? 'Published' : 'Updated'} announcement: "${title}"`);
   adminToast(`Announcement ${isActive ? 'published' : 'saved'} successfully!`, 'success');
@@ -1337,6 +1287,8 @@ function editAnnouncement(id) {
   if (titleEl) titleEl.value = ann.title || 'Important Announcement';
   const subEl = document.getElementById('annSubtitleInput');
   if (subEl) subEl.value = ann.subtitle || '';
+  const catEl = document.getElementById('annCategorySelect');
+  if (catEl) catEl.value = ann.category || 'tips';
   const waEl = document.getElementById('annWhatsappInput');
   if (waEl) waEl.value = ann.whatsappUrl || '';
   const contentEl = document.getElementById('annContentInput');
@@ -1375,6 +1327,8 @@ function resetAnnouncementForm() {
   if (titleEl) titleEl.value = 'Important Announcement';
   const subEl = document.getElementById('annSubtitleInput');
   if (subEl) subEl.value = '';
+  const catEl = document.getElementById('annCategorySelect');
+  if (catEl) catEl.value = 'tips';
   const waEl = document.getElementById('annWhatsappInput');
   if (waEl) waEl.value = 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq';
   const contentEl = document.getElementById('annContentInput');
@@ -1418,18 +1372,13 @@ async function toggleAnnouncementStatus(id) {
   }
 
   if (willBeActive) {
-    localStorage.setItem('primes_active_announcement', JSON.stringify(ann));
-    localStorage.setItem('global_announcement', JSON.stringify(ann));
     adminToast('Announcement published to user dashboard!', 'success');
     logActivity('config', `Activated announcement: "${ann.title}"`);
   } else {
-    localStorage.removeItem('primes_active_announcement');
-    localStorage.removeItem('global_announcement');
     adminToast('Announcement deactivated.', 'info');
     logActivity('config', `Disabled announcement: "${ann.title}"`);
   }
 
-  localStorage.setItem('primes_announcements', JSON.stringify(announcements));
   loadAdminAnnouncements();
 }
 
@@ -1438,27 +1387,7 @@ function deleteAnnouncement(id) {
     'Delete Announcement',
     'Are you sure you want to permanently delete this announcement? This action cannot be undone.',
     async () => {
-      let announcements = getAdminAnnouncements();
-      announcements = announcements.filter(a => a.id !== id);
-      localStorage.setItem('primes_announcements', JSON.stringify(announcements));
-
-      const rawActive = localStorage.getItem('primes_active_announcement') || localStorage.getItem('global_announcement');
-      if (rawActive) {
-        try {
-          const a = JSON.parse(rawActive);
-          if (a.id === id) {
-            const nextActive = announcements.find(x => x.active === true);
-            if (nextActive) {
-              localStorage.setItem('primes_active_announcement', JSON.stringify(nextActive));
-              localStorage.setItem('global_announcement', JSON.stringify(nextActive));
-            } else {
-              localStorage.removeItem('primes_active_announcement');
-              localStorage.removeItem('global_announcement');
-            }
-          }
-        } catch (_) {}
-      }
-
+      allAnnouncements = allAnnouncements.filter(a => a.id !== id);
       adminToast('Announcement deleted successfully.', 'success');
       logActivity('config', `Deleted announcement #${id}`);
       resetAnnouncementForm();
@@ -1591,10 +1520,13 @@ async function makeAnnouncement() {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
-  localStorage.setItem('global_announcement', JSON.stringify(payload));
+  if (typeof publishAnnouncementToApi === 'function') {
+    try {
+      await publishAnnouncementToApi(payload);
+    } catch (_) {}
+  }
   const list = getAdminAnnouncements();
   list.unshift(payload);
-  localStorage.setItem('primes_announcements', JSON.stringify(list));
   logActivity('config', `Broadcast announcement: "${msg.slice(0, 40)}..."`);
   adminToast('Announcement broadcasted to all users!', 'success');
   loadAdminAnnouncements();

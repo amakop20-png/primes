@@ -1526,6 +1526,9 @@ function init() {
     loadTransactions(1);
     loadActiveNumbers();
     loadNotifications().catch(e => console.log('Notif check fail:', e));
+    if (typeof checkForAnnouncements === 'function') {
+        checkForAnnouncements();
+    }
 
     // 7. Multi-tab and cross-page synchronization
     window.addEventListener('storage', (e) => {

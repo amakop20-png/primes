@@ -177,6 +177,35 @@ function updateProfileUI() {
             }
         });
     }
+
+    // 5. Admin Console navigation link if user is administrator
+    try {
+        const isUserAdmin = (typeof isAdmin === 'function' && isAdmin(session)) ||
+                            String(session.role || '').toLowerCase() === 'admin' ||
+                            String(session.role || '').toLowerCase() === 'superadmin' ||
+                            session.isAdmin === true || session.is_admin === true;
+        const dropdown = document.getElementById('dropdown');
+        if (dropdown) {
+            let adminLink = document.getElementById('userDropdownAdminLink');
+            if (isUserAdmin) {
+                if (!adminLink) {
+                    adminLink = document.createElement('a');
+                    adminLink.id = 'userDropdownAdminLink';
+                    adminLink.href = 'admin.html';
+                    adminLink.innerHTML = '<i class="ph ph-shield-check" style="color:var(--primary);"></i> Admin Console';
+                    adminLink.style.cssText = 'color:var(--primary);font-weight:700;border-left:3px solid var(--primary);padding-left:14px;';
+                    const logoutBtn = dropdown.querySelector('a.logout') || dropdown.lastElementChild;
+                    if (logoutBtn) {
+                        dropdown.insertBefore(adminLink, logoutBtn);
+                    } else {
+                        dropdown.appendChild(adminLink);
+                    }
+                }
+            } else if (adminLink) {
+                adminLink.remove();
+            }
+        }
+    } catch (_) {}
 }
 
 // ── Settings Modal Logic ──
@@ -595,7 +624,7 @@ window.openSettings           = openSettings;
 window.closeSettings          = closeSettings;
 
 // ── Auto-init on load ──
-document.addEventListener('DOMContentLoaded', () => {
+function initSharedComponents() {
     restoreTheme();
     updateProfileUI();
     attachProfileEventListeners();
@@ -606,9 +635,16 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarSettingsBtn._wired = true;
     }
     
-    // Check for announcements on load
-    setTimeout(checkForAnnouncements, 1000);
-});
+    // Check for announcements on dashboard load (after user authentication)
+    setTimeout(checkForAnnouncements, 800);
+    setTimeout(syncAdminAnnouncementsToUserNotifications, 1000);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSharedComponents);
+} else {
+    initSharedComponents();
+}
 
 // Listen for real-time announcements across tabs
 window.addEventListener('storage', (e) => {
@@ -707,14 +743,86 @@ function parseSingleItem(line) {
     };
 }
 
+const DEFAULT_LOGIN_ANNOUNCEMENT = {
+    id: 'login_tips_v1',
+    title: 'Important Announcement',
+    subtitle: 'Tips (5)',
+    content: [
+        '💡 WhatsApp link issues? If it doesn\'t open, copy and paste it into Chrome.',
+        '💡 Slow OTP delivery? Cancel after 2 mins and request a refund or try another service.',
+        '💡 High volume delays: During peak hours, some SMS routes may experience delays.',
+        '🔒 Account security: Do not share your OTPs or verification codes with anyone.',
+        '💡 Need help? Contact 24/7 support or join our WhatsApp community for updates.'
+    ].join('\n'),
+    whatsappUrl: 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq',
+    active: true
+};
+
+function ensureAnnouncementModalInDOM() {
+    let modal = document.getElementById('announcementModal');
+    if (!modal) {
+        const wrap = document.createElement('div');
+        wrap.innerHTML = `
+          <div id="announcementModal" class="ann-modal-backdrop" aria-hidden="true" role="dialog" aria-labelledby="announcementTitleText">
+            <div class="ann-modal-card">
+              <button class="ann-close-icon-btn" id="announcementCloseTopBtn" onclick="closeAnnouncementModal()" aria-label="Close Announcement">&times;</button>
+              <div class="ann-header-wrap">
+                <h2 class="ann-heading-title" id="announcementTitle">
+                  <span class="ann-icon-badge">📢</span>
+                  <span id="announcementTitleText">Important Announcement</span>
+                </h2>
+                <div class="ann-heading-subtitle" id="announcementSubtitle">Tips (5)</div>
+              </div>
+              <div class="ann-content-box" id="announcementContentBox">
+                <div class="ann-items-list" id="announcementModalContent"></div>
+              </div>
+              <div class="ann-actions-wrap">
+                <a href="https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq" target="_blank" rel="noopener noreferrer" class="ann-btn-whatsapp" id="announcementWhatsappBtn">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;">
+                    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.04 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.59 20.16 12.04 20.16C10.61 20.16 9.22 19.78 8.01 19.06L7.71 18.88L4.62 19.69L5.45 16.67L5.25 16.36C4.47 15.11 4.05 13.54 4.05 11.91C4.05 7.51 7.64 3.67 12.04 3.67ZM8.82 7.37C8.61 7.37 8.39 7.37 8.21 7.41C7.99 7.45 7.72 7.57 7.52 7.79C7.26 8.07 6.55 8.74 6.55 10.1C6.55 11.46 7.54 12.77 7.68 12.96C7.82 13.15 9.61 15.91 12.35 17.09C13 17.37 13.51 17.56 13.92 17.69C14.53 17.88 15.09 17.86 15.53 17.79C16.02 17.72 17.04 17.17 17.25 16.57C17.47 15.98 17.47 15.47 17.4 15.36C17.33 15.25 17.15 15.19 16.86 15.05C16.58 14.91 15.22 14.24 14.97 14.15C14.72 14.06 14.54 14.01 14.36 14.28C14.18 14.55 13.68 15.14 13.52 15.32C13.37 15.51 13.22 15.53 12.94 15.39C12.65 15.25 11.75 14.95 10.68 13.99C9.84 13.25 9.28 12.33 9.12 12.05C8.95 11.77 9.1 11.61 9.25 11.47C9.37 11.34 9.53 11.13 9.68 10.96C9.82 10.79 9.87 10.66 9.96 10.47C10.05 10.29 10.01 10.13 9.94 9.99C9.87 9.85 9.35 8.57 9.13 8.04C8.92 7.52 8.7 7.59 8.53 7.58L8.82 7.37Z"/>
+                  </svg>
+                  <span>Join WhatsApp Community</span>
+                </a>
+                <button class="ann-btn-close" id="announcementCloseBtn" onclick="closeAnnouncementModal()">
+                  <span>✕ Close</span>
+                </button>
+              </div>
+            </div>
+          </div>`;
+        document.body.appendChild(wrap.firstElementChild);
+        modal = document.getElementById('announcementModal');
+    }
+    return modal;
+}
+
+/* ────────────────────────────────────────────────────────
+   1. AUTOMATIC USER LOGIN ANNOUNCEMENT (POPUP SYSTEM)
+   Triggers automatically after user logs in.
+   Persists viewed/dismissed state per user.
+   Does not re-trigger every time the user navigates sections.
+──────────────────────────────────────────────────────── */
 async function checkForAnnouncements() {
-    // 1. Strict guard: ONLY display after successful user authentication, when entering dashboard
+    // 1. Strict guard: ONLY display after successful user authentication, on user dashboard
+    const path = (window.location.pathname || '').toLowerCase();
+    if (path.includes('login') || path.includes('signup') || path.includes('admin')) {
+        return;
+    }
+
     const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('primes_token');
     if (!token) {
         return; // Do NOT display before login
     }
 
-    // 2. Fetch latest active announcement from backend / API
+    const session = typeof getSession === 'function' ? getSession() : null;
+    const userKey = (session?.email || session?.username || session?._id || 'user').toLowerCase().trim();
+
+    // Check if already dismissed in this browser session (prevents annoyance on section navigation/refresh)
+    const sessionDismissed = sessionStorage.getItem(`nuraxq_login_ann_dismissed_${userKey}`);
+    if (sessionDismissed === 'true') {
+        return;
+    }
+
+    // 2. Fetch latest active announcement from backend / API if provided
     let announcement = null;
     if (typeof fetchActiveAnnouncementFromApi === 'function') {
         try {
@@ -724,40 +832,78 @@ async function checkForAnnouncements() {
         }
     }
 
-    // Fallback: check synchronized active announcement from backend/admin
-    if (!announcement) {
-        announcement = getActiveAnnouncement();
+    // Fallback to platform login announcement
+    if (!announcement || (!announcement.content && !announcement.message)) {
+        announcement = DEFAULT_LOGIN_ANNOUNCEMENT;
     }
 
-    // 3. If there is no active announcement:
-    // - Do nothing
-    // - Do not show an empty popup
-    // - Do not show an error to the user
     if (!announcement || announcement.active === false) {
         return;
     }
 
-    const content = announcement.content || announcement.message;
-    if (!content || !String(content).trim()) {
+    const annId = announcement.id || announcement._id || 'login_tips_v1';
+    const dismissedKey = `primes_ann_dismissed_${userKey}_${annId}`;
+    const justLoggedIn = sessionStorage.getItem('just_logged_in') === 'true';
+
+    // If already dismissed permanently by this user and not a fresh login, do not display
+    if (localStorage.getItem(dismissedKey) === 'true' && !justLoggedIn) {
         return;
     }
 
-    // 4. Client-side state: check if already dismissed by this authenticated user
-    const annId = announcement.id || announcement._id || ('ann_' + (announcement.title || 'active').replace(/\s+/g, '_'));
-    const session = typeof getSession === 'function' ? getSession() : null;
-    const userKey = (session?.email || session?.username || session?._id || 'user').toLowerCase().trim();
-    const dismissedKey = `primes_ann_dismissed_${userKey}_${annId}`;
+    // Ensure modal exists in DOM
+    ensureAnnouncementModalInDOM();
 
-    if (localStorage.getItem(dismissedKey) === 'true') {
-        return; // Prevent repeated appearances after dismissal
-    }
-
-    // 5. Automatically display the announcement popup
+    // Automatically display the announcement popup
     showAnnouncementModal(announcement, false);
 }
 
+/* ────────────────────────────────────────────────────────
+   2. SEPARATE ADMIN ANNOUNCEMENT SYSTEM (SYNC TO NOTIFICATIONS)
+   Displays admin-created announcements in user notification area
+──────────────────────────────────────────────────────── */
+function syncAdminAnnouncementsToUserNotifications() {
+    try {
+        const rawAdmin = localStorage.getItem('primes_announcements') || localStorage.getItem('primes_admin_announcements');
+        if (!rawAdmin) return;
+        const list = JSON.parse(rawAdmin);
+        if (!Array.isArray(list) || !list.length) return;
+
+        const activeAnnouncements = list.filter(a => a && a.active === true);
+        if (!activeAnnouncements.length) return;
+
+        const session = typeof getSession === 'function' ? getSession() : null;
+        const userKey = (session?.email || session?.username || session?._id || 'user').toLowerCase().trim();
+        const userNotifKey = `primes_notifications_${userKey}`;
+        let userNotifs = JSON.parse(localStorage.getItem(userNotifKey) || '[]');
+        let updated = false;
+
+        for (const ann of activeAnnouncements) {
+            const notifId = `admin_ann_${ann.id}`;
+            if (!userNotifs.some(n => n.id === notifId)) {
+                userNotifs.unshift({
+                    id: notifId,
+                    title: ann.title || 'Announcement',
+                    message: (ann.content || ann.message || '').slice(0, 300),
+                    type: ann.category || 'system',
+                    createdAt: ann.updatedAt || ann.createdAt || new Date().toISOString(),
+                    read: false
+                });
+                updated = true;
+            }
+        }
+
+        if (updated) {
+            localStorage.setItem(userNotifKey, JSON.stringify(userNotifs.slice(0, 50)));
+            if (typeof renderNotifications === 'function') {
+                renderNotifications(userNotifs);
+            }
+            window.dispatchEvent(new CustomEvent('primes_notification_created'));
+        }
+    } catch (_) {}
+}
+
 function showAnnouncementModal(payload, isPreview = false) {
-    const modal = document.getElementById('announcementModal');
+    const modal = ensureAnnouncementModalInDOM();
     if (!modal) return;
 
     let data = payload;
@@ -843,10 +989,15 @@ function closeAnnouncementModal() {
         }, 260);
     }
 
+    const session = typeof getSession === 'function' ? getSession() : null;
+    const userKey = (session?.email || session?.username || session?._id || 'user').toLowerCase().trim();
+    
+    // Remember dismissed for this user session
+    sessionStorage.setItem(`nuraxq_login_ann_dismissed_${userKey}`, 'true');
+    sessionStorage.removeItem('just_logged_in');
+
     if (currentActiveAnnouncementId) {
         try {
-            const session = typeof getSession === 'function' ? getSession() : null;
-            const userKey = session?.email || session?.username || 'user';
             localStorage.setItem(`primes_ann_dismissed_${userKey}_${currentActiveAnnouncementId}`, 'true');
             localStorage.setItem('last_seen_announcement_id', String(currentActiveAnnouncementId));
         } catch (_) {}
@@ -878,4 +1029,22 @@ window.closeAnnouncementModal      = closeAnnouncementModal;
 window.parseAnnouncementItems      = parseAnnouncementItems;
 window.getActiveAnnouncement       = getActiveAnnouncement;
 window.getStoredAnnouncements      = getStoredAnnouncements;
+
+// Automatic check and display when user enters dashboard
+function autoCheckDashboardAnnouncements() {
+    setTimeout(() => {
+        if (typeof checkForAnnouncements === 'function') {
+            checkForAnnouncements();
+        }
+        if (typeof syncAdminAnnouncementsToUserNotifications === 'function') {
+            syncAdminAnnouncementsToUserNotifications();
+        }
+    }, 400);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', autoCheckDashboardAnnouncements);
+} else {
+    autoCheckDashboardAnnouncements();
+}
 
