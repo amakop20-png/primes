@@ -5538,6 +5538,84 @@ body.dark-theme .vnum-card-value {
   transform: scale(0.97);
 }
 
+/* Wallet Add Fund button - perfectly matching Referral Card design and visual balance */
+.btn-wallet-fund {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+  line-height: 1.2;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  flex-shrink: 0;
+  outline: none;
+  text-decoration: none;
+}
+
+.btn-wallet-fund:hover {
+  background: rgba(255, 255, 255, 0.35) !important;
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  transform: translateY(-1px);
+}
+
+.btn-wallet-fund:active {
+  transform: scale(0.97);
+  background: rgba(255, 255, 255, 0.26) !important;
+}
+
+.btn-wallet-fund i {
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive adjustments for wallet action strip and Add Fund button */
+@media (max-width: 600px) {
+  .wallet-card .wallet-action-strip {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .wallet-card .wallet-status-label {
+    font-size: 11.5px;
+  }
+  .btn-wallet-fund {
+    padding: 7px 13px;
+    font-size: 11.5px;
+  }
+}
+
+@media (max-width: 440px) {
+  .wallet-card .wallet-action-strip {
+    flex-wrap: wrap !important;
+    gap: 10px;
+  }
+  .wallet-card .wallet-action-strip > div:first-child {
+    width: 100%;
+  }
+  .wallet-card .wallet-action-strip > div:last-child {
+    width: 100%;
+  }
+  .btn-wallet-fund {
+    width: 100%;
+    justify-content: center;
+    padding: 9px 16px;
+    font-size: 12.5px;
+  }
+}
+
 /* ══════════════════════════════════════
    NURAXQ PRODUCTION ANNOUNCEMENT POPUP MODAL
    ══════════════════════════════════════ */

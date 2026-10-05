@@ -851,6 +851,20 @@ async function adminApiRequest(endpoint, options = {}) {
 }
 
 // ── Admin Authentication (PDF Page 1) ──
+async function adminRegisterApi({ name, email, password, role, setupKey } = {}) {
+    const headers = {};
+    if (setupKey) {
+        headers['x-admin-setup-key'] = setupKey;
+    }
+    const body = { name, email, password };
+    if (role) body.role = role;
+    return await adminApiRequest('/auth/register', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+    });
+}
+
 async function adminLoginApi(email, password) {
     const res = await adminApiRequest('/auth/login', {
         method: 'POST',
@@ -1096,6 +1110,7 @@ window.getAdminAuthToken              = getAdminAuthToken;
 window.setAdminAuthToken              = setAdminAuthToken;
 window.clearAdminAuthToken            = clearAdminAuthToken;
 window.adminApiRequest                = adminApiRequest;
+window.adminRegisterApi               = adminRegisterApi;
 window.adminLoginApi                  = adminLoginApi;
 window.adminGetProfileApi             = adminGetProfileApi;
 window.adminLogoutApi                 = adminLogoutApi;
