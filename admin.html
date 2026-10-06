@@ -50,8 +50,8 @@
 
       <form id="adminGateForm" onsubmit="handleAdminGateLogin(event)">
         <div class="sfield-group">
-          <label class="sfield-label" for="adminGateUser">Admin Username</label>
-          <input type="text" id="adminGateUser" class="sfield-input" placeholder="admin" required autocomplete="username" value="admin">
+          <label class="sfield-label" for="adminGateUser">Admin Email</label>
+          <input type="email" id="adminGateUser" class="sfield-input" placeholder="admin@example.com" required autocomplete="email">
         </div>
 
         <div class="sfield-group">
@@ -738,6 +738,41 @@
       <div class="modal-actions">
         <button class="btn-outline" onclick="closeModal('userModal')">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ── Edit User Modal (PDF Page 2: PATCH /users/:id) ── -->
+  <div class="modal-overlay" id="editUserModal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal('editUserModal')" aria-label="Close modal"><i class="ph ph-x"></i></button>
+      <h2 class="modal-title"><i class="ph ph-pencil-simple"></i> Edit User Profile</h2>
+      <form id="editUserForm" onsubmit="handleUpdateUserSubmit(event)">
+        <input type="hidden" id="editUserId" value="">
+        <div class="sfield-group">
+          <label class="sfield-label" for="editUserFirstName">First Name</label>
+          <input type="text" id="editUserFirstName" class="sfield-input" placeholder="First Name">
+        </div>
+        <div class="sfield-group">
+          <label class="sfield-label" for="editUserLastName">Last Name</label>
+          <input type="text" id="editUserLastName" class="sfield-input" placeholder="Last Name">
+        </div>
+        <div class="sfield-group">
+          <label class="sfield-label" for="editUserUsername">Username</label>
+          <input type="text" id="editUserUsername" class="sfield-input" placeholder="Username">
+        </div>
+        <div class="sfield-group">
+          <label class="sfield-label" for="editUserEmail">Email Address</label>
+          <input type="email" id="editUserEmail" class="sfield-input" placeholder="user@example.com">
+        </div>
+        <div class="sfield-group">
+          <label class="sfield-label" for="editUserPhone">Phone Number</label>
+          <input type="tel" id="editUserPhone" class="sfield-input" placeholder="+234...">
+        </div>
+        <div class="modal-actions" style="margin-top:20px;">
+          <button type="button" class="btn-outline" onclick="closeModal('editUserModal')">Cancel</button>
+          <button type="submit" class="btn-primary" id="editUserSubmitBtn"><i class="ph ph-floppy-disk"></i> Save Changes</button>
+        </div>
+      </form>
     </div>
   </div>
 

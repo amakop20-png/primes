@@ -794,10 +794,13 @@ window.NuraAPI = {
 /* ======================================================================
    NURASMS ADMIN API CLIENT (Specification: NuraSMS Admin API v1)
    Base URL: /api/admin
+   Centralized Admin API layer strictly adhering to the API specification.
 ====================================================================== */
 
+const ADMIN_API_BASE = `${API_BASE_URL}/api/admin`;
+
 function getAdminAuthToken() {
-    return localStorage.getItem('primes_admin_token') || localStorage.getItem('primes_token') || null;
+    return localStorage.getItem('primes_admin_token') || null;
 }
 
 function setAdminAuthToken(token) {
@@ -806,52 +809,41 @@ function setAdminAuthToken(token) {
 
 function clearAdminAuthToken() {
     localStorage.removeItem('primes_admin_token');
+    localStorage.removeItem('primes_admin_session');
 }
 
-const unavailableAdminEndpoints = new Set();
-
-function clearUnavailableAdminEndpoints() {
-    unavailableAdminEndpoints.clear();
-}
-
-function isAdminEndpointUnavailable(endpoint) {
-    if (!endpoint) return false;
-    const clean = endpoint.startsWith('/api/admin') 
-        ? endpoint 
-        : `/api/admin${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
-    return unavailableAdminEndpoints.has(clean.split('?')[0]);
+function buildAdminUrl(endpoint) {
+    if (!endpoint) return ADMIN_API_BASE;
+    if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+        return endpoint;
+    }
+    const clean = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    if (clean.startsWith('/api/admin/')) {
+        return `${API_BASE_URL}${clean}`;
+    }
+    if (clean === '/api/admin') {
+        return `${API_BASE_URL}/api/admin`;
+    }
+    return `${ADMIN_API_BASE}${clean}`;
 }
 
 async function adminApiRequest(endpoint, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
-    const cleanEndpoint = endpoint.startsWith('/api/admin') 
-        ? endpoint 
-        : `/api/admin${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
-    const basePath = cleanEndpoint.split('?')[0];
-
-    // If endpoint is confirmed unavailable (404), suppress repeated network calls
-    if (unavailableAdminEndpoints.has(basePath)) {
-        const notFoundErr = new Error(`Admin endpoint ${basePath} is unavailable on server (404)`);
-        notFoundErr.status = 404;
-        notFoundErr.isNotFound = true;
-        notFoundErr.suppressed = true;
-        throw notFoundErr;
-    }
-
+    const url = buildAdminUrl(endpoint);
     const token = getAdminAuthToken();
     const headers = {
         'Accept': 'application/json'
     };
 
     let bodyPayload = options.body;
-    if (bodyPayload && typeof bodyPayload === 'object') {
+    if (bodyPayload && typeof bodyPayload === 'object' && !(bodyPayload instanceof FormData)) {
         bodyPayload = JSON.stringify(bodyPayload);
         headers['Content-Type'] = 'application/json';
     } else if (bodyPayload && typeof bodyPayload === 'string') {
-        headers['Content-Type'] = 'application/json';
+        if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
     }
 
-    const isAdminAuthRoute = endpoint.includes('/auth/login') || endpoint.includes('/auth/register');
+    const isAdminAuthRoute = url.endsWith('/auth/login') || url.endsWith('/auth/register');
     if (token && !isAdminAuthRoute) {
         headers['Authorization'] = `Bearer ${token}`;
     }
@@ -860,8 +852,10 @@ async function adminApiRequest(endpoint, options = {}) {
         Object.assign(headers, options.headers);
     }
 
-    const url = `${API_BASE_URL}${cleanEndpoint}`;
     const fetchOptions = { ...options, method, headers, body: bodyPayload };
+    delete fetchOptions.suppressAuthRedirect;
+
+    console.log(`[Admin API Request] ${method} ${url}`);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -872,18 +866,23 @@ async function adminApiRequest(endpoint, options = {}) {
         response = await fetch(url, fetchOptions);
     } catch (networkErr) {
         clearTimeout(timeoutId);
-        const err = new Error('Admin API Network error: ' + networkErr.message);
+        let errMsg = 'Network error. Unable to connect to Admin API. Please check your connection.';
+        if (networkErr.name === 'AbortError') {
+            errMsg = `Admin API timed out (> ${REQUEST_TIMEOUT_MS / 1000}s).`;
+        } else if (networkErr.message) {
+            errMsg = `Admin API Network Error: ${networkErr.message}`;
+        }
+        const err = new Error(errMsg);
         err.status = 0;
+        err.endpoint = url;
+        err.method = method;
         err.isNetworkError = true;
-        console.warn(`[Admin API] Network error on ${method} ${cleanEndpoint}:`, networkErr.message);
+        console.error(`[Admin API Error] 0 ${method} ${url}:`, errMsg);
         throw err;
     }
     clearTimeout(timeoutId);
 
-    // If server responds with 404, record the endpoint to stop repeated loops
-    if (response.status === 404) {
-        unavailableAdminEndpoints.add(basePath);
-    }
+    console.log(`[Admin API Response] ${response.status} ${method} ${url}`);
 
     let data = null;
     let responseText = '';
@@ -904,23 +903,59 @@ async function adminApiRequest(endpoint, options = {}) {
     }
 
     if (!response.ok) {
-        let errMsg = data?.message || data?.error || data?.msg;
-        if (!errMsg && responseText && !responseText.trim().startsWith('<')) {
-            errMsg = responseText.trim();
+        let errorMsg = data?.message || data?.error || data?.msg || data?.details;
+        if (!errorMsg && responseText) {
+            const cleanText = responseText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            if (cleanText && cleanText.length < 300) {
+                errorMsg = cleanText;
+            }
         }
-        if (!errMsg) {
-            errMsg = `Admin API Error ${response.status}: ${response.statusText || 'Request failed'}`;
+
+        if (!errorMsg) {
+            switch (response.status) {
+                case 400:
+                    errorMsg = 'Bad request. Please verify your submitted parameters.';
+                    break;
+                case 401:
+                    errorMsg = 'Admin authentication expired or invalid. Please sign in again.';
+                    break;
+                case 403:
+                    errorMsg = 'Access forbidden. Administrator privileges required.';
+                    break;
+                case 404:
+                    errorMsg = `Admin endpoint not found on server (404: ${method} ${url.replace(API_BASE_URL, '')}).`;
+                    break;
+                case 409:
+                    errorMsg = 'Conflict occurred. Please refresh and try again.';
+                    break;
+                case 422:
+                    errorMsg = 'Validation failed. Please verify the submitted data.';
+                    break;
+                case 429:
+                    errorMsg = 'Rate limit reached. Please wait a moment and try again.';
+                    break;
+                case 500:
+                default:
+                    errorMsg = response.status >= 500
+                        ? `Server error (${response.status}). Please try again later.`
+                        : `Admin API request failed with status ${response.status}`;
+                    break;
+            }
         }
-        const err = new Error(errMsg);
+
+        const err = new Error(errorMsg);
         err.status = response.status;
+        err.endpoint = url;
+        err.method = method;
         err.data = data;
         err.rawText = responseText;
-        if (response.status === 404) {
-            err.isNotFound = true;
-            console.info(`[Admin API] Route ${cleanEndpoint} returned 404 Not Found. Further requests to ${basePath} are suppressed.`);
-        } else {
-            console.warn(`[Admin API Error] ${response.status} ${method} ${cleanEndpoint}:`, errMsg);
+
+        if (response.status === 401 && !options.suppressAuthRedirect) {
+            clearAdminAuthToken();
+            window.dispatchEvent(new CustomEvent('admin_auth_expired', { detail: { message: errorMsg } }));
         }
+
+        console.error(`[Admin API Error] ${response.status} ${method} ${url}:`, errorMsg);
         throw err;
     }
 
@@ -938,14 +973,14 @@ async function adminRegisterApi({ name, email, password, role, setupKey } = {}) 
     return await adminApiRequest('/auth/register', {
         method: 'POST',
         headers,
-        body: JSON.stringify(body)
+        body
     });
 }
 
 async function adminLoginApi(email, password) {
     const res = await adminApiRequest('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password })
+        body: { email, password }
     });
     const token = res?.token || res?.accessToken || res?.data?.token;
     if (token) {
@@ -974,33 +1009,47 @@ async function adminGetDashboardStats() {
 // ── Admin User Management (PDF Page 2-3) ──
 async function adminGetUsers(params = {}) {
     const q = new URLSearchParams();
-    if (params.page) q.set('page', params.page);
-    if (params.limit) q.set('limit', params.limit);
+    if (params.page !== undefined && params.page !== null) q.set('page', params.page);
+    if (params.limit !== undefined && params.limit !== null) q.set('limit', params.limit);
     if (params.search) q.set('search', params.search);
-    if (params.isSuspended !== undefined) q.set('isSuspended', params.isSuspended);
+    if (params.isSuspended !== undefined && params.isSuspended !== null && params.isSuspended !== '') {
+        q.set('isSuspended', String(params.isSuspended));
+    }
     const qs = q.toString() ? `?${q.toString()}` : '';
     return await adminApiRequest(`/users${qs}`);
 }
 
 async function adminGetUser(id) {
+    if (!id) throw new Error('User ID is required');
     return await adminApiRequest(`/users/${encodeURIComponent(id)}`);
 }
 
-async function adminUpdateUser(id, body) {
+async function adminUpdateUser(id, body = {}) {
+    if (!id) throw new Error('User ID is required');
+    const payload = {};
+    if (body.firstName !== undefined) payload.firstName = body.firstName;
+    if (body.lastName !== undefined) payload.lastName = body.lastName;
+    if (body.email !== undefined) payload.email = body.email;
+    if (body.phoneNumber !== undefined) payload.phoneNumber = body.phoneNumber;
+    if (body.username !== undefined) payload.username = body.username;
+
     return await adminApiRequest(`/users/${encodeURIComponent(id)}`, {
         method: 'PATCH',
-        body: JSON.stringify(body)
+        body: payload
     });
 }
 
 async function adminSuspendUser(id, reason = '') {
+    if (!id) throw new Error('User ID is required');
+    const body = reason ? { reason } : {};
     return await adminApiRequest(`/users/${encodeURIComponent(id)}/suspend`, {
         method: 'POST',
-        body: JSON.stringify({ reason })
+        body
     });
 }
 
 async function adminUnsuspendUser(id) {
+    if (!id) throw new Error('User ID is required');
     return await adminApiRequest(`/users/${encodeURIComponent(id)}/unsuspend`, {
         method: 'POST'
     });
@@ -1009,38 +1058,49 @@ async function adminUnsuspendUser(id) {
 // ── Admin Wallets Management (PDF Page 3-4) ──
 async function adminGetWallets(params = {}) {
     const q = new URLSearchParams();
-    if (params.page) q.set('page', params.page);
-    if (params.limit) q.set('limit', params.limit);
-    if (params.isFrozen !== undefined) q.set('isFrozen', params.isFrozen);
+    if (params.page !== undefined && params.page !== null) q.set('page', params.page);
+    if (params.limit !== undefined && params.limit !== null) q.set('limit', params.limit);
+    if (params.isFrozen !== undefined && params.isFrozen !== null && params.isFrozen !== '') {
+        q.set('isFrozen', String(params.isFrozen));
+    }
     const qs = q.toString() ? `?${q.toString()}` : '';
     return await adminApiRequest(`/wallets${qs}`);
 }
 
 async function adminGetUserWallet(userId) {
+    if (!userId) throw new Error('User ID is required');
     return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}`);
 }
 
 async function adminCreditWallet(userId, amount, reason = 'Admin credit') {
+    if (!userId) throw new Error('User ID is required');
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) throw new Error('Valid credit amount is required');
     return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}/credit`, {
         method: 'POST',
-        body: JSON.stringify({ amount, reason })
+        body: { amount: numAmount, reason: reason || 'Admin wallet credit' }
     });
 }
 
 async function adminDebitWallet(userId, amount, reason = 'Admin debit') {
+    if (!userId) throw new Error('User ID is required');
+    const numAmount = Number(amount);
+    if (isNaN(numAmount) || numAmount <= 0) throw new Error('Valid debit amount is required');
     return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}/debit`, {
         method: 'POST',
-        body: JSON.stringify({ amount, reason })
+        body: { amount: numAmount, reason: reason || 'Admin wallet debit' }
     });
 }
 
 async function adminFreezeWallet(userId) {
+    if (!userId) throw new Error('User ID is required');
     return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}/freeze`, {
         method: 'POST'
     });
 }
 
 async function adminUnfreezeWallet(userId) {
+    if (!userId) throw new Error('User ID is required');
     return await adminApiRequest(`/wallets/${encodeURIComponent(userId)}/unfreeze`, {
         method: 'POST'
     });
@@ -1049,8 +1109,8 @@ async function adminUnfreezeWallet(userId) {
 // ── Admin Transactions (PDF Page 4-5) ──
 async function adminGetTransactions(params = {}) {
     const q = new URLSearchParams();
-    if (params.page) q.set('page', params.page);
-    if (params.limit) q.set('limit', params.limit);
+    if (params.page !== undefined && params.page !== null) q.set('page', params.page);
+    if (params.limit !== undefined && params.limit !== null) q.set('limit', params.limit);
     if (params.user) q.set('user', params.user);
     if (params.type) q.set('type', params.type);
     if (params.status) q.set('status', params.status);
@@ -1061,26 +1121,29 @@ async function adminGetTransactions(params = {}) {
 }
 
 async function adminGetTransaction(id) {
+    if (!id) throw new Error('Transaction ID is required');
     return await adminApiRequest(`/transactions/${encodeURIComponent(id)}`);
 }
 
 async function adminUpdateTransactionStatus(id, status) {
+    if (!id) throw new Error('Transaction ID is required');
     return await adminApiRequest(`/transactions/${encodeURIComponent(id)}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status })
+        body: { status }
     });
 }
 
 // ── Admin Virtual Accounts (PDF Page 5) ──
 async function adminGetVirtualAccounts(params = {}) {
     const q = new URLSearchParams();
-    if (params.page) q.set('page', params.page);
-    if (params.limit) q.set('limit', params.limit);
+    if (params.page !== undefined && params.page !== null) q.set('page', params.page);
+    if (params.limit !== undefined && params.limit !== null) q.set('limit', params.limit);
     const qs = q.toString() ? `?${q.toString()}` : '';
     return await adminApiRequest(`/virtual-accounts${qs}`);
 }
 
 async function adminGetUserVirtualAccount(userId) {
+    if (!userId) throw new Error('User ID is required');
     return await adminApiRequest(`/virtual-accounts/${encodeURIComponent(userId)}`);
 }
 
@@ -1120,7 +1183,6 @@ async function publishAnnouncementToApi(announcementPayload) {
         } catch (_) {}
     }
 
-    // Keep announcement history in localStorage
     try {
         const list = JSON.parse(localStorage.getItem('primes_announcements') || '[]');
         const idx = list.findIndex(a => a.id === announcementPayload.id);
@@ -1135,12 +1197,54 @@ async function publishAnnouncementToApi(announcementPayload) {
     return announcementPayload;
 }
 
+// ── Centralized Admin API Client (Section 33) ──
+const adminApi = {
+    BASE_URL: ADMIN_API_BASE,
+    request: adminApiRequest,
+    getToken: getAdminAuthToken,
+    setToken: setAdminAuthToken,
+    clearToken: clearAdminAuthToken,
+
+    // Authentication (PDF Page 1)
+    register: adminRegisterApi,
+    login: adminLoginApi,
+    me: adminGetProfileApi,
+    logout: adminLogoutApi,
+
+    // Dashboard (PDF Page 2)
+    getDashboardStats: adminGetDashboardStats,
+
+    // Users (PDF Page 2-3)
+    getUsers: adminGetUsers,
+    getUser: adminGetUser,
+    updateUser: adminUpdateUser,
+    suspendUser: adminSuspendUser,
+    unsuspendUser: adminUnsuspendUser,
+
+    // Wallets (PDF Page 3-4)
+    getWallets: adminGetWallets,
+    getWallet: adminGetUserWallet,
+    creditWallet: adminCreditWallet,
+    debitWallet: adminDebitWallet,
+    freezeWallet: adminFreezeWallet,
+    unfreezeWallet: adminUnfreezeWallet,
+
+    // Transactions (PDF Page 4-5)
+    getTransactions: adminGetTransactions,
+    getTransaction: adminGetTransaction,
+    updateTransactionStatus: adminUpdateTransactionStatus,
+
+    // Virtual Accounts (PDF Page 5)
+    getVirtualAccounts: adminGetVirtualAccounts,
+    getUserVirtualAccount: adminGetUserVirtualAccount
+};
+
 // Global exports
+window.ADMIN_API_BASE                 = ADMIN_API_BASE;
+window.adminApi                       = adminApi;
 window.getAdminAuthToken              = getAdminAuthToken;
 window.setAdminAuthToken              = setAdminAuthToken;
 window.clearAdminAuthToken            = clearAdminAuthToken;
-window.clearUnavailableAdminEndpoints = clearUnavailableAdminEndpoints;
-window.isAdminEndpointUnavailable     = isAdminEndpointUnavailable;
 window.adminApiRequest                = adminApiRequest;
 window.adminRegisterApi               = adminRegisterApi;
 window.adminLoginApi                  = adminLoginApi;

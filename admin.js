@@ -108,18 +108,6 @@ function statusBadge(status) {
    ADMIN AUTHENTICATION & ACCESS GATE
    (Dedicated standalone admin access — distinct from customer dashboard)
 ════════════════════════════════════ */
-function getAdminCreds() {
-  try {
-    const raw = localStorage.getItem(KEY_ADMIN_CREDS);
-    if (raw) return JSON.parse(raw);
-  } catch (_) {}
-  return { username: 'admin', password: 'admin123' };
-}
-
-function setAdminCreds(creds) {
-  localStorage.setItem(KEY_ADMIN_CREDS, JSON.stringify(creds));
-}
-
 function getAdminSession() {
   try {
     const raw = localStorage.getItem(KEY_ADMIN_SESSION);
@@ -133,78 +121,77 @@ function setAdminSession(sess) {
   else localStorage.setItem(KEY_ADMIN_SESSION, JSON.stringify(sess));
 }
 
-function isUserAdminRole() {
-  try {
-    const userSession = typeof getSession === 'function' ? getSession() : JSON.parse(localStorage.getItem('primes_session') || 'null');
-    if (typeof isAdmin === 'function') return isAdmin(userSession);
-    if (!userSession) return false;
-    const r = String(userSession.role || '').toLowerCase();
-    return r === 'admin' || r === 'superadmin' || userSession.isAdmin === true || userSession.is_admin === true;
-  } catch (_) {
-    return false;
-  }
-}
-
-function checkAdminAuth() {
-  const adminSess = getAdminSession();
-  const hasAdminRole = isUserAdminRole();
+function showAdminGate(errorMessage = null) {
   const gateOverlay = document.getElementById('adminGateOverlay');
-
-  if (adminSess && adminSess.loggedIn) {
-    if (gateOverlay) gateOverlay.classList.add('hidden');
-    const nameEl = document.getElementById('sidebarAdminName');
-    const roleEl = document.getElementById('sidebarAdminRole');
-    if (nameEl) nameEl.textContent = adminSess.username || 'Admin';
-    if (roleEl) roleEl.textContent = 'Super Admin';
-
-    // Hydrate live profile from Admin API GET /auth/me (PDF Page 1)
-    if (typeof adminGetProfileApi === 'function') {
-      adminGetProfileApi().then(res => {
-        const p = res?.admin || res?.user || res?.data || res;
-        if (p && (p.name || p.username || p.email)) {
-          if (nameEl) nameEl.textContent = p.name || p.username || p.email;
-          if (roleEl && p.role) roleEl.textContent = String(p.role).toLowerCase() === 'superadmin' ? 'Super Admin' : 'Admin';
-        }
-      }).catch(() => {});
-    }
-    return true;
-  }
-
-  if (hasAdminRole) {
-    const userSession = typeof getSession === 'function' ? getSession() : JSON.parse(localStorage.getItem('primes_session') || 'null');
-    const adminUser = userSession.name || userSession.username || userSession.email || 'Admin';
-    setAdminSession({ loggedIn: true, username: adminUser, at: new Date().toISOString() });
-    if (gateOverlay) gateOverlay.classList.add('hidden');
-    const nameEl = document.getElementById('sidebarAdminName');
-    const roleEl = document.getElementById('sidebarAdminRole');
-    if (nameEl) nameEl.textContent = adminUser;
-    if (roleEl) roleEl.textContent = String(userSession.role || '').toLowerCase() === 'superadmin' ? 'Super Admin' : 'Admin';
-
-    if (typeof adminGetProfileApi === 'function') {
-      adminGetProfileApi().then(res => {
-        const p = res?.admin || res?.user || res?.data || res;
-        if (p && (p.name || p.username || p.email)) {
-          if (nameEl) nameEl.textContent = p.name || p.username || p.email;
-        }
-      }).catch(() => {});
-    }
-    return true;
-  }
-
-  // Not authenticated: reveal dedicated admin gate overlay right on admin.html
-  // NEVER redirect to dashboard.html or login.html!
   if (gateOverlay) {
     gateOverlay.classList.remove('hidden');
     const userIn = document.getElementById('adminGateUser');
     const passIn = document.getElementById('adminGatePass');
-    const creds = getAdminCreds();
-    if (userIn && !userIn.value) userIn.value = creds.username || 'admin';
+    const errEl  = document.getElementById('adminGateError');
+    const errMsg = document.getElementById('adminGateErrorMsg');
+    if (errorMessage) {
+      if (errEl) errEl.style.display = 'flex';
+      if (errMsg) errMsg.textContent = errorMessage;
+    } else {
+      if (errEl) errEl.style.display = 'none';
+    }
     if (passIn) {
       passIn.value = '';
       setTimeout(() => passIn.focus(), 150);
     }
   }
-  return false;
+}
+
+function hideAdminGate() {
+  const gateOverlay = document.getElementById('adminGateOverlay');
+  if (gateOverlay) gateOverlay.classList.add('hidden');
+  const errEl = document.getElementById('adminGateError');
+  if (errEl) errEl.style.display = 'none';
+}
+
+async function checkAdminAuth() {
+  const token = typeof getAdminAuthToken === 'function' ? getAdminAuthToken() : localStorage.getItem('primes_admin_token');
+
+  if (!token) {
+    if (typeof clearAdminAuthToken === 'function') clearAdminAuthToken();
+    setAdminSession(null);
+    showAdminGate();
+    return false;
+  }
+
+  // Authoritative API session verification: GET /api/admin/auth/me (PDF Page 1)
+  try {
+    const res = await (typeof adminGetProfileApi === 'function' ? adminGetProfileApi() : adminApi.me());
+    const profile = res?.admin || res?.user || res?.data?.admin || res?.data?.user || res?.data || res;
+    if (profile && (profile.email || profile.username || profile.name || profile.id || profile._id)) {
+      const displayName = profile.name || profile.username || profile.email || 'Administrator';
+      const roleName = String(profile.role || 'admin').toLowerCase() === 'superadmin' ? 'Super Admin' : 'Admin';
+
+      setAdminSession({
+        loggedIn: true,
+        username: displayName,
+        email: profile.email || '',
+        role: roleName,
+        id: profile.id || profile._id || ''
+      });
+
+      const nameEl = document.getElementById('sidebarAdminName');
+      const roleEl = document.getElementById('sidebarAdminRole');
+      if (nameEl) nameEl.textContent = displayName;
+      if (roleEl) roleEl.textContent = roleName;
+
+      hideAdminGate();
+      return true;
+    } else {
+      throw new Error('Invalid administrator session response from server.');
+    }
+  } catch (err) {
+    console.warn('[Admin Auth] Session validation failed:', err.message);
+    if (typeof clearAdminAuthToken === 'function') clearAdminAuthToken();
+    setAdminSession(null);
+    showAdminGate(err.message || 'Administrator session expired or invalid. Please sign in again.');
+    return false;
+  }
 }
 
 async function handleAdminGateLogin(e) {
@@ -215,77 +202,51 @@ async function handleAdminGateLogin(e) {
   const errMsg = document.getElementById('adminGateErrorMsg');
   const btn    = document.getElementById('adminGateSubmitBtn');
 
-  const username = userIn ? userIn.value.trim() : '';
+  const email = userIn ? userIn.value.trim() : '';
   const password = passIn ? passIn.value : '';
 
-  if (!username || !password) {
+  if (!email || !password) {
     if (errEl) errEl.style.display = 'flex';
-    if (errMsg) errMsg.textContent = 'Please enter both username and password.';
+    if (errMsg) errMsg.textContent = 'Please enter both administrator email and password.';
     return;
   }
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<i class="ph ph-spinner spinning"></i> Authenticating...';
+    btn.innerHTML = '<i class="ph ph-spinner spinning"></i> Authenticating with API...';
   }
 
-  // 1. Attempt backend Admin API login (POST /api/admin/auth/login)
-  let apiSuccess = false;
-  let adminDisplayName = '';
-  if (typeof adminLoginApi === 'function') {
-    try {
-      const res = await adminLoginApi(username, password);
-      apiSuccess = true;
-      const u = res?.user || res?.data?.user || res?.data;
-      if (u) adminDisplayName = u.name || u.firstName || u.username || u.email;
-    } catch (_) {}
-  }
+  try {
+    // Official endpoint: POST /api/admin/auth/login (PDF Page 1)
+    const loginRes = await (typeof adminLoginApi === 'function' ? adminLoginApi(email, password) : adminApi.login(email, password));
+    const token = loginRes?.token || loginRes?.accessToken || loginRes?.data?.token || (typeof getAdminAuthToken === 'function' ? getAdminAuthToken() : null);
 
-  // 2. If dedicated admin endpoint was rejected, attempt user login with admin role
-  if (!apiSuccess && typeof loginUser === 'function') {
-    try {
-      const uRes = await loginUser(username, password);
-      const u = uRes?.user || uRes?.data?.user || uRes?.data;
-      const isAdm = (typeof isAdmin === 'function' && isAdmin(u)) ||
-                    String(u?.role || '').toLowerCase() === 'admin' ||
-                    String(u?.role || '').toLowerCase() === 'superadmin' ||
-                    u?.isAdmin === true || u?.is_admin === true;
-      if (isAdm) {
-        apiSuccess = true;
-        const uTok = uRes?.token || uRes?.accessToken || uRes?.data?.token;
-        if (uTok && typeof setAdminAuthToken === 'function') {
-          setAdminAuthToken(uTok);
-        }
-        adminDisplayName = u.name || [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username || u.email;
-      }
-    } catch (_) {}
-  }
+    if (!token) {
+      throw new Error('Authentication succeeded but no access token was returned by the API.');
+    }
 
-  // 3. Fallback to local admin credentials
-  const creds = getAdminCreds();
-  const localMatch = (username.toLowerCase() === creds.username.toLowerCase() && password === creds.password);
+    // Verify session and load profile via GET /api/admin/auth/me
+    const isSessionValid = await checkAdminAuth();
+    if (!isSessionValid) {
+      throw new Error('Could not verify administrator profile after login.');
+    }
 
-  if (apiSuccess || localMatch) {
     if (errEl) errEl.style.display = 'none';
-    const finalAdminName = adminDisplayName || username || creds.username;
-    setAdminSession({ loggedIn: true, username: finalAdminName, at: new Date().toISOString() });
-    logActivity('config', `Administrator ${finalAdminName} signed in to Admin Console`);
-    adminToast('Admin authenticated successfully', 'success');
+    adminToast('Administrator authenticated successfully', 'success');
 
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = '<i class="ph ph-sign-in"></i> Sign In to Admin Console';
     }
 
-    checkAdminAuth();
     await refreshAll();
-  } else {
+  } catch (err) {
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = '<i class="ph ph-sign-in"></i> Sign In to Admin Console';
     }
     if (errEl) errEl.style.display = 'flex';
-    if (errMsg) errMsg.textContent = 'Invalid administrator credentials. Access denied.';
+    if (errMsg) errMsg.textContent = err.message || 'Invalid administrator credentials. Access denied.';
     if (passIn) {
       passIn.value = '';
       passIn.focus();
@@ -311,18 +272,20 @@ function adminLogout() {
     'Log Out of Admin Console',
     'Are you sure you want to end your administrative session?',
     async () => {
-      if (typeof adminLogoutApi === 'function') {
-        try { await adminLogoutApi(); } catch (_) {}
+      try {
+        if (typeof adminLogoutApi === 'function') {
+          await adminLogoutApi();
+        } else if (typeof adminApi !== 'undefined' && adminApi.logout) {
+          await adminApi.logout();
+        }
+      } catch (err) {
+        console.warn('[Admin Logout] API notice:', err.message);
+      } finally {
+        if (typeof clearAdminAuthToken === 'function') clearAdminAuthToken();
+        setAdminSession(null);
+        showAdminGate();
+        adminToast('You have been logged out of the Admin Console.', 'info');
       }
-      setAdminSession(null);
-      const gateOverlay = document.getElementById('adminGateOverlay');
-      if (gateOverlay) gateOverlay.classList.remove('hidden');
-      const passIn = document.getElementById('adminGatePass');
-      if (passIn) {
-        passIn.value = '';
-        passIn.focus();
-      }
-      adminToast('You have been logged out of the Admin Console.', 'info');
     }
   );
 }
@@ -331,28 +294,20 @@ function updateAdminCredentials() {
   const userEl = document.getElementById('adminUsernameSetting');
   const passEl = document.getElementById('adminNewPasswordSetting');
   const username = userEl ? userEl.value.trim() : '';
-  const newPass  = passEl ? passEl.value.trim() : '';
-
-  const creds = getAdminCreds();
 
   if (username) {
-    creds.username = username;
+    const sess = getAdminSession() || {};
+    sess.username = username;
+    setAdminSession(sess);
+    const nameEl = document.getElementById('sidebarAdminName');
+    if (nameEl) nameEl.textContent = username;
+    logActivity('config', `Administrator display name updated to ${username}`);
+    adminToast('Administrator display name updated for this session.', 'success');
   }
-  if (newPass) {
-    if (newPass.length < 6) {
-      adminToast('New password must be at least 6 characters.', 'error');
-      return;
-    }
-    creds.password = newPass;
+  if (passEl && passEl.value.trim()) {
+    adminToast('Password changes are secured. Use the Register Administrator section to provision new credentials.', 'info');
+    passEl.value = '';
   }
-
-  setAdminCreds(creds);
-  logActivity('config', `Admin access credentials updated (Username: ${creds.username})`);
-  adminToast('Admin credentials updated successfully.', 'success');
-
-  if (passEl) passEl.value = '';
-  const nameEl = document.getElementById('sidebarAdminName');
-  if (nameEl) nameEl.textContent = creds.username;
 }
 
 /* ════════════════════════════════════
@@ -696,6 +651,7 @@ function renderUsersTable(users = allUsers) {
       <td style="text-align:right;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
           <button class="tbl-btn tbl-btn-view" onclick="viewUser('${escapeHTML(uid)}')"><i class="ph ph-eye"></i> View</button>
+          <button class="tbl-btn tbl-btn-view" onclick="openEditUserModal('${escapeHTML(uid)}')"><i class="ph ph-pencil-simple"></i> Edit</button>
           <button class="tbl-btn tbl-btn-fund" onclick="quickFundUser('${escapeHTML(u.email || uid)}')"><i class="ph ph-plus"></i> Fund</button>
           <button class="tbl-btn ${isSusp ? 'tbl-btn-fund' : 'tbl-btn-del'}" onclick="toggleUserSuspension('${escapeHTML(uid)}', ${isSusp})" title="${isSusp ? 'Unsuspend' : 'Suspend'}">
             <i class="ph ${isSusp ? 'ph-check-circle' : 'ph-prohibit'}"></i> ${isSusp ? 'Unsuspend' : 'Suspend'}
@@ -707,32 +663,140 @@ function renderUsersTable(users = allUsers) {
   }).join('');
 }
 
+let userSearchTimeout = null;
+let currentUsersPage = 1;
+let currentUsersLimit = 50;
+
+async function loadAdminUsers(params = {}) {
+  const tbody = document.getElementById('usersTbody');
+  if (tbody && !allUsers.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-cell"><i class="ph ph-spinner spinning"></i> Loading users from Admin API (GET /api/admin/users)...</td></tr>';
+  }
+
+  currentUsersPage = params.page !== undefined ? params.page : currentUsersPage;
+  currentUsersLimit = params.limit !== undefined ? params.limit : currentUsersLimit;
+
+  const queryParams = {
+    page: currentUsersPage,
+    limit: currentUsersLimit
+  };
+
+  const searchVal = params.search !== undefined ? params.search : (document.getElementById('userSearch')?.value || '').trim();
+  if (searchVal) queryParams.search = searchVal;
+
+  const statusVal = params.isSuspended !== undefined ? params.isSuspended : (document.getElementById('userStatusFilter')?.value || '').trim();
+  if (statusVal === 'suspended' || statusVal === 'true' || statusVal === true) {
+    queryParams.isSuspended = 'true';
+  } else if (statusVal === 'active' || statusVal === 'false' || statusVal === false) {
+    queryParams.isSuspended = 'false';
+  }
+
+  try {
+    const res = await (typeof adminGetUsers === 'function' ? adminGetUsers(queryParams) : adminApi.getUsers(queryParams));
+    const list = res?.users || res?.data?.users || res?.data || (Array.isArray(res) ? res : []);
+    allUsers = Array.isArray(list) ? list.map(u => ({
+      id: u.id || u._id || '',
+      _id: u._id || u.id || '',
+      firstName: u.firstName || '',
+      lastName: u.lastName || '',
+      username: u.username || '',
+      name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || u.username || 'User',
+      email: u.email || '',
+      phone: u.phoneNumber || u.phone || '—',
+      phoneNumber: u.phoneNumber || u.phone || '',
+      balance: String(u.balance || (u.wallet ? u.wallet.balance : 0) || 0),
+      role: u.role || 'user',
+      isSuspended: Boolean(u.isSuspended),
+      createdAt: u.createdAt || new Date().toISOString()
+    })) : [];
+
+    setText('navUsersBadge', allUsers.length);
+    renderUsersTable(allUsers);
+  } catch (err) {
+    console.error('[Admin] loadAdminUsers error:', err.message);
+    if (tbody && !allUsers.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-cell" style="color:var(--red);"><i class="ph ph-warning-circle"></i> Failed to load users: ${escapeHTML(err.message)}</td></tr>`;
+    }
+  }
+}
+
 function filterUsers() {
-  const q = (document.getElementById('userSearch')?.value || '').toLowerCase().trim();
-  const statusFilter = (document.getElementById('userStatusFilter')?.value || '').toLowerCase().trim();
-
-  const filtered = allUsers.filter(u => {
-    const matchQ = !q ||
-      (u.name || '').toLowerCase().includes(q) ||
-      (u.username || '').toLowerCase().includes(q) ||
-      (u.email || '').toLowerCase().includes(q) ||
-      (u.phone || u.phoneNumber || '').toLowerCase().includes(q) ||
-      String(u.id || u._id || '').toLowerCase().includes(q);
-
-    let matchStatus = true;
-    if (statusFilter === 'active') matchStatus = !u.isSuspended;
-    else if (statusFilter === 'suspended') matchStatus = Boolean(u.isSuspended);
-
-    return matchQ && matchStatus;
-  });
-
-  renderUsersTable(filtered);
+  clearTimeout(userSearchTimeout);
+  userSearchTimeout = setTimeout(() => {
+    const q = (document.getElementById('userSearch')?.value || '').trim();
+    const statusVal = (document.getElementById('userStatusFilter')?.value || '').trim();
+    loadAdminUsers({ page: 1, search: q, isSuspended: statusVal });
+  }, 350);
 }
 
 async function refreshUsersData() {
-  await loadAllData();
-  filterUsers();
-  adminToast('User list refreshed.', 'info');
+  await loadAdminUsers({ page: 1 });
+  adminToast('User list refreshed from API.', 'info');
+}
+
+function openEditUserModal(userId) {
+  const u = currentViewingUser || allUsers.find(x => String(x.id || x._id) === String(userId));
+  if (!u) {
+    adminToast('User record not found to edit.', 'error');
+    return;
+  }
+
+  const idIn = document.getElementById('editUserId');
+  const fnIn = document.getElementById('editUserFirstName');
+  const lnIn = document.getElementById('editUserLastName');
+  const unIn = document.getElementById('editUserUsername');
+  const emIn = document.getElementById('editUserEmail');
+  const phIn = document.getElementById('editUserPhone');
+
+  if (idIn) idIn.value = u.id || u._id || userId;
+  if (fnIn) fnIn.value = u.firstName || '';
+  if (lnIn) lnIn.value = u.lastName || '';
+  if (unIn) unIn.value = u.username || '';
+  if (emIn) emIn.value = u.email || '';
+  if (phIn) phIn.value = u.phoneNumber || u.phone || '';
+
+  showModal('editUserModal');
+}
+
+async function handleUpdateUserSubmit(e) {
+  if (e) e.preventDefault();
+  const id = document.getElementById('editUserId')?.value;
+  if (!id) return;
+
+  const btn = document.getElementById('editUserSubmitBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-spinner spinning"></i> Saving...';
+  }
+
+  const payload = {
+    firstName: document.getElementById('editUserFirstName')?.value?.trim() || '',
+    lastName: document.getElementById('editUserLastName')?.value?.trim() || '',
+    username: document.getElementById('editUserUsername')?.value?.trim() || '',
+    email: document.getElementById('editUserEmail')?.value?.trim() || '',
+    phoneNumber: document.getElementById('editUserPhone')?.value?.trim() || ''
+  };
+
+  try {
+    // Official endpoint: PATCH /api/admin/users/:id (PDF Page 2)
+    await (typeof adminUpdateUser === 'function' ? adminUpdateUser(id, payload) : adminApi.updateUser(id, payload));
+    adminToast('User profile updated successfully!', 'success');
+    logActivity('config', `Updated profile for user ${id} (${payload.email || payload.username})`);
+    closeModal('editUserModal');
+    
+    // Refresh user from API & update visible UI
+    await loadAdminUsers();
+    if (document.getElementById('userModal')?.classList.contains('show')) {
+      await viewUser(id);
+    }
+  } catch (err) {
+    adminToast(err.message || 'Failed to update user profile.', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="ph ph-floppy-disk"></i> Save Changes';
+    }
+  }
 }
 
 async function viewUser(idOrEmail) {
@@ -741,7 +805,7 @@ async function viewUser(idOrEmail) {
 
   const body = document.getElementById('userModalBody');
   if (body) {
-    body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);grid-column:1/-1;"><i class="ph ph-spinner spinning"></i> Fetching live user record from Admin API...</div>';
+    body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);grid-column:1/-1;"><i class="ph ph-spinner spinning"></i> Fetching live user record from Admin API (GET /api/admin/users/:id)...</div>';
   }
   showModal('userModal');
 
@@ -750,27 +814,26 @@ async function viewUser(idOrEmail) {
   let liveVA = null;
 
   // Direct Admin API endpoint calls (PDF Pages 2, 3, 5)
-  if (typeof adminGetUser === 'function' && userId && userId !== '—') {
+  if (userId && userId !== '—') {
     try {
-      const res = await adminGetUser(userId);
-      if (res) liveUser = res.user || res.data || res;
+      const [uRes, wRes, vaRes] = await Promise.allSettled([
+        typeof adminGetUser === 'function' ? adminGetUser(userId) : adminApi.getUser(userId),
+        typeof adminGetUserWallet === 'function' ? adminGetUserWallet(userId) : adminApi.getWallet(userId),
+        typeof adminGetUserVirtualAccount === 'function' ? adminGetUserVirtualAccount(userId) : adminApi.getUserVirtualAccount(userId)
+      ]);
+
+      if (uRes.status === 'fulfilled' && uRes.value) {
+        liveUser = uRes.value.user || uRes.value.data?.user || uRes.value.data || uRes.value;
+      }
+      if (wRes.status === 'fulfilled' && wRes.value) {
+        liveWallet = wRes.value.wallet || wRes.value.data?.wallet || wRes.value.data || wRes.value;
+      }
+      if (vaRes.status === 'fulfilled' && vaRes.value) {
+        liveVA = vaRes.value.virtualAccount || vaRes.value.data?.virtualAccount || vaRes.value.data || vaRes.value;
+      }
     } catch (err) {
-      console.warn('[Admin] adminGetUser notice:', err.message);
+      console.warn('[Admin] viewUser fetch notice:', err.message);
     }
-  }
-
-  if (typeof adminGetUserWallet === 'function' && userId && userId !== '—') {
-    try {
-      const wRes = await adminGetUserWallet(userId);
-      if (wRes) liveWallet = wRes.wallet || wRes.data || wRes;
-    } catch (_) {}
-  }
-
-  if (typeof adminGetUserVirtualAccount === 'function' && userId && userId !== '—') {
-    try {
-      const vaRes = await adminGetUserVirtualAccount(userId);
-      if (vaRes) liveVA = vaRes.virtualAccount || vaRes.data || vaRes;
-    } catch (_) {}
   }
 
   if (!liveUser) {
@@ -836,6 +899,9 @@ async function viewUser(idOrEmail) {
       <div class="modal-field full-width" style="margin-top:10px;padding-top:14px;border-top:1px solid var(--border);">
         <div class="modal-field-label" style="margin-bottom:8px;">Administrative Actions</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="tbl-btn tbl-btn-view" onclick="openEditUserModal('${escapeHTML(uid)}')">
+            <i class="ph ph-pencil-simple"></i> Edit Profile
+          </button>
           <button class="tbl-btn ${isSusp ? 'tbl-btn-fund' : 'tbl-btn-del'}" onclick="toggleUserSuspension('${escapeHTML(uid)}', ${isSusp})">
             <i class="ph ${isSusp ? 'ph-check-circle' : 'ph-prohibit'}"></i> ${isSusp ? 'Unsuspend User' : 'Suspend User'}
           </button>
@@ -855,18 +921,16 @@ async function toggleUserSuspension(userId, currentlySuspended) {
   if (currentlySuspended) {
     openConfirmModal(
       'Unsuspend User Account',
-      'Are you sure you want to lift the suspension for this user account?',
+      'Are you sure you want to lift the suspension for this user account? (POST /api/admin/users/:id/unsuspend)',
       async () => {
         try {
-          if (typeof adminUnsuspendUser === 'function') {
-            await adminUnsuspendUser(userId);
-          }
+          // Official endpoint: POST /api/admin/users/:id/unsuspend (PDF Page 3)
+          await (typeof adminUnsuspendUser === 'function' ? adminUnsuspendUser(userId) : adminApi.unsuspendUser(userId));
           adminToast('User account unsuspended successfully.', 'success');
           logActivity('config', `Unsuspended user account ${userId}`);
-          await loadAllData();
-          filterUsers();
+          await loadAdminUsers();
           if (document.getElementById('userModal')?.classList.contains('show')) {
-            viewUser(userId);
+            await viewUser(userId);
           }
         } catch (err) {
           adminToast(err.message || 'Failed to unsuspend user.', 'error');
@@ -876,18 +940,16 @@ async function toggleUserSuspension(userId, currentlySuspended) {
   } else {
     openConfirmModal(
       'Suspend User Account',
-      'Are you sure you want to suspend this user account? The user will be blocked from purchasing numbers or using platform services.',
+      'Are you sure you want to suspend this user account? The user will be blocked from logging into the platform. (POST /api/admin/users/:id/suspend)',
       async () => {
         try {
-          if (typeof adminSuspendUser === 'function') {
-            await adminSuspendUser(userId, 'Administrative suspension via Console');
-          }
+          // Official endpoint: POST /api/admin/users/:id/suspend (PDF Page 3)
+          await (typeof adminSuspendUser === 'function' ? adminSuspendUser(userId, 'Administrative suspension via Console') : adminApi.suspendUser(userId, 'Administrative suspension via Console'));
           adminToast('User account suspended.', 'warning');
           logActivity('config', `Suspended user account ${userId}`);
-          await loadAllData();
-          filterUsers();
+          await loadAdminUsers();
           if (document.getElementById('userModal')?.classList.contains('show')) {
-            viewUser(userId);
+            await viewUser(userId);
           }
         } catch (err) {
           adminToast(err.message || 'Failed to suspend user.', 'error');
@@ -908,52 +970,51 @@ function quickFundUser(email) {
 /* ════════════════════════════════════
    WALLETS & VIRTUAL ACCOUNTS (Admin API PDF Pages 3-5)
 ════════════════════════════════════ */
-async function loadAdminWallets() {
+async function loadAdminWallets(params = {}) {
   const tbody = document.getElementById('walletsTbody');
-  if (tbody && !allWallets.length) tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Syncing wallets from Admin API...</td></tr>';
+  if (tbody && !allWallets.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-cell"><i class="ph ph-spinner spinning"></i> Syncing wallets from Admin API (GET /api/admin/wallets)...</td></tr>';
+  }
+
+  const filter = params.isFrozen !== undefined ? params.isFrozen : (document.getElementById('walletFrozenFilter')?.value || '').toLowerCase().trim();
+  const queryParams = { page: 1, limit: 100 };
+  if (filter === 'active' || filter === 'false' || filter === false) {
+    queryParams.isFrozen = 'false';
+  } else if (filter === 'frozen' || filter === 'true' || filter === true) {
+    queryParams.isFrozen = 'true';
+  }
 
   try {
-    if (typeof adminGetWallets === 'function') {
-      try {
-        const wRes = await adminGetWallets({ limit: 100 });
-        const wList = wRes?.wallets || wRes?.data || (Array.isArray(wRes) ? wRes : []);
-        if (Array.isArray(wList)) {
-          allWallets = wList;
-          setText('navWalletsBadge', allWallets.length);
-        }
-      } catch (wErr) {
-        if (!wErr?.suppressed) console.warn('[Admin] Live wallets notice:', wErr.message);
+    const [wRes, vaRes] = await Promise.allSettled([
+      typeof adminGetWallets === 'function' ? adminGetWallets(queryParams) : adminApi.getWallets(queryParams),
+      typeof adminGetVirtualAccounts === 'function' ? adminGetVirtualAccounts({ limit: 100 }) : adminApi.getVirtualAccounts({ limit: 100 })
+    ]);
+
+    if (wRes.status === 'fulfilled' && wRes.value) {
+      const wList = wRes.value.wallets || wRes.value.data?.wallets || wRes.value.data || (Array.isArray(wRes.value) ? wRes.value : []);
+      if (Array.isArray(wList)) {
+        allWallets = wList;
+        setText('navWalletsBadge', allWallets.length);
       }
     }
-    if (typeof adminGetVirtualAccounts === 'function') {
-      try {
-        const vaRes = await adminGetVirtualAccounts({ limit: 100 });
-        const vaList = vaRes?.virtualAccounts || vaRes?.data || (Array.isArray(vaRes) ? vaRes : []);
-        if (Array.isArray(vaList)) {
-          allVirtualAccounts = vaList;
-        }
-      } catch (vaErr) {
-        if (!vaErr?.suppressed) console.warn('[Admin] Live virtual accounts notice:', vaErr.message);
+    if (vaRes.status === 'fulfilled' && vaRes.value) {
+      const vaList = vaRes.value.virtualAccounts || vaRes.value.data?.virtualAccounts || vaRes.value.data || (Array.isArray(vaRes.value) ? vaRes.value : []);
+      if (Array.isArray(vaList)) {
+        allVirtualAccounts = vaList;
       }
     }
-    filterAdminWallets();
+    renderWalletsTable(allWallets);
   } catch (err) {
+    console.error('[Admin] loadAdminWallets error:', err.message);
     if (tbody && !allWallets.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No wallets recorded yet.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-cell" style="color:var(--red);"><i class="ph ph-warning-circle"></i> Failed to sync wallets: ${escapeHTML(err.message)}</td></tr>`;
     }
-    filterAdminWallets();
   }
 }
 
 function filterAdminWallets() {
   const filter = (document.getElementById('walletFrozenFilter')?.value || '').toLowerCase().trim();
-  let list = allWallets;
-  if (filter === 'active') {
-    list = allWallets.filter(w => !w.isFrozen);
-  } else if (filter === 'frozen') {
-    list = allWallets.filter(w => Boolean(w.isFrozen));
-  }
-  renderWalletsTable(list);
+  loadAdminWallets({ isFrozen: filter });
 }
 
 function renderWalletsTable(wallets = allWallets) {
@@ -1175,31 +1236,39 @@ async function checkLiveOrderStatus(orderId) {
    BACKEND TRANSACTIONS AUDITING (Admin API PDF Page 4-5)
    Directly communicates with real backend /api/admin/transactions
 ════════════════════════════════════ */
-async function loadBackendTransactions() {
+async function loadBackendTransactions(params = {}) {
   const tbody = document.getElementById('transactionsTbody');
-  if (tbody && !allTransactions.length) tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">Syncing transactions from backend...</td></tr>';
+  if (tbody && !allTransactions.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-cell"><i class="ph ph-spinner spinning"></i> Syncing transactions from Admin API (GET /api/admin/transactions)...</td></tr>';
+  }
+
+  const typeFilter = params.type !== undefined ? params.type : (document.getElementById('txTypeFilter')?.value || '').toLowerCase().trim();
+  const statusFilter = params.status !== undefined ? params.status : (document.getElementById('txStatusFilter')?.value || '').toLowerCase().trim();
+
+  const queryParams = {
+    page: params.page || 1,
+    limit: params.limit || 50
+  };
+  if (typeFilter) queryParams.type = typeFilter;
+  if (statusFilter) queryParams.status = statusFilter;
+  if (params.user) queryParams.user = params.user;
+  if (params.from) queryParams.from = params.from;
+  if (params.to) queryParams.to = params.to;
 
   try {
     let txList = [];
-    // Only documented Admin API GET /transactions (PDF page 4-5)
-    if (typeof adminGetTransactions === 'function') {
-      try {
-        const res = await adminGetTransactions({ limit: 50 });
-        if (res && (res.transactions || res.data || Array.isArray(res))) {
-          txList = res.transactions || res.data || (Array.isArray(res) ? res : []);
-        }
-      } catch (tErr) {
-        if (!tErr?.suppressed) console.warn('[Admin] adminGetTransactions notice:', tErr.message);
-      }
+    const res = await (typeof adminGetTransactions === 'function' ? adminGetTransactions(queryParams) : adminApi.getTransactions(queryParams));
+    if (res) {
+      txList = res.transactions || res.data?.transactions || res.data || (Array.isArray(res) ? res : []);
     }
 
     allTransactions = Array.isArray(txList) ? txList : [];
     setText('navTxBadge', allTransactions.length);
-
-    filterBackendTransactions();
+    renderTransactionsTable(allTransactions);
   } catch (err) {
+    console.error('[Admin] loadBackendTransactions error:', err.message);
     if (tbody && !allTransactions.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">No transactions found.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="7" class="empty-cell" style="color:var(--red);"><i class="ph ph-warning-circle"></i> Failed to sync transactions: ${escapeHTML(err.message)}</td></tr>`;
     }
   }
 }
@@ -1207,22 +1276,7 @@ async function loadBackendTransactions() {
 function filterBackendTransactions() {
   const typeFilter = (document.getElementById('txTypeFilter')?.value || '').toLowerCase().trim();
   const statusFilter = (document.getElementById('txStatusFilter')?.value || '').toLowerCase().trim();
-
-  const filtered = allTransactions.filter(t => {
-    let matchType = true;
-    if (typeFilter) {
-      matchType = String(t.type || '').toLowerCase() === typeFilter;
-    }
-
-    let matchStatus = true;
-    if (statusFilter) {
-      matchStatus = String(t.status || '').toLowerCase() === statusFilter;
-    }
-
-    return matchType && matchStatus;
-  });
-
-  renderTransactionsTable(filtered);
+  loadBackendTransactions({ type: typeFilter, status: statusFilter });
 }
 
 function renderTransactionsTable(transactions = allTransactions) {
@@ -1270,15 +1324,20 @@ async function viewTransactionDetails(id) {
   }
   showModal('txModal');
 
-  let tx = allTransactions.find(t => String(t._id || t.id || t.reference) === String(id));
-
-  if (typeof adminGetTransaction === 'function' && id) {
+  let tx = null;
+  if (id) {
     try {
-      const res = await adminGetTransaction(id);
+      const res = await (typeof adminGetTransaction === 'function' ? adminGetTransaction(id) : adminApi.getTransaction(id));
       if (res) {
-        tx = res.transaction || res.data || res;
+        tx = res.transaction || res.data?.transaction || res.data || res;
       }
-    } catch (_) {}
+    } catch (err) {
+      console.warn('[Admin] adminGetTransaction notice:', err.message);
+    }
+  }
+
+  if (!tx) {
+    tx = allTransactions.find(t => String(t._id || t.id || t.reference) === String(id));
   }
 
   if (!tx) {
@@ -1444,7 +1503,7 @@ function loadSettingsForm() {
   }
 
   const userIn = document.getElementById('adminUsernameSetting');
-  if (userIn) userIn.value = getAdminCreds().username || 'admin';
+  if (userIn) userIn.value = getAdminSession()?.username || 'admin';
 }
 
 function savePlatformConfig() {
@@ -1509,6 +1568,8 @@ async function fundUser() {
     const rIn = document.getElementById('fundReason');
     if (rIn) rIn.value = '';
 
+    await loadAdminWallets();
+    await loadBackendTransactions();
     await loadAllData();
     renderOverview();
     renderUsersTable(allUsers);
@@ -2119,8 +2180,13 @@ document.addEventListener('keydown', e => {
   }
 });
 
+window.addEventListener('admin_auth_expired', () => {
+  setAdminSession(null);
+  showAdminGate('Your administrator session has expired or is invalid. Please sign in again.');
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
-  const isAuth = checkAdminAuth();
+  const isAuth = await checkAdminAuth();
   if (!isAuth) return;
 
   await refreshAll();
