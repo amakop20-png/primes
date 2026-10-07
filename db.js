@@ -8,7 +8,12 @@ let pool = null;
 let dbType = 'none';
 
 // Attempt MongoDB initialization if URI is available
-const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+const mongoUri = process.env.MONGODB_URI || 
+                 process.env.MONGO_URI || 
+                 process.env.MONGO_URL || 
+                 process.env.MONGODB_URL || 
+                 (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('mongodb') ? process.env.DATABASE_URL : null);
+
 if (mongoUri) {
   try {
     mongoose = require('mongoose');
@@ -26,7 +31,7 @@ if (mongoUri) {
 }
 
 // Attempt PostgreSQL initialization if DATABASE_URL is available
-const pgUri = process.env.DATABASE_URL;
+const pgUri = (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith('mongodb')) ? process.env.DATABASE_URL : (process.env.POSTGRES_URL || process.env.PG_URI);
 if (!mongoUri && pgUri) {
   try {
     const { Pool } = require('pg');
@@ -100,25 +105,20 @@ async function findUserByEmailOrUsername(identifier) {
   
   if (dbType === 'mongo' && mongoose) {
     const User = mongoose.models.User || mongoose.model('User', new mongoose.Schema({
-      email: { type: String, required: true, unique: true },
-      username: { type: String, required: true, unique: true },
-      phoneNumber: { type: String, unique: true, sparse: true },
-      firstName: String,
-      lastName: String,
-      password: { type: String, required: true },
-      role: { type: String, default: 'user' },
-      isSuspended: { type: Boolean, default: false },
-      balance: { type: Number, default: 0 },
-      createdAt: { type: Date, default: Date.now },
-      updatedAt: { type: Date, default: Date.now }
-    }, { timestamps: true }));
+      email: { type: String },
+      username: { type: String },
+      password: { type: String },
+      role: { type: String, default: 'user' }
+    }, { strict: false, timestamps: true }));
 
-    return await User.findOne({
+    const user = await User.findOne({
       $or: [
         { email: cleanId },
         { username: cleanId }
       ]
-    });
+    }).lean();
+
+    return user;
   }
 
   if (pool) {
