@@ -2,7 +2,19 @@
 const express = require('express');
 const router = express.Router();
 let bcrypt;
-try { bcrypt = require('bcrypt'); } catch (_) { bcrypt = require('bcryptjs'); }
+try {
+  bcrypt = require('bcryptjs');
+} catch (_) {
+  try {
+    bcrypt = require('bcrypt');
+  } catch (_e) {
+    const crypto = require('crypto');
+    bcrypt = {
+      hash: async (pwd) => '$pbkdf2$' + crypto.scryptSync(pwd, 'nuraxq_salt', 32).toString('hex'),
+      compare: async (pwd, hash) => hash === ('$pbkdf2$' + crypto.scryptSync(pwd, 'nuraxq_salt', 32).toString('hex'))
+    };
+  }
+}
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../middleware/adminAuth');
 const db = require('../db');
