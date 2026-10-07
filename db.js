@@ -1,0 +1,170 @@
+// db.js - Database connection and user repository abstraction
+require('dotenv').config();
+let bcrypt;
+try { bcrypt = require('bcrypt'); } catch (_) { bcrypt = require('bcryptjs'); }
+
+let mongoose = null;
+let pool = null;
+let dbType = 'none';
+
+// Attempt MongoDB initialization if URI is available
+const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+if (mongoUri) {
+  try {
+    mongoose = require('mongoose');
+    mongoose.connect(mongoUri)
+      .then(() => {
+        console.log('✅ Connected to MongoDB database.');
+        dbType = 'mongo';
+      })
+      .catch(err => {
+        console.error('⚠️ MongoDB connection error:', err.message);
+      });
+  } catch (err) {
+    console.warn('⚠️ mongoose module not available:', err.message);
+  }
+}
+
+// Attempt PostgreSQL initialization if DATABASE_URL is available
+const pgUri = process.env.DATABASE_URL;
+if (!mongoUri && pgUri) {
+  try {
+    const { Pool } = require('pg');
+    pool = new Pool({
+      connectionString: pgUri,
+      ssl: pgUri.includes('localhost') ? false : { rejectUnauthorized: false }
+    });
+    pool.connect((err, client, release) => {
+      if (err) {
+        console.error('⚠️ PostgreSQL connection error:', err.message);
+      } else {
+        console.log('✅ Connected to PostgreSQL database.');
+        dbType = 'pg';
+        initPgTables();
+        release();
+      }
+    });
+  } catch (err) {
+    console.warn('⚠️ pg module not available:', err.message);
+  }
+}
+
+// PostgreSQL table initialization
+async function initPgTables() {
+  if (!pool) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE NOT NULL,
+        first_name TEXT,
+        last_name TEXT,
+        phone TEXT UNIQUE,
+        password_hash TEXT NOT NULL,
+        balance NUMERIC DEFAULT 0,
+        role TEXT DEFAULT 'user',
+        is_suspended BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS login_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        email TEXT NOT NULL,
+        ip_address TEXT,
+        user_agent TEXT,
+        status TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS transactions (
+        id SERIAL PRIMARY KEY,
+        reference TEXT UNIQUE NOT NULL,
+        user_id INTEGER,
+        user_email TEXT,
+        amount NUMERIC NOT NULL,
+        type TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+  } catch (err) {
+    console.error('Error creating PostgreSQL tables:', err.message);
+  }
+}
+
+// User repository functions
+async function findUserByEmailOrUsername(identifier) {
+  const cleanId = String(identifier || '').trim().toLowerCase();
+  
+  if (dbType === 'mongo' && mongoose) {
+    const User = mongoose.models.User || mongoose.model('User', new mongoose.Schema({
+      email: { type: String, required: true, unique: true },
+      username: { type: String, required: true, unique: true },
+      phoneNumber: { type: String, unique: true, sparse: true },
+      firstName: String,
+      lastName: String,
+      password: { type: String, required: true },
+      role: { type: String, default: 'user' },
+      isSuspended: { type: Boolean, default: false },
+      balance: { type: Number, default: 0 },
+      createdAt: { type: Date, default: Date.now },
+      updatedAt: { type: Date, default: Date.now }
+    }, { timestamps: true }));
+
+    return await User.findOne({
+      $or: [
+        { email: cleanId },
+        { username: cleanId }
+      ]
+    });
+  }
+
+  if (pool) {
+    const res = await pool.query(
+      `SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $1 LIMIT 1`,
+      [cleanId]
+    );
+    return res.rows[0] || null;
+  }
+
+  return null;
+}
+
+async function findUserById(id) {
+  if (dbType === 'mongo' && mongoose) {
+    const User = mongoose.models.User;
+    if (User) return await User.findById(id).select('-password');
+  }
+
+  if (pool) {
+    const res = await pool.query(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [id]);
+    if (res.rows[0]) {
+      const { password_hash, ...safe } = res.rows[0];
+      return safe;
+    }
+  }
+
+  return null;
+}
+
+async function recordLoginLog({ userId, email, ipAddress, userAgent, status }) {
+  if (pool) {
+    try {
+      await pool.query(
+        `INSERT INTO login_logs (user_id, email, ip_address, user_agent, status) VALUES ($1, $2, $3, $4, $5)`,
+        [userId || null, email, ipAddress, userAgent, status]
+      );
+    } catch (_) {}
+  }
+}
+
+module.exports = {
+  dbType,
+  findUserByEmailOrUsername,
+  findUserById,
+  recordLoginLog,
+  getPool: () => pool,
+  getMongoose: () => mongoose
+};
