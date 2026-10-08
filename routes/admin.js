@@ -443,6 +443,54 @@ router.post('/wallets/:userId/debit', adminAuth, async (req, res) => {
   }
 });
 
+// GET /api/admin/wallets/:userId
+router.get('/wallets/:userId', adminAuth, async (req, res) => {
+  try {
+    const pool = db.getPool();
+    if (pool) {
+      const rows = (await pool.query(
+        `SELECT id AS user_id, email, username, balance, is_suspended AS is_frozen FROM users WHERE id = $1 LIMIT 1`,
+        [req.params.userId]
+      )).rows;
+      if (rows.length) {
+        return res.status(200).json({ success: true, data: rows[0], wallet: rows[0] });
+      }
+    }
+    const user = await db.findUserById(req.params.userId);
+    if (!user) return res.status(404).json({ success: false, error: 'Wallet not found' });
+    const wallet = { user_id: user.id || user._id, email: user.email, username: user.username, balance: user.balance || 0, is_frozen: Boolean(user.is_suspended || user.isSuspended) };
+    return res.status(200).json({ success: true, data: wallet, wallet });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to retrieve wallet' });
+  }
+});
+
+// POST /api/admin/wallets/:userId/freeze
+router.post('/wallets/:userId/freeze', adminAuth, async (req, res) => {
+  try {
+    const pool = db.getPool();
+    if (pool) {
+      await pool.query(`UPDATE users SET is_suspended = TRUE, updated_at = NOW() WHERE id = $1`, [req.params.userId]);
+    }
+    return res.status(200).json({ success: true, message: 'Wallet frozen successfully' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to freeze wallet' });
+  }
+});
+
+// POST /api/admin/wallets/:userId/unfreeze
+router.post('/wallets/:userId/unfreeze', adminAuth, async (req, res) => {
+  try {
+    const pool = db.getPool();
+    if (pool) {
+      await pool.query(`UPDATE users SET is_suspended = FALSE, updated_at = NOW() WHERE id = $1`, [req.params.userId]);
+    }
+    return res.status(200).json({ success: true, message: 'Wallet unfrozen successfully' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to unfreeze wallet' });
+  }
+});
+
 /* ======================================================================
    TRANSACTIONS (Base: /api/admin/transactions)
 ====================================================================== */
@@ -474,4 +522,86 @@ router.get('/transactions', adminAuth, async (req, res) => {
   }
 });
 
+// GET /api/admin/transactions/:id
+router.get('/transactions/:id', adminAuth, async (req, res) => {
+  try {
+    const pool = db.getPool();
+    if (pool) {
+      const rows = (await pool.query(`SELECT * FROM transactions WHERE id = $1 OR reference = $1 LIMIT 1`, [req.params.id])).rows;
+      if (rows.length) {
+        return res.status(200).json({ success: true, data: rows[0], transaction: rows[0] });
+      }
+    }
+    return res.status(404).json({ success: false, error: 'Transaction not found' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to retrieve transaction' });
+  }
+});
+
+// PATCH /api/admin/transactions/:id/status
+router.patch('/transactions/:id/status', adminAuth, async (req, res) => {
+  const { status } = req.body;
+  if (!status) {
+    return res.status(400).json({ success: false, error: 'Status is required' });
+  }
+  try {
+    const pool = db.getPool();
+    if (pool) {
+      const result = await pool.query(
+        `UPDATE transactions SET status = $1 WHERE id = $2 OR reference = $2 RETURNING *`,
+        [status.toLowerCase(), req.params.id]
+      );
+      if (result.rows.length) {
+        return res.status(200).json({ success: true, message: 'Transaction status updated', data: result.rows[0], transaction: result.rows[0] });
+      }
+    }
+    return res.status(404).json({ success: false, error: 'Transaction not found' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to update transaction status' });
+  }
+});
+
+/* ======================================================================
+   VIRTUAL ACCOUNTS (Base: /api/admin/virtual-accounts)
+====================================================================== */
+
+// GET /api/admin/virtual-accounts
+router.get('/virtual-accounts', adminAuth, async (req, res) => {
+  const page = parseInt(req.query.page || 1, 10);
+  const limit = parseInt(req.query.limit || 20, 10);
+  try {
+    const pool = db.getPool();
+    if (pool) {
+      const rows = (await pool.query(
+        `SELECT va.*, u.email, u.username FROM virtual_accounts va LEFT JOIN users u ON va.user_id = u.id ORDER BY va.created_at DESC LIMIT $1 OFFSET $2`,
+        [limit, (page - 1) * limit]
+      )).rows;
+      return res.status(200).json({ success: true, data: rows, virtualAccounts: rows });
+    }
+    return res.status(200).json({ success: true, data: [], virtualAccounts: [] });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to retrieve virtual accounts' });
+  }
+});
+
+// GET /api/admin/virtual-accounts/:userId
+router.get('/virtual-accounts/:userId', adminAuth, async (req, res) => {
+  try {
+    const pool = db.getPool();
+    if (pool) {
+      const rows = (await pool.query(
+        `SELECT va.*, u.email, u.username FROM virtual_accounts va LEFT JOIN users u ON va.user_id = u.id WHERE va.user_id = $1 LIMIT 1`,
+        [req.params.userId]
+      )).rows;
+      if (rows.length) {
+        return res.status(200).json({ success: true, data: rows[0], virtualAccount: rows[0] });
+      }
+    }
+    return res.status(404).json({ success: false, error: 'Virtual account not found' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to retrieve virtual account' });
+  }
+});
+
 module.exports = router;
+

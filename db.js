@@ -105,6 +105,14 @@ async function initPgTables() {
         reason TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS virtual_accounts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        account_number TEXT,
+        bank_name TEXT,
+        account_name TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
   } catch (err) {
     console.error('Error creating PostgreSQL tables:', err.message);
@@ -173,7 +181,7 @@ async function recordLoginLog({ userId, email, ipAddress, userAgent, status }) {
 }
 
 module.exports = {
-  dbType,
+  get dbType() { return dbType; },
   findUserByEmailOrUsername,
   findUserById,
   recordLoginLog,
