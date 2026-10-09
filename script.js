@@ -189,11 +189,17 @@ function updateCurrencyDisplay(currency) {
     const depSym = document.getElementById('depositSymbol');
     const depMin = document.getElementById('depositMinLabel');
     const depInp = document.getElementById('depositAmountInput');
+    const depBadge = document.getElementById('depositCurrBadge');
     if (depSym) depSym.textContent = isUSD ? '$' : '₦';
     if (depMin) depMin.textContent = isUSD ? '$1' : '₦100';
+    if (depBadge) depBadge.textContent = `Currency: ${isUSD ? 'USD ($)' : 'NGN (₦)'}`;
     if (depInp) {
         depInp.min = isUSD ? '1' : '100';
-        depInp.placeholder = isUSD ? 'e.g. 10' : 'e.g. 1000';
+        depInp.placeholder = isUSD ? 'e.g. 20' : 'e.g. 2500';
+    }
+
+    if (typeof renderDepositPresets === 'function' && document.getElementById('depositModal')?.style.display === 'flex') {
+        renderDepositPresets();
     }
 
     // Update segmented toggle buttons across dashboard and sidebar
@@ -301,10 +307,19 @@ function updateBalancePrivacyDisplay() {
         balPrimaryEl.classList.toggle('balance-masked', isHidden);
     }
 
-    // 2. Secondary Balance (Keep cleared so real amount is never exposed)
+    // 2. Secondary Dual-Currency Balance
+    const altFormatted = isUSD ? `≈ ${formattedNGN}` : `≈ ${formattedUSD}`;
+    const altSym = isUSD ? '₦' : '$';
+    const maskedAlt = `≈ ${altSym}${BALANCE_MASK_DIGITS}`;
     const balSecondaryEl = document.getElementById('displayBalanceUSD');
     if (balSecondaryEl) {
-        balSecondaryEl.textContent = '';
+        balSecondaryEl.textContent = isHidden ? maskedAlt : altFormatted;
+        balSecondaryEl.classList.toggle('balance-masked', isHidden);
+    }
+
+    const rateChipTextEl = document.getElementById('walletRateChipText');
+    if (rateChipTextEl) {
+        rateChipTextEl.textContent = `1 USD ≈ ₦${rate.toLocaleString()}`;
     }
 
     // 3. NGN Balance Card
@@ -373,6 +388,22 @@ function updateBalancePrivacyDisplay() {
     });
 }
 window.updateBalancePrivacyDisplay = updateBalancePrivacyDisplay;
+
+async function refreshWalletBalanceWithSpin(btn) {
+    const icon = btn ? btn.querySelector('i') : document.getElementById('walletRefreshIcon');
+    if (icon) icon.classList.add('wfin-spin');
+    try {
+        await loadWalletBalance();
+        showToast('Wallet balance refreshed', 'info');
+    } catch (e) {
+        // Error is handled inside loadWalletBalance
+    } finally {
+        setTimeout(() => {
+            if (icon) icon.classList.remove('wfin-spin');
+        }, 600);
+    }
+}
+window.refreshWalletBalanceWithSpin = refreshWalletBalanceWithSpin;
 
 /**
  * Render the balance cards for the active currency.
@@ -721,11 +752,115 @@ window.copyVirtualAccount = copyVirtualAccount;
    TRANSACTIONS
    Display and convert transactions according to active dashboard currency
 ══════════════════════════════════════════ */
+let currentTransactionsList = [];
+let activeTxFilter = 'all';
+
+function filterTransactions(type) {
+    activeTxFilter = type;
+    document.querySelectorAll('.tx-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tx-filter') === type);
+    });
+    renderCachedTransactions();
+}
+window.filterTransactions = filterTransactions;
+
+function renderCachedTransactions() {
+    const listEl = document.getElementById('transactionsList');
+    if (!listEl) return;
+    const curr = getCurrency();
+    const isUSD = curr === 'USD';
+    const symbol = isUSD ? '$' : '₦';
+    const rate = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
+
+    let filtered = currentTransactionsList;
+    if (activeTxFilter === 'credit') {
+        filtered = currentTransactionsList.filter(tx => {
+            const rawAmount = parseFloat(tx.amount) || 0;
+            return (tx.type && tx.type.toLowerCase() === 'credit') || rawAmount > 0;
+        });
+    } else if (activeTxFilter === 'debit') {
+        filtered = currentTransactionsList.filter(tx => {
+            const rawAmount = parseFloat(tx.amount) || 0;
+            return (tx.type && tx.type.toLowerCase() !== 'credit') && rawAmount <= 0;
+        });
+    }
+
+    if (!filtered || filtered.length === 0) {
+        listEl.innerHTML = `
+            <li class="tx-empty-state">
+                <div class="tx-empty-icon"><i class="ph ph-receipt"></i></div>
+                <div class="tx-empty-title">No transactions found</div>
+                <p class="tx-empty-desc">Your ${curr} transactions will appear here as soon as you fund your wallet or activate a number.</p>
+            </li>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = filtered.map(tx => {
+        const rawAmount = parseFloat(tx.amount) || 0;
+        const txCur = (tx.currency || 'NGN').toUpperCase();
+        const isCredit = (tx.type && tx.type.toLowerCase() === 'credit') || rawAmount > 0;
+        const absAmount = Math.abs(rawAmount);
+
+        let convertedAmt;
+        if (isUSD) {
+            convertedAmt = (txCur === 'USD') ? absAmount : (absAmount / rate);
+        } else {
+            convertedAmt = (txCur === 'USD') ? (absAmount * rate) : absAmount;
+        }
+
+        const amtStr = (isCredit ? '+' : '−') + symbol + convertedAmt.toLocaleString(isUSD ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const dateStr = tx.createdAt ? new Date(tx.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+        const status = (tx.status || 'success').toLowerCase();
+        const isSuccess = status === 'success' || status === 'completed';
+        const isPending = status === 'pending';
+        const statusClass = isSuccess ? 'status-success' : (isPending ? 'status-pending' : 'status-failed');
+        const statusLabel = isSuccess ? 'Success' : (isPending ? 'Pending' : 'Failed');
+
+        let iconClass = 'tx-type-debit';
+        let iconName = 'ph-sim-card';
+        let title = 'Number Purchase';
+
+        if (isCredit) {
+            iconClass = 'tx-type-credit';
+            iconName = 'ph-arrow-down-left';
+            title = 'Wallet Deposit';
+        } else if ((tx.type || '').toLowerCase().includes('referral') || (tx.type || '').toLowerCase().includes('reward')) {
+            iconClass = 'tx-type-reward';
+            iconName = 'ph-gift';
+            title = 'Referral Reward';
+        } else if (tx.type) {
+            title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
+        }
+
+        const refBadge = tx.reference ? `<span class="tx-ref-badge">${tx.reference}</span>` : '';
+
+        return `
+        <li class="tx-card-row">
+            <div class="tx-left-col">
+                <div class="tx-icon-bubble ${iconClass}">
+                    <i class="ph ${iconName}"></i>
+                </div>
+                <div class="tx-meta-info">
+                    <span class="tx-title-text">${title}</span>
+                    <div class="tx-sub-row">
+                        <span>${dateStr}</span>
+                        ${refBadge}
+                    </div>
+                </div>
+            </div>
+            <div class="tx-right-col">
+                <span class="tx-amount-text ${isCredit ? 'amount-credit' : 'amount-debit'}">${amtStr}</span>
+                <span class="tx-status-pill ${statusClass}">${statusLabel}</span>
+            </div>
+        </li>`;
+    }).join('');
+}
+
 async function loadTransactions(page = 1, currency) {
     txPage = page;
     const curr   = currency || getCurrency();
     const isUSD  = curr === 'USD';
-    const symbol = isUSD ? '$' : '₦';
     const rate   = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
 
     const listEl    = document.getElementById('transactionsList');
@@ -736,7 +871,7 @@ async function loadTransactions(page = 1, currency) {
 
     if (!listEl) return;
 
-    listEl.innerHTML = `<li style="text-align:center;padding:20px;color:var(--muted,#888);">Loading ${curr} transactions…</li>`;
+    listEl.innerHTML = `<li class="tx-loading-state"><i class="ph ph-circle-notch tx-spin"></i><span>Loading ${curr} transactions…</span></li>`;
     if (prevBtn) prevBtn.disabled = true;
     if (nextBtn) nextBtn.disabled = true;
 
@@ -761,57 +896,27 @@ async function loadTransactions(page = 1, currency) {
         let totalRechargeInNGN = 0;
         let numbersCount = 0;
 
-        if (!txs || txs.length === 0) {
-            listEl.innerHTML = `<li style="text-align:center;padding:24px;color:var(--muted,#888);font-size:14px;">No ${curr} transactions recorded yet.</li>`;
-        } else {
-            listEl.innerHTML = txs.map(tx => {
-                const rawAmount = parseFloat(tx.amount) || 0;
-                const txCur     = (tx.currency || 'NGN').toUpperCase();
-                const isCredit  = (tx.type && tx.type.toLowerCase() === 'credit') || rawAmount > 0;
-                const absAmount = Math.abs(rawAmount);
+        txs.forEach(tx => {
+            const rawAmount = parseFloat(tx.amount) || 0;
+            const txCur     = (tx.currency || 'NGN').toUpperCase();
+            const isCredit  = (tx.type && tx.type.toLowerCase() === 'credit') || rawAmount > 0;
+            const absAmount = Math.abs(rawAmount);
+            const amountInNGN = (txCur === 'USD') ? (absAmount * rate) : absAmount;
+            if (isCredit) {
+                totalRechargeInNGN += amountInNGN;
+            } else {
+                numbersCount++;
+            }
+        });
 
-                // Convert transaction amount based on active display currency
-                let convertedAmt;
-                if (isUSD) {
-                    convertedAmt = (txCur === 'USD') ? absAmount : (absAmount / rate);
-                } else {
-                    convertedAmt = (txCur === 'USD') ? (absAmount * rate) : absAmount;
-                }
-
-                // Track stats for popup
-                const amountInNGN = (txCur === 'USD') ? (absAmount * rate) : absAmount;
-                if (isCredit) {
-                    totalRechargeInNGN += amountInNGN;
-                } else {
-                    numbersCount++;
-                }
-
-                const amtStr    = (isCredit ? '+' : '-') + symbol + convertedAmt.toLocaleString(isUSD ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const color     = isCredit ? '#10b981' : '#ef4444';
-                const dateStr   = tx.createdAt ? new Date(tx.createdAt).toLocaleString() : '—';
-                const status    = tx.status || 'success';
-                const isSuccess = status.toLowerCase() === 'success';
-                const statusBadge = `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${isSuccess ? '#d1fae5' : '#fee2e2'};color:${isSuccess ? '#065f46' : '#b91c1c'};font-weight:700;text-transform:uppercase;">${status}</span>`;
-
-                return `
-                <li style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border,#e5e7eb);gap:8px;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:0;">
-                        <div style="font-weight:700;font-size:13px;color:var(--text);">
-                            ${(tx.type || 'Transaction').toUpperCase()} ${statusBadge}
-                        </div>
-                        <div style="font-size:11px;color:var(--muted,#888);margin-top:4px;">
-                            ${tx.reference ? 'Ref: <strong>' + tx.reference + '</strong> · ' : ''}${dateStr}
-                        </div>
-                    </div>
-                    <div style="font-weight:800;font-size:14px;color:${color};flex-shrink:0;">${amtStr}</div>
-                </li>`;
-            }).join('');
-        }
+        currentTransactionsList = txs;
+        renderCachedTransactions();
 
         // Update popup modal statistics
         const totalRechargeEl = document.getElementById('popupTotalRecharge');
         if (totalRechargeEl) {
             const displayRecharge = isUSD ? (totalRechargeInNGN / rate) : totalRechargeInNGN;
+            const symbol = isUSD ? '$' : '₦';
             totalRechargeEl.textContent = symbol + displayRecharge.toLocaleString(isUSD ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
         const numbersPurchasedEl = document.getElementById('popupNumbersPurchased');
@@ -829,7 +934,7 @@ async function loadTransactions(page = 1, currency) {
 
     } catch (err) {
         console.error('loadTransactions error:', err);
-        listEl.innerHTML = `<li style="text-align:center;padding:24px;color:var(--muted,#888);font-size:14px;">No ${curr} transactions recorded yet.</li>`;
+        listEl.innerHTML = `<li class="tx-empty-state"><div class="tx-empty-title">Error</div><p class="tx-empty-desc">Could not load ${curr} transactions. Please try again.</p></li>`;
     }
 }
 
@@ -1223,6 +1328,42 @@ function loadPaystackSDK() {
     });
 }
 
+function renderDepositPresets() {
+    const isUSD = getCurrency() === 'USD';
+    const presetsContainer = document.getElementById('depositPresets');
+    if (!presetsContainer) return;
+    
+    const amounts = isUSD ? [5, 10, 20, 50, 100] : [1000, 2500, 5000, 10000, 20000];
+    const sym = isUSD ? '$' : '₦';
+    const currentInputVal = parseFloat(document.getElementById('depositAmountInput')?.value) || 0;
+
+    presetsContainer.innerHTML = amounts.map(amt => {
+        const isActive = currentInputVal === amt ? ' active' : '';
+        return `
+            <button type="button" class="dep-preset-chip${isActive}" data-amt="${amt}" onclick="selectDepositPreset(${amt}, this)">
+                +${sym}${amt.toLocaleString()}
+            </button>
+        `;
+    }).join('');
+}
+window.renderDepositPresets = renderDepositPresets;
+
+function selectDepositPreset(amt, btn) {
+    const inp = document.getElementById('depositAmountInput');
+    const errEl = document.getElementById('depositError');
+    if (inp) {
+        inp.value = amt;
+        inp.focus();
+    }
+    if (errEl) {
+        errEl.style.display = 'none';
+        errEl.textContent = '';
+    }
+    document.querySelectorAll('.dep-preset-chip').forEach(el => el.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+}
+window.selectDepositPreset = selectDepositPreset;
+
 function openDepositModal() {
     const isNGN   = getCurrency() === 'NGN';
     const symbol  = isNGN ? '₦' : '$';
@@ -1231,10 +1372,13 @@ function openDepositModal() {
     const minEl   = document.getElementById('depositMinLabel');
     const inp     = document.getElementById('depositAmountInput');
     const errEl   = document.getElementById('depositError');
+    const badgeEl = document.getElementById('depositCurrBadge');
     if (symEl) symEl.textContent = symbol;
     if (minEl) minEl.textContent = symbol + minAmt.toLocaleString();
-    if (inp)   { inp.value = ''; inp.min = minAmt; inp.placeholder = `e.g. ${isNGN ? '1000' : '10'}`; }
+    if (badgeEl) badgeEl.textContent = `Currency: ${isNGN ? 'NGN (₦)' : 'USD ($)'}`;
+    if (inp)   { inp.value = ''; inp.min = minAmt; inp.placeholder = `e.g. ${isNGN ? '2500' : '20'}`; }
     if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+    renderDepositPresets();
     const modal = document.getElementById('depositModal');
     if (modal) { modal.style.display = 'flex'; setTimeout(() => inp && inp.focus(), 100); }
 }

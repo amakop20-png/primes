@@ -6,6 +6,26 @@
   <title>Admin Panel — NuraXQ</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script>
+  (function() {
+    window.addEventListener('unhandledrejection', function(event) {
+      const reasonStr = String(event.reason || '');
+      const stackStr = String(event.reason?.stack || '');
+      const msgStr = String(event.reason?.message || '');
+      if (
+        reasonStr.includes('webpushr') ||
+        stackStr.includes('webpushr') ||
+        msgStr.includes('Failed to fetch') ||
+        msgStr.includes('Unexpected token') ||
+        msgStr.includes('is not valid JSON') ||
+        reasonStr.includes('Error 4:')
+      ) {
+        console.warn('[Admin Network] Handled non-JSON/upstream response gracefully:', msgStr || reasonStr);
+        event.preventDefault();
+      }
+    });
+  })();
+  </script>
   <!-- start webpushr tracking code -->
   <script>
   (function(w,d,s,id) {
@@ -25,8 +45,12 @@
       'key':'BM23b9moGySmnAwvyGTR9UqyN5Klu4lm1O-kaaqulN5fL76PGJmyaYTbFaImOQLqq00bn0LuddyXUcpGa6Y92eA'
   });
   </script>
-  <!-- end webpushr tracking code -->
-  <link rel="icon" type="image/png" href="nuraxq-logo.png">
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="nuraxq-icon.png">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="nuraxq-icon.png">
   <link rel="stylesheet" href="admin.css?v=2.4">
 </head>
 <body>

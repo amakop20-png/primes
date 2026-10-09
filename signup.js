@@ -281,19 +281,25 @@ function initForm() {
                 "success"
             );
 
-            // If token returned on signup, store it
+            // If token returned on signup, store it and route to dashboard with announcement popup
             const token = result.accessToken || result.token || result.access_token || result.data?.token || result.data?.accessToken;
+            const displayName = [firstName, lastName].filter(Boolean).join(' ') || username || 'User';
+            const userKey = (email || username || 'user').toLowerCase().trim();
+
+            sessionStorage.setItem('just_logged_in', 'true');
+            sessionStorage.setItem('just_signed_up', 'true');
+            sessionStorage.removeItem(`nuraxq_login_ann_dismissed_${userKey}`);
+            sessionStorage.removeItem('nuraxq_login_ann_dismissed_user');
+
             if (token) {
                 setAuthToken(token);
-                if (result.user) {
-                    setSession(result.user);
-                }
+                const userObj = result.user || result.data?.user || result.data || { firstName, lastName, username, email, phoneNumber };
+                setSession({ ...userObj, name: displayName, loggedAt: new Date().toISOString() });
             }
 
             // Sync with admin dashboard records
             try {
                 const users = JSON.parse(localStorage.getItem('primes_users') || '[]');
-                const displayName = [firstName, lastName].filter(Boolean).join(' ') || username || 'User';
                 const userEmail = (email || '').toLowerCase();
                 const exists = users.some(u => (u.email && u.email.toLowerCase() === userEmail));
                 if (!exists && (userEmail || displayName)) {
@@ -320,8 +326,8 @@ function initForm() {
             form.reset();
 
             setTimeout(() => {
-                window.location.href = "login.html";
-            }, 1500);
+                window.location.href = token ? "dashboard.html" : "login.html";
+            }, 1200);
 
         } catch (error) {
 

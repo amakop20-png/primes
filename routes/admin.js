@@ -301,7 +301,29 @@ router.get('/users/:id', adminAuth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
-    return res.status(200).json({ success: true, data: user, user });
+
+    let virtualAccount = null;
+    const pool = db.getPool();
+    if (pool) {
+      try {
+        const vaRes = await pool.query(
+          `SELECT account_number AS "accountNumber", bank_name AS "bankName", account_name AS "accountName", created_at AS "createdAt" FROM virtual_accounts WHERE user_id = $1 LIMIT 1`,
+          [user.id || req.params.id]
+        );
+        if (vaRes.rows.length) virtualAccount = vaRes.rows[0];
+      } catch (_) {}
+    }
+
+    const userData = {
+      ...user,
+      wallet: {
+        balance: parseFloat(user.balance || 0),
+        isFrozen: Boolean(user.is_suspended)
+      },
+      virtualAccount
+    };
+
+    return res.status(200).json({ success: true, data: userData, user: userData });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to retrieve user details' });
   }
@@ -368,18 +390,34 @@ router.post('/users/:id/unsuspend', adminAuth, async (req, res) => {
 router.get('/wallets', adminAuth, async (req, res) => {
   const page = parseInt(req.query.page || 1, 10);
   const limit = parseInt(req.query.limit || 20, 10);
+  const isFrozen = req.query.isFrozen !== undefined ? (req.query.isFrozen === 'true' || req.query.isFrozen === true) : null;
 
   try {
     const pool = db.getPool();
     if (pool) {
-      const rows = (await pool.query(`
-        SELECT id AS user_id, email, username, balance, is_suspended AS is_frozen
-        FROM users ORDER BY balance DESC LIMIT $1 OFFSET $2
-      `, [limit, (page - 1) * limit])).rows;
+      let query = `SELECT id AS user_id, email, username, balance, is_suspended AS is_frozen FROM users WHERE 1=1`;
+      const params = [];
 
-      return res.status(200).json({ success: true, data: rows, wallets: rows });
+      if (isFrozen !== null) {
+        params.push(isFrozen);
+        query += ` AND is_suspended = $${params.length}`;
+      }
+
+      const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM (${query}) AS filtered`, params);
+      const total = countRes.rows[0]?.total || 0;
+
+      query += ` ORDER BY balance DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+      params.push(limit, (page - 1) * limit);
+
+      const rows = (await pool.query(query, params)).rows;
+      return res.status(200).json({
+        success: true,
+        data: rows,
+        wallets: rows,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+      });
     }
-    return res.status(200).json({ success: true, data: [], wallets: [] });
+    return res.status(200).json({ success: true, data: [], wallets: [], pagination: { page, limit, total: 0 } });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to retrieve wallets' });
   }
@@ -501,22 +539,39 @@ router.get('/transactions', adminAuth, async (req, res) => {
   const limit = parseInt(req.query.limit || 20, 10);
   const type = req.query.type;
   const status = req.query.status;
+  const user = req.query.user;
+  const from = req.query.from;
+  const to = req.query.to;
 
   try {
     const pool = db.getPool();
     if (pool) {
       let query = `SELECT * FROM transactions WHERE 1=1`;
       const params = [];
-      if (type) { params.push(type); query += ` AND type = $${params.length}`; }
-      if (status) { params.push(status); query += ` AND status = $${params.length}`; }
+      if (type) { params.push(type.toLowerCase()); query += ` AND LOWER(type) = $${params.length}`; }
+      if (status) { params.push(status.toLowerCase()); query += ` AND LOWER(status) = $${params.length}`; }
+      if (user) {
+        params.push(user);
+        query += ` AND (user_id::text = $${params.length} OR LOWER(user_email) = LOWER($${params.length}))`;
+      }
+      if (from) { params.push(new Date(from).toISOString()); query += ` AND created_at >= $${params.length}`; }
+      if (to) { params.push(new Date(to).toISOString()); query += ` AND created_at <= $${params.length}`; }
+
+      const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM (${query}) AS filtered`, params);
+      const total = countRes.rows[0]?.total || 0;
 
       query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
       params.push(limit, (page - 1) * limit);
 
       const rows = (await pool.query(query, params)).rows;
-      return res.status(200).json({ success: true, data: rows, transactions: rows });
+      return res.status(200).json({
+        success: true,
+        data: rows,
+        transactions: rows,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+      });
     }
-    return res.status(200).json({ success: true, data: [], transactions: [] });
+    return res.status(200).json({ success: true, data: [], transactions: [], pagination: { page, limit, total: 0 } });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to retrieve transactions' });
   }
@@ -601,7 +656,82 @@ router.get('/virtual-accounts/:userId', adminAuth, async (req, res) => {
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to retrieve virtual account' });
   }
+/* ======================================================================
+   ANNOUNCEMENTS (Base: /api/admin/announcements)
+====================================================================== */
+let inMemoryAnnouncements = [
+  {
+    id: 'ann_default_1',
+    title: 'Important Announcement',
+    subtitle: 'Tips (5)',
+    category: 'tips',
+    content: '💡 Delete and reinstall WhatsApp before getting a number\n💡 Avoid Business WhatsApp. They ban faster... use normal WhatsApp instead\n💡 Ensure Your Time Zone & VPN matches the country of the number\n💡 Use a fresh WhatsApp installation for better success rates\n💡 Complete verification within the allocated time frame',
+    message: '💡 Delete and reinstall WhatsApp before getting a number\n💡 Avoid Business WhatsApp. They ban faster... use normal WhatsApp instead\n💡 Ensure Your Time Zone & VPN matches the country of the number\n💡 Use a fresh WhatsApp installation for better success rates\n💡 Complete verification within the allocated time frame',
+    whatsappUrl: 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq',
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
+
+// GET /api/admin/announcements/active
+router.get('/announcements/active', (req, res) => {
+  const active = inMemoryAnnouncements.find(a => a.active);
+  return res.status(200).json({
+    success: true,
+    data: active || null,
+    announcement: active || null
+  });
+});
+
+// GET /api/admin/announcements
+router.get('/announcements', adminAuth, (req, res) => {
+  return res.status(200).json({
+    success: true,
+    data: inMemoryAnnouncements,
+    announcements: inMemoryAnnouncements
+  });
+});
+
+// POST /api/admin/announcements
+router.post('/announcements', adminAuth, (req, res) => {
+  const ann = req.body;
+  if (!ann || !ann.content) {
+    return res.status(400).json({ success: false, error: 'Announcement content is required' });
+  }
+
+  const newAnn = {
+    id: ann.id || ('ann_' + Date.now()),
+    title: ann.title || 'Important Announcement',
+    subtitle: ann.subtitle || 'Notice',
+    category: ann.category || 'tips',
+    content: ann.content || ann.message || '',
+    message: ann.message || ann.content || '',
+    whatsappUrl: ann.whatsappUrl || 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq',
+    active: ann.active !== false,
+    createdAt: ann.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (newAnn.active) {
+    inMemoryAnnouncements.forEach(a => a.active = false);
+  }
+
+  const existingIdx = inMemoryAnnouncements.findIndex(a => a.id === newAnn.id);
+  if (existingIdx !== -1) {
+    inMemoryAnnouncements[existingIdx] = newAnn;
+  } else {
+    inMemoryAnnouncements.unshift(newAnn);
+  }
+
+  return res.status(201).json({
+    success: true,
+    message: 'Announcement saved successfully',
+    data: newAnn,
+    announcement: newAnn
+  });
 });
 
 module.exports = router;
+
 

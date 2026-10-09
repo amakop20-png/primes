@@ -177,12 +177,9 @@ async function apiRequest(endpoint, options = {}) {
 
     let data = {};
     let textResponse = '';
-    const contentType = response.headers.get('content-type') || '';
     try {
-        if (contentType.includes('application/json')) {
-            data = await response.json();
-        } else {
-            textResponse = await response.text();
+        textResponse = await response.text();
+        if (textResponse) {
             try {
                 data = JSON.parse(textResponse);
             } catch (_) {
@@ -886,12 +883,9 @@ async function adminApiRequest(endpoint, options = {}) {
 
     let data = null;
     let responseText = '';
-    const contentType = response.headers.get('content-type') || '';
     try {
-        if (contentType.includes('application/json')) {
-            data = await response.json();
-        } else {
-            responseText = await response.text();
+        responseText = await response.text();
+        if (responseText) {
             try {
                 data = JSON.parse(responseText);
             } catch (_) {

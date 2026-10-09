@@ -181,9 +181,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 setAuthToken(token);
 
                 const user = result.user || result.data?.user || result.data || {};
-                const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.username || user.name || 'User';
+                const inputIdentifier = String(loginInputValue || '').trim();
+                const isEmailInput = inputIdentifier.includes('@');
+                const resolvedUsername = user.username || (!isEmailInput ? inputIdentifier : '') || '';
+                const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || resolvedUsername || user.name || 'User';
                 const sessionData = {
                     ...user,
+                    username: resolvedUsername || user.username || '',
                     name: displayName,
                     loggedAt: new Date().toISOString()
                 };
@@ -213,6 +217,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Mark session flag so automatic user announcement popup checks immediately upon landing on dashboard
                 try {
                     sessionStorage.setItem('just_logged_in', 'true');
+                    const userKey = (user.email || user.username || user._id || 'user').toLowerCase().trim();
+                    sessionStorage.removeItem(`nuraxq_login_ann_dismissed_${userKey}`);
+                    sessionStorage.removeItem('nuraxq_login_ann_dismissed_user');
                 } catch (_) {}
 
                 // Initialize welcome notification if user inbox has no items yet

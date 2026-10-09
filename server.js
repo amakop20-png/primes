@@ -49,6 +49,16 @@ app.post('/api/signup', (req, res) => {
   authRoutes(req, res);
 });
 
+// Active announcements public aliases
+app.get('/api/announcements/active', (req, res) => {
+  req.url = '/announcements/active';
+  adminRoutes(req, res);
+});
+app.get('/api/admin/announcements/active', (req, res) => {
+  req.url = '/announcements/active';
+  adminRoutes(req, res);
+});
+
 // 5sim proxy integration if fivesim.js exists
 try {
   const fivesim = require('./fivesim');

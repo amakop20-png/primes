@@ -373,18 +373,28 @@ async function checkProviderStatus() {
       headers: { 'Accept': 'application/json' }
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      const profile = data.profile || data;
-      const bal = parseFloat(profile.balance ?? 0).toFixed(2);
-      const rating = profile.rating ?? 96;
+    const cType = res.headers.get('content-type') || '';
+    if (res.ok && (cType.includes('application/json') || cType.includes('text/json'))) {
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (_) {
+        const text = await res.text().catch(() => '');
+        try { data = JSON.parse(text); } catch (_) { data = null; }
+      }
 
-      if (dot) dot.className = 'chip-dot online';
-      if (status) status.textContent = `5sim: Online (★ ${rating})`;
-      if (balEl) balEl.textContent = `5sim Balance: ${bal} ₽`;
-    } else {
-      throw new Error(`Status ${res.status}`);
+      if (data) {
+        const profile = data.profile || data;
+        const bal = parseFloat(profile.balance ?? 0).toFixed(2);
+        const rating = profile.rating ?? 96;
+
+        if (dot) dot.className = 'chip-dot online';
+        if (status) status.textContent = `5sim: Online (★ ${rating})`;
+        if (balEl) balEl.textContent = `5sim Balance: ${bal} ₽`;
+        return;
+      }
     }
+    throw new Error(`Status ${res.status}`);
   } catch (err) {
     if (dot) dot.className = 'chip-dot offline';
     if (status) status.textContent = '5sim: Upstream Offline';
@@ -1188,7 +1198,8 @@ async function checkLiveOrderStatus(orderId) {
       const res = await fetch(`https://nurasms-api.onrender.com/api/order/${encodeURIComponent(orderId)}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
-      orderData = await res.json();
+      const text = await res.text().catch(() => '');
+      try { orderData = JSON.parse(text); } catch (_) { orderData = null; }
     }
 
     const o = orderData?.order || orderData;
@@ -1972,7 +1983,7 @@ function previewFormAnnouncement() {
   const title = (document.getElementById('annTitleInput')?.value || '').trim() || 'Important Announcement';
   const subtitle = (document.getElementById('annSubtitleInput')?.value || '').trim();
   const whatsappUrl = (document.getElementById('annWhatsappInput')?.value || '').trim() || 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq';
-  const content = (document.getElementById('annContentInput')?.value || '').trim() || `💡 Delete and reinstall WhatsApp before getting a number\n💡 Avoid Business WhatsApp. They ban faster... use normal WhatsApp instead\n💡 Ensure Your Time Zone & VPN matches the country of the number\n🔒 Use a fresh WhatsApp installation for better success rates\n⏰ Complete verification within the allocated time frame`;
+  const content = (document.getElementById('annContentInput')?.value || '').trim() || `💡 Delete and reinstall WhatsApp before getting a number\n💡 Avoid Business WhatsApp. They ban faster... use normal WhatsApp instead\n💡 Ensure Your Time Zone & VPN matches the country of the number\n💡 Use a fresh WhatsApp installation for better success rates\n💡 Complete verification within the allocated time frame`;
 
   const previewObj = {
     id: 'preview',

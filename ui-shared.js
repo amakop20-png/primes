@@ -686,12 +686,15 @@ function getActiveAnnouncement() {
                 return {
                     id: 'legacy_' + parsed.slice(0, 8),
                     title: 'Important Announcement',
-                    subtitle: 'Tips (1)',
+                    subtitle: 'Tips (5)',
                     content: parsed,
                     active: true
                 };
             }
             if (parsed && typeof parsed === 'object') {
+                if (parsed.id === 'login_tips_v1' || (parsed.content && parsed.content.includes('WhatsApp link issues'))) {
+                    return DEFAULT_LOGIN_ANNOUNCEMENT;
+                }
                 if (!parsed.content && parsed.message) {
                     parsed.content = parsed.message;
                 }
@@ -703,11 +706,7 @@ function getActiveAnnouncement() {
         }
     } catch (_) {}
 
-    // Check stored announcements from backend/admin
-    const list = getStoredAnnouncements();
-    const active = list.find(a => a.active === true);
-    if (active) return active;
-    return null;
+    return DEFAULT_LOGIN_ANNOUNCEMENT;
 }
 
 function parseAnnouncementItems(content) {
@@ -744,15 +743,15 @@ function parseSingleItem(line) {
 }
 
 const DEFAULT_LOGIN_ANNOUNCEMENT = {
-    id: 'login_tips_v1',
+    id: 'login_tips_main_rules_v2',
     title: 'Important Announcement',
     subtitle: 'Tips (5)',
     content: [
-        '💡 WhatsApp link issues? If it doesn\'t open, copy and paste it into Chrome.',
-        '💡 Slow OTP delivery? Cancel after 2 mins and request a refund or try another service.',
-        '💡 High volume delays: During peak hours, some SMS routes may experience delays.',
-        '🔒 Account security: Do not share your OTPs or verification codes with anyone.',
-        '💡 Need help? Contact 24/7 support or join our WhatsApp community for updates.'
+        '💡 Delete and reinstall WhatsApp before getting a number',
+        '💡 Avoid Business WhatsApp. They ban faster... use normal WhatsApp instead',
+        '💡 Ensure Your Time Zone & VPN matches the country of the number',
+        '💡 Use a fresh WhatsApp installation for better success rates',
+        '💡 Complete verification within the allocated time frame'
     ].join('\n'),
     whatsappUrl: 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq',
     active: true
@@ -796,10 +795,11 @@ function ensureAnnouncementModalInDOM() {
 }
 
 /* ────────────────────────────────────────────────────────
-   1. AUTOMATIC USER LOGIN ANNOUNCEMENT (POPUP SYSTEM)
-   Triggers automatically after user logs in.
+   1. AUTOMATIC USER LOGIN/SIGNUP ANNOUNCEMENT (POPUP SYSTEM)
+   Triggers automatically after user logs in or signs up.
+   Presents the platform main rules and tips.
    Persists viewed/dismissed state per user.
-   Does not re-trigger every time the user navigates sections.
+   Does not re-trigger on simple in-dashboard tab navigation.
 ──────────────────────────────────────────────────────── */
 async function checkForAnnouncements() {
     // 1. Strict guard: ONLY display after successful user authentication, on user dashboard
@@ -816,13 +816,17 @@ async function checkForAnnouncements() {
     const session = typeof getSession === 'function' ? getSession() : null;
     const userKey = (session?.email || session?.username || session?._id || 'user').toLowerCase().trim();
 
-    // Check if already dismissed in this browser session (prevents annoyance on section navigation/refresh)
-    const sessionDismissed = sessionStorage.getItem(`nuraxq_login_ann_dismissed_${userKey}`);
-    if (sessionDismissed === 'true') {
-        return;
+    const justLoggedIn = sessionStorage.getItem('just_logged_in') === 'true' || sessionStorage.getItem('just_signed_up') === 'true';
+
+    // If NOT a fresh login/signup, respect session dismissal to prevent annoying popups during section navigation
+    if (!justLoggedIn) {
+        const sessionDismissed = sessionStorage.getItem(`nuraxq_login_ann_dismissed_${userKey}`);
+        if (sessionDismissed === 'true') {
+            return;
+        }
     }
 
-    // 2. Fetch latest active announcement from backend / API if provided
+    // 2. Fetch latest active announcement from backend / storage
     let announcement = null;
     if (typeof fetchActiveAnnouncementFromApi === 'function') {
         try {
@@ -832,8 +836,8 @@ async function checkForAnnouncements() {
         }
     }
 
-    // Fallback to platform login announcement
-    if (!announcement || (!announcement.content && !announcement.message)) {
+    // Fallback or upgrade to platform main rules announcement
+    if (!announcement || (!announcement.content && !announcement.message) || announcement.id === 'login_tips_v1' || (announcement.content && announcement.content.includes('WhatsApp link issues'))) {
         announcement = DEFAULT_LOGIN_ANNOUNCEMENT;
     }
 
@@ -841,11 +845,10 @@ async function checkForAnnouncements() {
         return;
     }
 
-    const annId = announcement.id || announcement._id || 'login_tips_v1';
+    const annId = announcement.id || announcement._id || 'login_tips_main_rules_v2';
     const dismissedKey = `primes_ann_dismissed_${userKey}_${annId}`;
-    const justLoggedIn = sessionStorage.getItem('just_logged_in') === 'true';
 
-    // If already dismissed permanently by this user and not a fresh login, do not display
+    // If already dismissed permanently by this user and not a fresh login/signup, do not display
     if (localStorage.getItem(dismissedKey) === 'true' && !justLoggedIn) {
         return;
     }
@@ -995,6 +998,7 @@ function closeAnnouncementModal() {
     // Remember dismissed for this user session
     sessionStorage.setItem(`nuraxq_login_ann_dismissed_${userKey}`, 'true');
     sessionStorage.removeItem('just_logged_in');
+    sessionStorage.removeItem('just_signed_up');
 
     if (currentActiveAnnouncementId) {
         try {
