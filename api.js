@@ -652,19 +652,16 @@ async function getNotifications() {
             method: 'GET',
             suppressAuthRedirect: true
         });
-        if (res) {
-            const list = Array.isArray(res.notifications) ? res.notifications : (Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : null));
-            if (Array.isArray(list) && list.length > 0) {
-                // Filter strictly for current user
-                const filtered = userKey 
-                    ? list.filter(n => (n.userId && String(n.userId) === String(userKey)) || (n.userEmail && n.userEmail.toLowerCase() === userEmail))
-                    : list;
-                localStorage.setItem(storageKey, JSON.stringify(filtered.slice(0, 100)));
-                return filtered;
-            }
+        if (res && (res.notifications !== undefined || res.data !== undefined || Array.isArray(res))) {
+            const list = Array.isArray(res.notifications) ? res.notifications : (Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []));
+            const filtered = userKey 
+                ? list.filter(n => (n.userId && String(n.userId) === String(userKey)) || (n.userEmail && n.userEmail.toLowerCase() === userEmail))
+                : list;
+            localStorage.setItem(storageKey, JSON.stringify(filtered.slice(0, 100)));
+            return filtered;
         }
     } catch (_) {
-        // Expected if backend has no /api/notifications endpoint
+        // Fallback to storage if backend is unreachable or offline
     }
 
     // 2. Load user-specific notifications from storage

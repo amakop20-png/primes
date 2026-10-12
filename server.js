@@ -23,6 +23,11 @@ app.get('/', (req, res) => {
 // Import Routers
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
+const notificationRoutes = require('./routes/notifications');
+
+// Mount Customer Notifications Router at /api/notifications & /api/user/notifications
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/user/notifications', notificationRoutes);
 
 // ✅ Mount Official Admin Router at /api/admin
 // This exposes:

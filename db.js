@@ -113,6 +113,17 @@ async function initPgTables() {
         account_name TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        notification_id TEXT UNIQUE,
+        user_id TEXT NOT NULL,
+        user_email TEXT,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        type TEXT DEFAULT 'system',
+        read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `);
   } catch (err) {
     console.error('Error creating PostgreSQL tables:', err.message);

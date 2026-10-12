@@ -12,8 +12,23 @@
   <link rel="apple-touch-icon" sizes="180x180" href="nuraxq-icon.png">
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Phosphor Icons -->
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Phosphor Icons (Local Offline Bundle with CDN Fallback) -->
+  <link rel="stylesheet" href="assets/phosphor/regular/style.css">
+  <link rel="stylesheet" href="assets/phosphor/fill/style.css">
+  <link rel="stylesheet" href="assets/phosphor/bold/style.css">
+  <script src="assets/phosphor/phosphor.js"></script>
+  <script>
+    window.addEventListener('error', function(e) {
+      if (e.target && e.target.tagName === 'LINK' && e.target.href && e.target.href.includes('assets/phosphor')) {
+        if (!window.__phosphorCdnFallbackTriggered) {
+          window.__phosphorCdnFallbackTriggered = true;
+          var s = document.createElement('script');
+          s.src = 'https://unpkg.com/@phosphor-icons/web';
+          document.head.appendChild(s);
+        }
+      }
+    }, true);
+  </script>
   <!-- start webpushr tracking code -->
   <script>
   (function(w,d,s,id) {
