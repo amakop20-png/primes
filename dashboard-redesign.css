@@ -2223,11 +2223,9 @@ aside {
   z-index: 200 !important;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: flex-start !important;
+  justify-content: space-between !important;
   box-sizing: border-box !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  scrollbar-width: thin !important;
+  overflow: hidden !important;
 }
 
 aside::-webkit-scrollbar {
@@ -2244,8 +2242,24 @@ aside::-webkit-scrollbar-thumb {
 aside .top {
   display: flex !important;
   flex-direction: column !important;
-  gap: 4px !important;
-  flex: 1 0 auto !important;
+  gap: 3px !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: thin !important;
+  padding-right: 2px !important;
+}
+
+aside .top::-webkit-scrollbar {
+  width: 4px;
+}
+aside .top::-webkit-scrollbar-track {
+  background: transparent;
+}
+aside .top::-webkit-scrollbar-thumb {
+  background: var(--border, rgba(124, 58, 237, 0.2));
+  border-radius: 10px;
 }
 
 /* ── Sidebar Brand Row ── */
@@ -2259,6 +2273,7 @@ aside .top {
   border-bottom: 1px solid var(--border) !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  flex-shrink: 0 !important;
 }
 
 .sidebar-brand-link {
@@ -2362,6 +2377,109 @@ body.dark-theme .sidebar-close-btn:hover {
   border-color: var(--primary, #7C3AED) !important;
 }
 
+/* ── User Profile Widget inside Sidebar ── */
+.sidebar-user-widget {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+  background: var(--border-light, #f8f6fc) !important;
+  border: 1px solid var(--border) !important;
+  cursor: pointer !important;
+  margin-bottom: 10px !important;
+  flex-shrink: 0 !important;
+  transition: all 0.18s ease !important;
+}
+
+.sidebar-user-widget:hover {
+  background: var(--surface-hover, #f1ecfc) !important;
+  border-color: rgba(124, 58, 237, 0.3) !important;
+}
+
+.sidebar-user-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: var(--primary-light, #ede9fe) !important;
+  color: var(--primary, #7C3AED) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  flex-shrink: 0 !important;
+}
+
+.sidebar-user-info {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.sidebar-user-name {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--text, #1E1B4B) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.25 !important;
+}
+
+.sidebar-user-email {
+  font-size: 11.5px !important;
+  font-weight: 500 !important;
+  color: var(--muted, #64748B) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.25 !important;
+}
+
+.sidebar-user-gear {
+  font-size: 15px !important;
+  color: var(--muted, #94A3B8) !important;
+  flex-shrink: 0 !important;
+  transition: transform 0.2s ease, color 0.2s ease !important;
+}
+
+.sidebar-user-widget:hover .sidebar-user-gear {
+  color: var(--primary, #7C3AED) !important;
+  transform: rotate(45deg) !important;
+}
+
+body.dark-theme .sidebar-user-widget {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.dark-theme .sidebar-user-widget:hover {
+  background: rgba(124, 58, 237, 0.15) !important;
+  border-color: rgba(124, 58, 237, 0.4) !important;
+}
+
+body.dark-theme .sidebar-user-name {
+  color: #FFFFFF !important;
+}
+
+/* ── Sidebar Navigation Group Labels ── */
+.sidebar-nav-group-label {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  color: var(--muted, #64748B) !important;
+  padding: 12px 14px 4px 14px !important;
+  margin: 0 !important;
+  user-select: none !important;
+  flex-shrink: 0 !important;
+}
+
+body.dark-theme .sidebar-nav-group-label {
+  color: #94A3B8 !important;
+}
+
 /* ── Sidebar Navigation Links ── */
 aside .top a {
   display: flex !important;
@@ -2373,7 +2491,15 @@ aside .top a {
   border-radius: 12px !important;
   font-size: 14px !important;
   font-weight: 600 !important;
-  transition: background 0.18s ease, color 0.18s ease !important;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease !important;
+  flex-shrink: 0 !important;
+}
+
+aside .top a span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
 }
 
 aside .top a i,
@@ -2486,13 +2612,21 @@ body.dark-theme aside .mode-dot {
     transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1), width 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
+  /* When desktop sidebar is expanded, hide redundant header toggle and logo */
+  .dash-header .toggle-btn,
+  .dash-header .logo {
+    display: none !important;
+  }
+
   main.container,
   .container {
     width: calc(100% - 260px) !important;
     margin-left: 260px !important;
+    margin-right: 0 !important;
     transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1), width 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
+  /* Desktop Collapsed State */
   body.sidebar-collapsed aside {
     transform: translateX(-100%) !important;
   }
@@ -2502,10 +2636,20 @@ body.dark-theme aside .mode-dot {
     width: 100% !important;
   }
 
+  /* When desktop sidebar is collapsed, show toggle and brand logo cleanly in header */
+  body.sidebar-collapsed .dash-header .toggle-btn {
+    display: inline-flex !important;
+  }
+
+  body.sidebar-collapsed .dash-header .logo {
+    display: inline-flex !important;
+  }
+
   body.sidebar-collapsed main.container,
   body.sidebar-collapsed .container {
     margin-left: 0 !important;
     width: 100% !important;
+    margin-right: auto !important;
   }
 }
 
