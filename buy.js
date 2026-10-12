@@ -1381,6 +1381,11 @@ async function handleBuyClick(country, product, btnEl) {
 
         showToast('✅ Number purchased successfully! Opening order…', 'success');
 
+        // Play subtle purchase success tone
+        if (window.NuraSound && typeof window.NuraSound.playPurchaseTone === 'function') {
+            window.NuraSound.playPurchaseTone();
+        }
+
         // Trigger in-app notification for number purchased
         if (typeof createNotification === 'function') {
             const countryName = (selectedCountryName || country || '').toUpperCase();
@@ -2042,6 +2047,9 @@ function displayOTP(code) {
                 message: `Verification code for ${prod}: ${otp}. Order #${currentOrderId}.`,
                 type: 'otp'
             });
+        }
+        if (window.NuraSound && typeof window.NuraSound.playOtpChime === 'function') {
+            window.NuraSound.playOtpChime(currentOrderId);
         }
     }
 }

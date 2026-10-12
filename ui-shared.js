@@ -10,6 +10,9 @@ function updateThemeUI(isDark) {
     if (modeIcon) {
         modeIcon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
     }
+    if (window.NuraLogo && typeof window.NuraLogo.updateAllLogos === 'function') {
+        window.NuraLogo.updateAllLogos(isDark);
+    }
 }
 
 function restoreTheme() {
@@ -18,6 +21,9 @@ function restoreTheme() {
     else         document.body.classList.remove('dark-theme');
     updateThemeUI(isDark);
     updateSettingsThemeBtns();
+    if (window.NuraLogo && typeof window.NuraLogo.updateAllLogos === 'function') {
+        window.NuraLogo.updateAllLogos(isDark);
+    }
 }
 
 function setTheme(theme) {
@@ -753,7 +759,7 @@ const DEFAULT_LOGIN_ANNOUNCEMENT = {
         '💡 Use a fresh WhatsApp installation for better success rates',
         '💡 Complete verification within the allocated time frame'
     ].join('\n'),
-    whatsappUrl: 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq',
+    whatsappUrl: 'https://chat.whatsapp.com/C4wqh3wCdAD4hrbEctYPfv',
     active: true
 };
 
@@ -776,11 +782,11 @@ function ensureAnnouncementModalInDOM() {
                 <div class="ann-items-list" id="announcementModalContent"></div>
               </div>
               <div class="ann-actions-wrap">
-                <a href="https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq" target="_blank" rel="noopener noreferrer" class="ann-btn-whatsapp" id="announcementWhatsappBtn">
+                <a href="https://chat.whatsapp.com/C4wqh3wCdAD4hrbEctYPfv" target="_blank" rel="noopener noreferrer" class="ann-btn-whatsapp" id="announcementWhatsappBtn">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;">
                     <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.04 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.59 20.16 12.04 20.16C10.61 20.16 9.22 19.78 8.01 19.06L7.71 18.88L4.62 19.69L5.45 16.67L5.25 16.36C4.47 15.11 4.05 13.54 4.05 11.91C4.05 7.51 7.64 3.67 12.04 3.67ZM8.82 7.37C8.61 7.37 8.39 7.37 8.21 7.41C7.99 7.45 7.72 7.57 7.52 7.79C7.26 8.07 6.55 8.74 6.55 10.1C6.55 11.46 7.54 12.77 7.68 12.96C7.82 13.15 9.61 15.91 12.35 17.09C13 17.37 13.51 17.56 13.92 17.69C14.53 17.88 15.09 17.86 15.53 17.79C16.02 17.72 17.04 17.17 17.25 16.57C17.47 15.98 17.47 15.47 17.4 15.36C17.33 15.25 17.15 15.19 16.86 15.05C16.58 14.91 15.22 14.24 14.97 14.15C14.72 14.06 14.54 14.01 14.36 14.28C14.18 14.55 13.68 15.14 13.52 15.32C13.37 15.51 13.22 15.53 12.94 15.39C12.65 15.25 11.75 14.95 10.68 13.99C9.84 13.25 9.28 12.33 9.12 12.05C8.95 11.77 9.1 11.61 9.25 11.47C9.37 11.34 9.53 11.13 9.68 10.96C9.82 10.79 9.87 10.66 9.96 10.47C10.05 10.29 10.01 10.13 9.94 9.99C9.87 9.85 9.35 8.57 9.13 8.04C8.92 7.52 8.7 7.59 8.53 7.58L8.82 7.37Z"/>
                   </svg>
-                  <span>Join WhatsApp Community</span>
+                  <span>Join Our WhatsApp Community</span>
                 </a>
                 <button class="ann-btn-close" id="announcementCloseBtn" onclick="closeAnnouncementModal()">
                   <span>✕ Close</span>
@@ -965,7 +971,7 @@ function showAnnouncementModal(payload, isPreview = false) {
 
     const waBtn = document.getElementById('announcementWhatsappBtn');
     if (waBtn) {
-        const waUrl = data.whatsappUrl || 'https://chat.whatsapp.com/GzB9gM3l82P6kQ11nuraxq';
+        const waUrl = data.whatsappUrl || 'https://chat.whatsapp.com/C4wqh3wCdAD4hrbEctYPfv';
         waBtn.href = waUrl;
         waBtn.target = '_blank';
         waBtn.rel = 'noopener noreferrer';
@@ -1051,4 +1057,171 @@ if (document.readyState === 'loading') {
 } else {
     autoCheckDashboardAnnouncements();
 }
+
+// ── Web Audio Notification Sound Engine ──
+(function() {
+    let audioCtx = null;
+    const playedOtpOrders = new Set();
+
+    function getAudioContext() {
+        if (!audioCtx) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+                audioCtx = new AudioContextClass();
+            }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
+        return audioCtx;
+    }
+
+    // Unlock audio context on first user gesture
+    function unlockAudio() {
+        const ctx = getAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
+        ['click', 'touchstart', 'keydown'].forEach(evt => {
+            document.removeEventListener(evt, unlockAudio, true);
+        });
+    }
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+        document.addEventListener(evt, unlockAudio, true);
+    });
+
+    function isSoundEnabled() {
+        return localStorage.getItem('primes_sound_enabled') !== 'false';
+    }
+
+    function setSoundEnabled(enabled) {
+        localStorage.setItem('primes_sound_enabled', enabled ? 'true' : 'false');
+        updateSoundUI();
+    }
+
+    function toggleSound() {
+        const next = !isSoundEnabled();
+        setSoundEnabled(next);
+        return next;
+    }
+
+    function updateSoundUI() {
+        const enabled = isSoundEnabled();
+        const toggleBtns = document.querySelectorAll('#soundToggleBtn, .sound-toggle-btn');
+        toggleBtns.forEach(btn => {
+            btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+            btn.setAttribute('title', enabled ? 'Mute notification sound' : 'Enable notification sound');
+            const icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = enabled ? 'ph ph-speaker-high' : 'ph ph-speaker-slash';
+            }
+        });
+        const checkbox = document.getElementById('notifSound');
+        if (checkbox) checkbox.checked = enabled;
+    }
+
+    // Play two-note digital chime for new OTP: C6 (1046.5Hz) -> E6 (1318.5Hz)
+    function playOtpChime(orderId) {
+        if (!isSoundEnabled()) return;
+        if (orderId) {
+            const strId = String(orderId);
+            if (playedOtpOrders.has(strId)) return;
+            playedOtpOrders.add(strId);
+        }
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(() => playChimeNotes(ctx)).catch(() => {});
+        } else {
+            playChimeNotes(ctx);
+        }
+    }
+
+    function playChimeNotes(ctx) {
+        try {
+            const now = ctx.currentTime;
+            // Note 1: C6 (1046.5Hz)
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(1046.5, now);
+            gain1.gain.setValueAtTime(0, now);
+            gain1.gain.linearRampToValueAtTime(0.25, now + 0.02);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.18);
+
+            // Note 2: E6 (1318.5Hz)
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1318.5, now + 0.12);
+            gain2.gain.setValueAtTime(0, now + 0.12);
+            gain2.gain.linearRampToValueAtTime(0.3, now + 0.14);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start(now + 0.12);
+            osc2.stop(now + 0.40);
+        } catch (_) {}
+    }
+
+    // Play subtle success tone on purchase: G5 (783.99Hz) -> C6 (1046.5Hz)
+    function playPurchaseTone() {
+        if (!isSoundEnabled()) return;
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(() => playPurchaseNotes(ctx)).catch(() => {});
+        } else {
+            playPurchaseNotes(ctx);
+        }
+    }
+
+    function playPurchaseNotes(ctx) {
+        try {
+            const now = ctx.currentTime;
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(783.99, now);
+            gain1.gain.setValueAtTime(0, now);
+            gain1.gain.linearRampToValueAtTime(0.2, now + 0.02);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.16);
+
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1046.5, now + 0.10);
+            gain2.gain.setValueAtTime(0, now + 0.10);
+            gain2.gain.linearRampToValueAtTime(0.25, now + 0.12);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start(now + 0.10);
+            osc2.stop(now + 0.35);
+        } catch (_) {}
+    }
+
+    window.NuraSound = {
+        isSoundEnabled,
+        setSoundEnabled,
+        toggleSound,
+        updateSoundUI,
+        playOtpChime,
+        playPurchaseTone
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateSoundUI);
+    } else {
+        updateSoundUI();
+    }
+})();
 

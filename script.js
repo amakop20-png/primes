@@ -389,17 +389,26 @@ function updateBalancePrivacyDisplay() {
 }
 window.updateBalancePrivacyDisplay = updateBalancePrivacyDisplay;
 
+let isRefreshingWallet = false;
 async function refreshWalletBalanceWithSpin(btn) {
-    const icon = btn ? btn.querySelector('i') : document.getElementById('walletRefreshIcon');
+    if (isRefreshingWallet) return;
+    isRefreshingWallet = true;
+
+    const refreshBtn = btn || document.getElementById('walletRefreshBtn');
+    const icon = refreshBtn ? refreshBtn.querySelector('i') : document.getElementById('walletRefreshIcon');
     if (icon) icon.classList.add('wfin-spin');
+    if (refreshBtn) refreshBtn.style.pointerEvents = 'none';
+
     try {
         await loadWalletBalance();
-        showToast('Wallet balance refreshed', 'info');
+        showToast('Wallet balance refreshed successfully', 'success');
     } catch (e) {
-        // Error is handled inside loadWalletBalance
+        showToast('Failed to refresh balance: ' + (e.message || 'Network error'), 'error');
     } finally {
         setTimeout(() => {
             if (icon) icon.classList.remove('wfin-spin');
+            if (refreshBtn) refreshBtn.style.pointerEvents = 'auto';
+            isRefreshingWallet = false;
         }, 600);
     }
 }
@@ -1249,21 +1258,107 @@ function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function toggleAside() {
-    if (aside) aside.classList.toggle('open');
+function isDesktopSidebarView() {
+    return window.innerWidth > 768;
 }
 
-function initScrollEvents() {
-    if (!scrollTopBtn) return;
-    scrollTopBtn.addEventListener('click', scrollToTop);
-    window.addEventListener('scroll', handleScroll);
-    handleScroll();
+function toggleSidebar() {
+    if (isDesktopSidebarView()) {
+        document.body.classList.toggle('sidebar-collapsed');
+        const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+        try { localStorage.setItem('primes_sidebar_collapsed', isCollapsed ? 'true' : 'false'); } catch (_) {}
+        updateSidebarUIState();
+    } else {
+        if (!aside) return;
+        aside.classList.toggle('open');
+        const isOpen = aside.classList.contains('open');
+        const backdrop = document.getElementById('sidebarBackdrop');
+        if (backdrop) backdrop.classList.toggle('active', isOpen);
+        document.body.classList.toggle('sidebar-mobile-open', isOpen);
+    }
+}
+
+function closeSidebarMobile() {
+    if (aside) aside.classList.remove('open');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (backdrop) backdrop.classList.remove('active');
+    document.body.classList.remove('sidebar-mobile-open');
+}
+
+function updateSidebarUIState() {
+    const isDesktop = isDesktopSidebarView();
+    const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+    
+    const sidebarIcon = document.getElementById('sidebarToggleIcon');
+    const headerIcon  = document.getElementById('headerToggleIcon');
+    const closeBtn    = document.getElementById('close-btn');
+
+    if (isDesktop) {
+        if (sidebarIcon) {
+            sidebarIcon.className = isCollapsed ? 'ph ph-caret-right' : 'ph ph-caret-left';
+        }
+        if (closeBtn) {
+            closeBtn.setAttribute('title', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+            closeBtn.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        }
+        if (headerIcon) {
+            headerIcon.className = isCollapsed ? 'ph ph-list' : 'ph ph-text-align-left';
+        }
+    } else {
+        if (sidebarIcon) {
+            sidebarIcon.className = 'ph ph-x';
+        }
+        if (closeBtn) {
+            closeBtn.setAttribute('title', 'Close sidebar');
+            closeBtn.setAttribute('aria-label', 'Close sidebar');
+        }
+        if (headerIcon) {
+            headerIcon.className = 'ph ph-list';
+        }
+    }
+}
+
+function toggleAside() {
+    toggleSidebar();
 }
 
 function initAsideEvents() {
-    if (closeAsideBtn) closeAsideBtn.addEventListener('click', () => { if (aside) aside.classList.remove('open'); });
-    if (toggleBtn)     toggleBtn.addEventListener('click', toggleAside);
+    // Restore desktop preference
+    if (isDesktopSidebarView() && localStorage.getItem('primes_sidebar_collapsed') === 'true') {
+        document.body.classList.add('sidebar-collapsed');
+    }
+    updateSidebarUIState();
+
+    if (closeAsideBtn) {
+        closeAsideBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isDesktopSidebarView()) {
+                toggleSidebar();
+            } else {
+                closeSidebarMobile();
+            }
+        });
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSidebar();
+        });
+    }
+
+    window.addEventListener('resize', () => {
+        if (isDesktopSidebarView()) {
+            closeSidebarMobile();
+        }
+        updateSidebarUIState();
+    });
 }
+
+window.toggleSidebar = toggleSidebar;
+window.closeSidebarMobile = closeSidebarMobile;
 
 function initPopupEvents() {
     if (openPopupBtn)  openPopupBtn.addEventListener('click', openPopup);
@@ -1524,13 +1619,22 @@ function initReferralCopy() {
 /* ══════════════════════════════════════════
    SCREEN LOADER
 ══════════════════════════════════════════ */
-window.addEventListener('load', function() {
-    const loader = document.querySelector('.loader-wrapper');
-    if (!loader) return;
-    loader.style.transition = 'opacity 0.5s ease';
-    loader.style.opacity    = '0';
-    setTimeout(() => { loader.style.display = 'none'; }, 500);
-});
+function dismissScreenLoader() {
+    const loader = document.getElementById('loaderWrapper') || document.querySelector('.loader-wrapper');
+    if (!loader || loader._dismissed) return;
+    loader._dismissed = true;
+    loader.style.transition = 'opacity 0.35s ease, visibility 0.35s ease';
+    loader.style.opacity = '0';
+    loader.style.visibility = 'hidden';
+    loader.style.pointerEvents = 'none';
+    setTimeout(() => {
+        if (loader) loader.style.display = 'none';
+    }, 400);
+}
+
+window.addEventListener('load', dismissScreenLoader);
+document.addEventListener('DOMContentLoaded', () => { setTimeout(dismissScreenLoader, 700); });
+setTimeout(dismissScreenLoader, 2200);
 
 /* ══════════════════════════════════════════
    QUICK ACTION CARDS (navigation only)
@@ -1768,3 +1872,30 @@ window.addEventListener('storage', (e) => {
         loadNotifications().catch(() => {});
     }
 });
+
+/* ── Quick Service & Country Selection (Reference Layout) ── */
+function selectQuickCountry(country) {
+    const pillUSA = document.getElementById('dashPillUSA');
+    const pillAll = document.getElementById('dashPillAll');
+    if (country === 'USA') {
+        pillUSA?.classList.add('active');
+        pillAll?.classList.remove('active');
+    } else {
+        pillAll?.classList.add('active');
+        pillUSA?.classList.remove('active');
+    }
+}
+
+function handleQuickServiceSelect(val) {
+    if (!val) return;
+    const isUSA = document.getElementById('dashPillUSA')?.classList.contains('active');
+    const countryParam = isUSA ? '&country=usa' : '';
+    if (val === 'all') {
+        window.location.href = 'buy.html?tab=products' + countryParam;
+    } else {
+        window.location.href = `buy.html?tab=products&service=${encodeURIComponent(val)}${countryParam}`;
+    }
+}
+
+window.selectQuickCountry = selectQuickCountry;
+window.handleQuickServiceSelect = handleQuickServiceSelect;

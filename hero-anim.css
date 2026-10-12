@@ -1,0 +1,490 @@
+/* ══════════════════════════════════════════════════════════════════
+   hero-anim.css — NuraXQ SaaS Interactive Hero Demo Animation
+   Showcases: 1. Select Country & Service -> 2. Purchase ->
+              3. Phone Allocated -> 4. Waiting SMS -> 5. OTP Code ->
+              6. Success Verification
+   ══════════════════════════════════════════════════════════════════ */
+
+.hero-anim-container {
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(124, 58, 237, 0.12), 0 4px 12px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  position: relative;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+body.dark-theme .hero-anim-container {
+  background: #131125;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(124, 58, 237, 0.25);
+}
+
+/* Window Chrome Topbar */
+.hero-anim-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface-sunk, #f8fafc);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+body.dark-theme .hero-anim-topbar {
+  background: #0f0d1d;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.hero-anim-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.anim-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.anim-dot-red    { background: #ef4444; }
+.anim-dot-yellow { background: #f59e0b; }
+.anim-dot-green  { background: #10b981; }
+
+.hero-anim-url-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  background: rgba(0, 0, 0, 0.04);
+  padding: 3px 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+body.dark-theme .hero-anim-url-pill {
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+
+.hero-anim-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+body.dark-theme .hero-anim-badge {
+  color: #34d399;
+}
+
+.anim-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
+  animation: animPulse 1.5s infinite;
+}
+
+@keyframes animPulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Progress Step Tracker */
+.hero-anim-steps-tracker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(124, 58, 237, 0.04);
+  border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+body.dark-theme .hero-anim-steps-tracker {
+  background: rgba(124, 58, 237, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.anim-step-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted, #94a3b8);
+  transition: all 0.25s ease;
+}
+
+.anim-step-item.active {
+  color: #7c3aed;
+}
+
+body.dark-theme .anim-step-item.active {
+  color: #c4b5fd;
+}
+
+.anim-step-num {
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--border, #e2e8f0);
+  color: var(--muted, #64748b);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 800;
+}
+
+.anim-step-item.active .anim-step-num {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+/* Stage Viewport */
+.hero-anim-viewport {
+  padding: 18px;
+  min-height: 310px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Step 1: Selection Cards */
+.anim-card {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 12px 14px;
+  transition: all 0.25s ease;
+}
+
+body.dark-theme .anim-card {
+  background: #18152e;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.anim-selection-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.anim-select-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1.5px solid transparent;
+  transition: all 0.3s ease;
+}
+
+body.dark-theme .anim-select-card {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.anim-select-card.selected {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: #7c3aed;
+}
+
+.anim-select-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.anim-select-meta h4 {
+  font-size: 12.5px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text, #0f172a);
+}
+
+body.dark-theme .anim-select-meta h4 {
+  color: #f8fafc;
+}
+
+.anim-select-meta span {
+  font-size: 10.5px;
+  color: var(--muted, #64748b);
+  display: block;
+}
+
+/* Purchase Button in Demo */
+.anim-buy-btn {
+  width: 100%;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.anim-buy-btn.clicking {
+  transform: scale(0.97);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.4);
+}
+
+/* Simulated Cursor */
+.anim-cursor {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  z-index: 10;
+  transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+
+/* Step 2: Allocated Number Box */
+.anim-number-box {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
+  border: 1.5px solid rgba(124, 58, 237, 0.25);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: none;
+  animation: animSlideUp 0.35s ease forwards;
+}
+
+body.dark-theme .anim-number-box {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.16) 0%, rgba(99, 102, 241, 0.16) 100%);
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+.anim-number-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.anim-number-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #7c3aed;
+  letter-spacing: 0.5px;
+}
+
+body.dark-theme .anim-number-label {
+  color: #c4b5fd;
+}
+
+.anim-timer-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.anim-phone-number {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text, #0f172a);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+body.dark-theme .anim-phone-number {
+  color: #ffffff;
+}
+
+.anim-copy-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #ede9fe;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Step 3: Waiting SMS Radar */
+.anim-waiting-box {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.4);
+  border-radius: 10px;
+  color: #d97706;
+  font-size: 12px;
+  font-weight: 600;
+  animation: animFadeIn 0.3s ease forwards;
+}
+
+body.dark-theme .anim-waiting-box {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.anim-radar-wave {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #f59e0b;
+  position: relative;
+  animation: animRadar 1.2s infinite;
+}
+
+@keyframes animRadar {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* Step 4: Live OTP Dropdown Card */
+.anim-otp-card {
+  display: none;
+  background: #ffffff;
+  border: 1.5px solid #10b981;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.16);
+  animation: animBounceDrop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+body.dark-theme .anim-otp-card {
+  background: #15222e;
+  border-color: #10b981;
+}
+
+.anim-otp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.anim-otp-sender {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #059669;
+}
+
+body.dark-theme .anim-otp-sender {
+  color: #34d399;
+}
+
+.anim-otp-time {
+  font-size: 10px;
+  color: var(--muted, #94a3b8);
+}
+
+.anim-otp-content {
+  font-size: 12px;
+  color: var(--text, #334155);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+body.dark-theme .anim-otp-content {
+  color: #e2e8f0;
+}
+
+.anim-otp-code-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 6px 12px;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.anim-otp-digits {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #059669;
+  font-family: monospace;
+}
+
+body.dark-theme .anim-otp-digits {
+  color: #34d399;
+}
+
+/* Success Banner */
+.anim-success-banner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #10b981;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  animation: animSlideUp 0.3s ease forwards;
+}
+
+/* Keyframes */
+@keyframes animSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes animFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes animBounceDrop {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Responsive Scaling */
+@media (max-width: 640px) {
+  .hero-anim-container {
+    max-width: 100%;
+    border-radius: 16px;
+  }
+  .hero-anim-viewport {
+    padding: 14px;
+    min-height: 290px;
+  }
+  .anim-phone-number {
+    font-size: 17px;
+  }
+  .anim-otp-digits {
+    font-size: 18px;
+    letter-spacing: 3px;
+  }
+}

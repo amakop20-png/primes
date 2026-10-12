@@ -72,18 +72,19 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  border: none;
 }
 
 .admin-sidebar-logo {
-  height: 28px;
+  height: 36px;
   width: auto;
-  max-width: 100px;
+  max-width: 140px;
   object-fit: contain;
   display: block;
+  transition: opacity 0.2s ease;
 }
 
 .brand-name {

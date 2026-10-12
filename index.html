@@ -42,6 +42,8 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="styles.css?v=2.5">
+  <link rel="stylesheet" href="hero-anim.css?v=1.0">
+  <script src="brand-logo.js?v=1.0"></script>
 </head>
 
 <body>
@@ -53,15 +55,14 @@
 
   <!-- Loader (first thing inside body) -->
   <div class="loader-wrapper" id="loaderWrapper">
-    <img src="nuraxq-icon.png" alt="NuraXQ" class="loader-logo" style="width:64px;height:64px;object-fit:contain;">
+    <img src="nurasms.comLF.png" alt="NuraXQ" class="loader-logo nuraxq-theme-logo" style="width:140px;height:auto;max-height:60px;object-fit:contain;">
   </div>
 
   <!-- Header -->
   <header>
     <div class="header__logo">
       <a href="index.html" class="header__logo-link">
-        <img src="nuraxq-icon.png" alt="NuraXQ" class="header__logo-img">
-        <span class="header__logo-text">NuraXQ</span>
+        <img src="nurasms.comLF.png" alt="NuraXQ" class="header__logo-img nuraxq-theme-logo">
       </a>
     </div>
 
@@ -125,75 +126,115 @@
     </div>
 
     <div class="hero__image">
-      <div class="hero-image-wrapper">
-        <img src="hero-phone.png" alt="Hand holding smartphone with virtual numbers for WhatsApp, Telegram, Google, Facebook, Instagram, TikTok" class="hero-main-img" id="heroPhoneImg">
-      </div>
-      <img src="pot1.jpg" alt="Global phone numbers illustration" style="display:none;">
-      <!-- Preserved terminal mockup for backward compatibility -->
-      <div class="hero-terminal-mockup" style="display:none;">
-        <div class="mockup-header">
-          <div class="mockup-header-left">
-            <span class="mockup-dot red"></span>
-            <span class="mockup-dot yellow"></span>
-            <span class="mockup-dot green"></span>
-            <span class="mockup-title">Active Virtual Number &bull; USA (+1)</span>
+      <div class="hero-anim-container" id="heroAnimStage" role="region" aria-label="Interactive demonstration of purchasing a virtual number and receiving SMS verification OTP">
+        <!-- Window Chrome Topbar -->
+        <div class="hero-anim-topbar">
+          <div class="hero-anim-dots">
+            <span class="anim-dot anim-dot-red"></span>
+            <span class="anim-dot anim-dot-yellow"></span>
+            <span class="anim-dot anim-dot-green"></span>
           </div>
-          <span class="mockup-live-tag"><span class="pulse-indicator"></span> LIVE WAITING</span>
+          <div class="hero-anim-url-pill">
+            <i class="ph ph-lock-simple"></i>
+            <span>nuraxq.com/buy-number</span>
+          </div>
+          <div class="hero-anim-badge">
+            <span class="anim-pulse-dot"></span>
+            <span>Live System</span>
+          </div>
         </div>
-        
-        <div class="mockup-body">
-          <div class="mockup-number-card">
-            <div class="mockup-num-top">
-              <div class="mockup-country">
-                <span class="mockup-flag">🇺🇸</span>
-                <div>
-                  <div class="mockup-cname">United States</div>
-                  <div class="mockup-service">WhatsApp Verification</div>
-                </div>
+
+        <!-- 3-Step Flow Tracker -->
+        <div class="hero-anim-steps-tracker">
+          <div class="anim-step-item active" id="animStep1">
+            <span class="anim-step-num">1</span>
+            <span>Select Service</span>
+          </div>
+          <div class="anim-step-item" id="animStep2">
+            <span class="anim-step-num">2</span>
+            <span>Purchase</span>
+          </div>
+          <div class="anim-step-item" id="animStep3">
+            <span class="anim-step-num">3</span>
+            <span>Receive OTP</span>
+          </div>
+        </div>
+
+        <!-- Animation Stage Viewport -->
+        <div class="hero-anim-viewport">
+          <!-- Floating Cursor for Realistic Interaction -->
+          <svg class="anim-cursor" id="animCursor" viewBox="0 0 24 24" fill="none">
+            <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87c.45 0 .67-.54.35-.85L6.35 2.85a.5.5 0 0 0-.85.36z" fill="#7C3AED" stroke="#FFFFFF" stroke-width="1.5"/>
+          </svg>
+
+          <!-- Step 1: Selection Row -->
+          <div class="anim-selection-row">
+            <div class="anim-select-card" id="animCountryCard">
+              <span class="anim-select-icon">🇺🇸</span>
+              <div class="anim-select-meta">
+                <h4>United States</h4>
+                <span>Code (+1)</span>
               </div>
-              <span class="mockup-status-badge">Waiting for SMS</span>
             </div>
-            <div class="mockup-phone-row">
-              <span class="mockup-phone-number">+1 (202) 555-0194</span>
-              <button type="button" class="mockup-copy-btn" onclick="navigator.clipboard?.writeText('+12025550194'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy', 1500);" title="Copy Phone Number">Copy</button>
+            <div class="anim-select-card" id="animServiceCard">
+              <span class="anim-select-icon" style="color:#22c55e;"><i class="ph ph-whatsapp-logo"></i></span>
+              <div class="anim-select-meta">
+                <h4>WhatsApp</h4>
+                <span>Price: ₦950</span>
+              </div>
             </div>
           </div>
 
-          <div class="mockup-sms-card">
-            <div class="mockup-sms-header">
-              <div class="mockup-sender">
-                <i class="ph ph-chat-circle-dots"></i>
-                <span>WhatsApp</span>
-              </div>
-              <span class="mockup-time">Just now</span>
+          <!-- Purchase Action Button -->
+          <button type="button" class="anim-buy-btn" id="animBuyBtn" aria-label="Purchase virtual number demonstration">
+            <span>Get Virtual Number</span>
+            <i class="ph ph-arrow-right"></i>
+          </button>
+
+          <!-- Step 2: Allocated Virtual Phone Number -->
+          <div class="anim-number-box" id="animNumberBox">
+            <div class="anim-number-header">
+              <span class="anim-number-label"><i class="ph ph-sim-card"></i> Virtual Number Allocated</span>
+              <span class="anim-timer-pill"><i class="ph ph-clock"></i> 19:59</span>
             </div>
-            <div class="mockup-sms-text">
-              Your WhatsApp code is <strong class="mockup-otp">729-418</strong>. Don't share this code with anyone.
-            </div>
-            <div class="mockup-otp-action-row">
-              <div class="mockup-code-highlight">
-                <span class="mockup-code-val">729418</span>
-              </div>
-              <span class="mockup-received-badge"><i class="ph ph-check-circle"></i> OTP Received in 2.4s</span>
+            <div class="anim-phone-number">
+              <span>+1 (202) 555-0184</span>
+              <span class="anim-copy-badge"><i class="ph ph-copy"></i> Copied</span>
             </div>
           </div>
 
-          <div class="mockup-stats-bar">
-            <div class="mockup-stat">
-              <i class="ph ph-lightning"></i>
-              <span>Instant Activation</span>
+          <!-- Step 3: Waiting for SMS Radar -->
+          <div class="anim-waiting-box" id="animWaitingBox">
+            <span class="anim-radar-wave"></span>
+            <span>Waiting for incoming SMS verification code...</span>
+          </div>
+
+          <!-- Step 4: OTP Received Notification Card -->
+          <div class="anim-otp-card" id="animOtpCard">
+            <div class="anim-otp-header">
+              <span class="anim-otp-sender">
+                <i class="ph ph-whatsapp-logo" style="font-size:16px;"></i>
+                <span>WhatsApp Notification</span>
+              </span>
+              <span class="anim-otp-time">Just now</span>
             </div>
-            <div class="mockup-stat">
-              <i class="ph ph-shield-check"></i>
-              <span>100% Private</span>
+            <p class="anim-otp-content">Your WhatsApp code is <strong>849-201</strong>. Do not share this code with anyone.</p>
+            <div class="anim-otp-code-pill">
+              <span class="anim-otp-digits">849-201</span>
+              <span class="anim-copy-badge" style="background:#10b981;color:#fff;"><i class="ph ph-check"></i> OTP Ready</span>
             </div>
-            <div class="mockup-stat">
-              <i class="ph ph-globe"></i>
-              <span>150+ Regions</span>
-            </div>
+          </div>
+
+          <!-- Step 5: Success Banner -->
+          <div class="anim-success-banner" id="animSuccessBox">
+            <i class="ph ph-check-circle" style="font-size:18px;"></i>
+            <span>Verification Successful! Account Active</span>
           </div>
         </div>
       </div>
+      <noscript>
+        <img src="hero-phone.png" alt="NuraXQ Virtual Numbers Demo" class="hero-main-img">
+      </noscript>
     </div>
   </section>
 
@@ -419,9 +460,10 @@
         </ul>
       </div>
       <div class="footer-section">
-        <h4>Support</h4>
+        <h4>Support &amp; Community</h4>
         <ul>
           <li><a href="help.html">Help Center</a></li>
+          <li><a href="https://chat.whatsapp.com/C4wqh3wCdAD4hrbEctYPfv" target="_blank" rel="noopener noreferrer"><i class="ph ph-whatsapp-logo" style="color:#22c55e;"></i> Join WhatsApp Community</a></li>
           <li><a href="mailto:support@nuraxq.com">Contact Us</a></li>
           <li><a href="#">Status</a></li>
         </ul>
@@ -429,6 +471,7 @@
       <div class="footer-section">
         <h4>Follow</h4>
         <div class="social-links">
+          <a href="https://chat.whatsapp.com/C4wqh3wCdAD4hrbEctYPfv" target="_blank" rel="noopener noreferrer" aria-label="Join WhatsApp Community" title="Join WhatsApp Community"><i class="ph ph-whatsapp-logo" style="color:#22c55e;"></i></a>
           <a href="#" aria-label="X (Twitter)"><i class="ph ph-x-logo"></i></a>
           <a href="#" aria-label="LinkedIn"><i class="ph ph-linkedin-logo"></i></a>
           <a href="#" aria-label="Facebook"><i class="ph ph-facebook-logo"></i></a>
@@ -514,7 +557,7 @@
       updateLandingThemeUI(isDark);
     }
   </script>
-
+  <script src="hero-anim.js?v=1.0"></script>
 </body>
 
 </html>

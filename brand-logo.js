@@ -1,0 +1,127 @@
+/**
+ * brand-logo.js — Official Theme-Aware NuraXQ Logo Switching Engine
+ * 
+ * Assets:
+ *   - Dark mode logo:  nurasms.comDFC.png
+ *   - Light mode logo: nurasms.comLF.png
+ *
+ * Automatically keeps all logo instances in sync with current theme
+ * on initial page load, real-time theme toggles, and cross-tab storage updates.
+ */
+
+(function () {
+  'use strict';
+
+  const LOGO_DARK = 'nurasms.comDFC.png';
+  const LOGO_LIGHT = 'nurasms.comLF.png';
+
+  const LOGO_SELECTORS = [
+    '.nuraxq-theme-logo',
+    'img[data-nuraxq-logo]',
+    '.header__logo-img',
+    '.sidebar-logo',
+    '.nuraxq-logo',
+    '.admin-sidebar-logo',
+    '.admin-gate-logo-img',
+    '.auth-banner-logo',
+    '.loader-logo'
+  ];
+
+  function isDarkMode() {
+    const saved = localStorage.getItem('dashboardTheme');
+    if (saved === 'dark') return true;
+    if (saved === 'light') return false;
+    return document.body ? document.body.classList.contains('dark-theme') : false;
+  }
+
+  function getLogoSrc(isDark) {
+    const dark = (typeof isDark === 'boolean') ? isDark : isDarkMode();
+    return dark ? LOGO_DARK : LOGO_LIGHT;
+  }
+
+  function updateAllLogos(isDarkOverride) {
+    const isDark = (typeof isDarkOverride === 'boolean') ? isDarkOverride : isDarkMode();
+    const targetSrc = isDark ? LOGO_DARK : LOGO_LIGHT;
+
+    const selectorStr = LOGO_SELECTORS.join(', ');
+    const logos = document.querySelectorAll(selectorStr);
+
+    logos.forEach(function (img) {
+      if (img && img.tagName === 'IMG') {
+        const currentSrc = img.getAttribute('src');
+        if (currentSrc !== targetSrc) {
+          img.setAttribute('src', targetSrc);
+        }
+      }
+    });
+  }
+
+  // Expose global controller
+  window.NuraLogo = {
+    LOGO_DARK: LOGO_DARK,
+    LOGO_LIGHT: LOGO_LIGHT,
+    isDarkMode: isDarkMode,
+    getLogoSrc: getLogoSrc,
+    updateAllLogos: updateAllLogos
+  };
+
+  // Immediate execution if body is already present
+  function initThemeAndLogos() {
+    if (!document.body) return;
+    const isDark = isDarkMode();
+    if (isDark) {
+      document.body.classList.add('dark-theme');
+    } else {
+      // Only remove if not explicitly set elsewhere
+      if (localStorage.getItem('dashboardTheme') === 'light') {
+        document.body.classList.remove('dark-theme');
+      }
+    }
+    updateAllLogos(isDark);
+  }
+
+  // Run as early as possible
+  initThemeAndLogos();
+
+  // Run on DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+      initThemeAndLogos();
+    });
+  } else {
+    initThemeAndLogos();
+  }
+
+  // Cross-tab theme synchronization
+  window.addEventListener('storage', function (e) {
+    if (e.key === 'dashboardTheme') {
+      const isDark = e.newValue === 'dark';
+      if (document.body) {
+        document.body.classList.toggle('dark-theme', isDark);
+      }
+      updateAllLogos(isDark);
+    }
+  });
+
+  // Watch for dynamic class changes on <body> (e.g. toggleDark calls)
+  function attachClassObserver() {
+    if (!document.body || typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(function (mutations) {
+      for (let i = 0; i < mutations.length; i++) {
+        if (mutations[i].attributeName === 'class') {
+          const isDark = document.body.classList.contains('dark-theme');
+          updateAllLogos(isDark);
+          break;
+        }
+      }
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  if (document.body) {
+    attachClassObserver();
+  } else {
+    document.addEventListener('DOMContentLoaded', attachClassObserver);
+  }
+
+})();
