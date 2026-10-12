@@ -1061,27 +1061,35 @@ if (document.readyState === 'loading') {
 // ── Web Audio Notification Sound Engine ──
 (function() {
     let audioCtx = null;
+    let hasUserGesture = false;
     const playedOtpOrders = new Set();
 
-    function getAudioContext() {
-        if (!audioCtx) {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (AudioContextClass) {
-                audioCtx = new AudioContextClass();
+    function getAudioContext(canCreate = false) {
+        try {
+            if (!audioCtx && (canCreate || hasUserGesture)) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
             }
+            if (audioCtx && audioCtx.state === 'suspended' && (canCreate || hasUserGesture)) {
+                audioCtx.resume().catch(() => {});
+            }
+            return audioCtx;
+        } catch (_) {
+            return null;
         }
-        if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume().catch(() => {});
-        }
-        return audioCtx;
     }
 
     // Unlock audio context on first user gesture
     function unlockAudio() {
-        const ctx = getAudioContext();
-        if (ctx && ctx.state === 'suspended') {
-            ctx.resume().catch(() => {});
-        }
+        hasUserGesture = true;
+        try {
+            const ctx = getAudioContext(true);
+            if (ctx && ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+            }
+        } catch (_) {}
         ['click', 'touchstart', 'keydown'].forEach(evt => {
             document.removeEventListener(evt, unlockAudio, true);
         });
@@ -1100,8 +1108,10 @@ if (document.readyState === 'loading') {
     }
 
     function toggleSound() {
+        hasUserGesture = true;
         const next = !isSoundEnabled();
         setSoundEnabled(next);
+        getAudioContext(true);
         return next;
     }
 
@@ -1128,10 +1138,12 @@ if (document.readyState === 'loading') {
             if (playedOtpOrders.has(strId)) return;
             playedOtpOrders.add(strId);
         }
-        const ctx = getAudioContext();
+        const ctx = getAudioContext(false);
         if (!ctx) return;
         if (ctx.state === 'suspended') {
-            ctx.resume().then(() => playChimeNotes(ctx)).catch(() => {});
+            if (hasUserGesture) {
+                ctx.resume().then(() => playChimeNotes(ctx)).catch(() => {});
+            }
         } else {
             playChimeNotes(ctx);
         }
@@ -1171,7 +1183,8 @@ if (document.readyState === 'loading') {
     // Play subtle success tone on purchase: G5 (783.99Hz) -> C6 (1046.5Hz)
     function playPurchaseTone() {
         if (!isSoundEnabled()) return;
-        const ctx = getAudioContext();
+        hasUserGesture = true;
+        const ctx = getAudioContext(true);
         if (!ctx) return;
         if (ctx.state === 'suspended') {
             ctx.resume().then(() => playPurchaseNotes(ctx)).catch(() => {});

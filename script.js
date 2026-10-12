@@ -1639,20 +1639,21 @@ function dismissScreenLoader() {
         clearTimeout(window.__loaderFailsafe);
         window.__loaderFailsafe = null;
     }
-    const loader = document.getElementById('loaderWrapper') || document.querySelector('.loader-wrapper');
-    if (!loader || loader._dismissed) return;
-    loader._dismissed = true;
-    loader.classList.add('hidden');
-    loader.style.transition = 'opacity 0.3s ease, visibility 0.3s ease';
-    loader.style.opacity = '0';
-    loader.style.visibility = 'hidden';
-    loader.style.pointerEvents = 'none';
-    setTimeout(() => {
-        if (loader) {
-            loader.style.display = 'none';
-            loader.setAttribute('aria-hidden', 'true');
-        }
-    }, 350);
+    const loaders = document.querySelectorAll('.loader-wrapper, #loaderWrapper');
+    loaders.forEach(loader => {
+        loader._dismissed = true;
+        loader.classList.add('hidden');
+        loader.style.transition = 'opacity 0.3s ease, visibility 0.3s ease';
+        loader.style.opacity = '0';
+        loader.style.visibility = 'hidden';
+        loader.style.pointerEvents = 'none';
+        setTimeout(() => {
+            try {
+                loader.style.display = 'none';
+                loader.setAttribute('aria-hidden', 'true');
+            } catch (_) {}
+        }, 350);
+    });
 }
 
 window.dismissScreenLoader = dismissScreenLoader;
@@ -1754,11 +1755,14 @@ document.addEventListener('DOMContentLoaded', function() {
 let isDashboardInitialized = false;
 
 function init() {
-    if (isDashboardInitialized) return;
+    if (isDashboardInitialized) {
+        dismissScreenLoader();
+        return;
+    }
 
     // 1. Auth guard — redirect immediately if no token
     if (!requireAuth()) {
-        dismissScreenLoader();
+        // Leave loader up during redirection to protect sensitive UI from flashing
         return;
     }
 

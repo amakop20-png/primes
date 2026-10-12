@@ -355,24 +355,28 @@
   </script>
 
   <!-- Screen Loader (Original Logo 40px x 40px) -->
-  <div class="loader-wrapper" id="loaderWrapper" aria-hidden="true">
+  <div class="loader-wrapper" id="loaderWrapper" role="status" aria-live="polite" aria-label="Loading">
     <img src="nuraxq-icon.png" alt="Loading" class="loader-logo">
   </div>
   <script>
     (function() {
       function dismissEarlyLoader() {
-        var l = document.getElementById('loaderWrapper');
-        if (l && !l._dismissed) {
-          l._dismissed = true;
-          l.classList.add('hidden');
-          l.style.opacity = '0';
-          l.style.visibility = 'hidden';
-          l.style.pointerEvents = 'none';
-          setTimeout(function() { if (l) l.style.display = 'none'; }, 300);
-        }
+        var token = localStorage.getItem('primes_token') || localStorage.getItem('accessToken') || localStorage.getItem('token');
+        if (!token) return; // Do not dismiss early if unauthenticated; wait for auth guard
+        var loaders = document.querySelectorAll('.loader-wrapper, #loaderWrapper');
+        loaders.forEach(function(l) {
+          if (!l._dismissed) {
+            l._dismissed = true;
+            l.classList.add('hidden');
+            l.style.opacity = '0';
+            l.style.visibility = 'hidden';
+            l.style.pointerEvents = 'none';
+            setTimeout(function() { if (l) l.style.display = 'none'; }, 300);
+          }
+        });
       }
       window.dismissEarlyLoader = dismissEarlyLoader;
-      window.__loaderFailsafe = setTimeout(dismissEarlyLoader, 800);
+      window.__loaderFailsafe = setTimeout(dismissEarlyLoader, 1500);
       document.addEventListener('DOMContentLoaded', function() {
         setTimeout(dismissEarlyLoader, 200);
       });
@@ -843,15 +847,6 @@
   <button class="scroll-top" id="scrollTopBtn">
     <i class="ph ph-arrow-up"></i>
   </button>
-<!-- Screen Loader -->
-<div class="loader-wrapper" id="loaderWrapper" role="status" aria-live="polite" aria-label="Loading">
-  <img
-    src="nuraxq-icon.png"
-    alt="NuraXQ"
-    class="loader-logo"
-    style="width:64px;height:64px;object-fit:contain;"
-  >
-</div>
 
   <!-- Deposit Modal (Redesigned Modern Fintech UI) -->
   <div id="depositModal" class="dep-modal-backdrop" style="display:none;">
