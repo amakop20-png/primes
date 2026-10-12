@@ -3064,6 +3064,6 @@ window.addEventListener('storage', (e) => {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (getAuthToken()) {
-        loadNotifications().catch(e => console.log('Init notif check failed:', e));
+        loadNotifications().catch(() => {});
     }
 });

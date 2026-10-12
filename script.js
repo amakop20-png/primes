@@ -1834,7 +1834,7 @@ function init() {
     loadTransactions(1).catch(e => console.warn('Transactions fetch warning:', e));
     loadActiveNumbers().catch(e => console.warn('Active numbers fetch warning:', e));
     if (typeof loadNotifications === 'function') {
-        loadNotifications().catch(e => console.warn('Notif check warning:', e));
+        loadNotifications().catch(() => {});
     }
     if (typeof checkForAnnouncements === 'function') {
         try { checkForAnnouncements(); } catch (e) { console.warn('Announcement check warning:', e); }
@@ -1866,8 +1866,7 @@ async function loadNotifications() {
         }
 
         renderNotifications(notifs || []);
-    } catch (err) {
-        console.warn('[Notifications] Error loading notifications:', err);
+    } catch (_) {
         renderNotifications([]);
     }
 }

@@ -235,7 +235,9 @@ async function apiRequest(endpoint, options = {}) {
             err.endpoint = endpoint;
             err.method = method;
             err.data = data;
-            console.error(`[API Error] ${response.status} ${method} ${endpoint}: ${message}`);
+            if (!options.silent) {
+                console.error(`[API Error] ${response.status} ${method} ${endpoint}: ${message}`);
+            }
             throw err;
         };
 
@@ -590,6 +592,10 @@ function getUserNotificationKey() {
     return 'primes_notifications_guest';
 }
 
+let isNotificationsEndpointAvailable = true;
+let lastNotificationsCheckTime = 0;
+const NOTIFICATIONS_CHECK_INTERVAL_MS = 60000; // Check once per minute max if unavailable
+
 async function createNotification(notifData) {
     if (!notifData || typeof notifData !== 'object') return null;
     const session = getSession();
@@ -608,15 +614,20 @@ async function createNotification(notifData) {
         read: false
     };
 
-    // 1. Attempt backend notification creation (if server endpoint becomes available)
-    try {
-        await apiRequest('/api/notifications', {
-            method: 'POST',
-            body: JSON.stringify(newNotif),
-            suppressAuthRedirect: true
-        });
-    } catch (_) {
-        // Backend notification endpoint not implemented on microservice (expected)
+    // 1. Attempt backend notification creation (if server endpoint is available)
+    if (isNotificationsEndpointAvailable) {
+        try {
+            await apiRequest('/api/notifications', {
+                method: 'POST',
+                body: JSON.stringify(newNotif),
+                suppressAuthRedirect: true,
+                silent: true
+            });
+        } catch (err) {
+            if (err && err.status === 404) {
+                isNotificationsEndpointAvailable = false;
+            }
+        }
     }
 
     // 2. Persist in user-specific storage
@@ -646,22 +657,33 @@ async function getNotifications() {
     const userEmail = (session?.email || '').toLowerCase().trim();
     const storageKey = getUserNotificationKey();
 
-    // 1. Query remote backend endpoint first
-    try {
-        const res = await apiRequest('/api/notifications', {
-            method: 'GET',
-            suppressAuthRedirect: true
-        });
-        if (res && (res.notifications !== undefined || res.data !== undefined || Array.isArray(res))) {
-            const list = Array.isArray(res.notifications) ? res.notifications : (Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []));
-            const filtered = userKey 
-                ? list.filter(n => (n.userId && String(n.userId) === String(userKey)) || (n.userEmail && n.userEmail.toLowerCase() === userEmail))
-                : list;
-            localStorage.setItem(storageKey, JSON.stringify(filtered.slice(0, 100)));
-            return filtered;
+    // 1. Query remote backend endpoint if token is present and not currently in backoff
+    const token = getAuthToken();
+    const now = Date.now();
+    const shouldCheckBackend = token && (isNotificationsEndpointAvailable || (now - lastNotificationsCheckTime > NOTIFICATIONS_CHECK_INTERVAL_MS));
+
+    if (shouldCheckBackend) {
+        lastNotificationsCheckTime = now;
+        try {
+            const res = await apiRequest('/api/notifications', {
+                method: 'GET',
+                suppressAuthRedirect: true,
+                silent: true
+            });
+            isNotificationsEndpointAvailable = true;
+            if (res && (res.notifications !== undefined || res.data !== undefined || Array.isArray(res))) {
+                const list = Array.isArray(res.notifications) ? res.notifications : (Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []));
+                const filtered = userKey 
+                    ? list.filter(n => (n.userId && String(n.userId) === String(userKey)) || (n.userEmail && n.userEmail.toLowerCase() === userEmail))
+                    : list;
+                localStorage.setItem(storageKey, JSON.stringify(filtered.slice(0, 100)));
+                return filtered;
+            }
+        } catch (err) {
+            if (err && err.status === 404) {
+                isNotificationsEndpointAvailable = false;
+            }
         }
-    } catch (_) {
-        // Fallback to storage if backend is unreachable or offline
     }
 
     // 2. Load user-specific notifications from storage
@@ -692,12 +714,15 @@ async function getNotifications() {
 async function markAllNotificationsRead() {
     const storageKey = getUserNotificationKey();
 
-    try {
-        await apiRequest('/api/notifications/read-all', {
-            method: 'POST',
-            suppressAuthRedirect: true
-        });
-    } catch (_) {}
+    if (isNotificationsEndpointAvailable) {
+        try {
+            await apiRequest('/api/notifications/read-all', {
+                method: 'POST',
+                suppressAuthRedirect: true,
+                silent: true
+            });
+        } catch (_) {}
+    }
 
     try {
         const list = await getNotifications();
