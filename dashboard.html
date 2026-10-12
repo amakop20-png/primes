@@ -252,96 +252,220 @@
       border-color: #7c3aed;
       color: #c4b5fd;
     }
+    /* ── Uniform Dashboard Card Sizing Rules ── */
+    .dash-hero-grid {
+      display: grid !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 20px !important;
+      width: 100% !important;
+      margin-bottom: 24px !important;
+      align-items: stretch !important;
+      box-sizing: border-box !important;
+    }
+    @media (max-width: 900px) {
+      .dash-hero-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+      }
+    }
+    .wallet-overview-section,
+    .referral-section {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 100% !important;
+      height: 100% !important;
+      min-width: 0 !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+    }
+    .nura-ref-wallet-card,
+    .wfin-referral-card,
+    .nura-ref-referral-card {
+      display: flex !important;
+      flex: 1 1 auto !important;
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 224px !important;
+      min-width: 0 !important;
+      padding: 28px 30px !important;
+      box-sizing: border-box !important;
+    }
+    @media (max-width: 768px) {
+      .nura-ref-wallet-card,
+      .wfin-referral-card,
+      .nura-ref-referral-card {
+        padding: 22px 20px !important;
+        min-height: auto !important;
+      }
+    }
+
     .vnum-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 18px;
-      width: 100%;
-      box-sizing: border-box;
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 18px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      align-items: stretch !important;
     }
     @media (max-width: 900px) {
       .vnum-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 14px !important;
       }
     }
-    @media (max-width: 580px) {
+    @media (max-width: 680px) {
       .vnum-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
       }
     }
     .vnum-card {
-      background: var(--surface, #ffffff);
-      border: 1px solid var(--border, #e2e8f0);
-      border-radius: 18px;
-      padding: 22px 24px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      min-height: 148px;
-      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06));
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-      box-sizing: border-box;
+      background: var(--surface, #ffffff) !important;
+      border: 1px solid var(--border, #e2e8f0) !important;
+      border-radius: 18px !important;
+      padding: 20px 22px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      height: 100% !important;
+      min-height: 142px !important;
+      min-width: 0 !important;
+      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06)) !important;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+      box-sizing: border-box !important;
     }
     .vnum-card:hover {
-      transform: none;
-      border-color: var(--primary, #7c3aed);
-      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
+      transform: translateY(-2px) !important;
+      border-color: var(--primary, #7c3aed) !important;
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12) !important;
     }
     .vnum-card-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 8px !important;
+      margin-bottom: 8px !important;
+      min-height: 36px !important;
     }
     .vnum-card-label {
-      font-size: 13.5px;
-      font-weight: 700;
-      color: var(--muted, #64748b);
-      text-transform: capitalize;
-      letter-spacing: 0.2px;
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      color: var(--muted, #64748b) !important;
+      text-transform: capitalize !important;
+      letter-spacing: 0.2px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      min-width: 0 !important;
     }
     .vnum-card-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
+      width: 36px !important;
+      height: 36px !important;
+      border-radius: 10px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 18px !important;
+      flex-shrink: 0 !important;
     }
     .vnum-card-icon.active {
-      background: rgba(16, 185, 129, 0.12);
-      color: #10b981;
+      background: rgba(16, 185, 129, 0.12) !important;
+      color: #10b981 !important;
     }
     .vnum-card-icon.total {
-      background: rgba(124, 58, 237, 0.12);
-      color: var(--primary, #7c3aed);
+      background: rgba(124, 58, 237, 0.12) !important;
+      color: var(--primary, #7c3aed) !important;
     }
     .vnum-card-icon.available {
-      background: rgba(124, 58, 237, 0.12);
-      color: var(--primary, #7c3aed);
+      background: rgba(124, 58, 237, 0.12) !important;
+      color: var(--primary, #7c3aed) !important;
     }
     .vnum-card-value {
-      font-size: 30px;
-      font-weight: 800;
-      color: var(--text, #0f172a);
-      line-height: 1.1;
-      margin-bottom: 6px;
+      font-size: 28px !important;
+      font-weight: 800 !important;
+      color: var(--text, #0f172a) !important;
+      line-height: 1.1 !important;
+      margin-bottom: 4px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      min-width: 0 !important;
     }
     .vnum-card-sub {
-      font-size: 12px;
-      color: var(--muted, #64748b);
-      line-height: 1.35;
+      font-size: 12px !important;
+      color: var(--muted, #64748b) !important;
+      line-height: 1.35 !important;
+      min-height: 16px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      min-width: 0 !important;
     }
     body.dark-theme .vnum-card {
-      background: var(--surface, #1e293b);
-      border-color: var(--border, #334155);
+      background: var(--surface, #1e293b) !important;
+      border-color: var(--border, #334155) !important;
     }
     body.dark-theme .vnum-card-value {
-      color: var(--text, #f8fafc);
+      color: var(--text, #f8fafc) !important;
+    }
+
+    .jacket {
+      display: grid !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      gap: 16px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      align-items: stretch !important;
+    }
+    @media (max-width: 900px) {
+      .jacket {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 14px !important;
+      }
+    }
+    @media (max-width: 480px) {
+      .jacket {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+      }
+    }
+    .action-card {
+      background: var(--surface, #ffffff) !important;
+      border: 1px solid var(--border, #e2e8f0) !important;
+      border-radius: var(--radius-md, 14px) !important;
+      padding: 16px 18px !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      cursor: pointer !important;
+      height: 100% !important;
+      min-height: 72px !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.06)) !important;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+    }
+    .action-card:hover {
+      background: var(--surface-hover, #f6f2fd) !important;
+      border-color: var(--primary, #7c3aed) !important;
+      transform: translateY(-2px) !important;
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12) !important;
+    }
+    .action-card span {
+      font-size: 13.5px !important;
+      font-weight: 700 !important;
+      color: var(--text, #0f172a) !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      min-width: 0 !important;
+    }
+    body.dark-theme .action-card {
+      background: var(--surface, #1e293b) !important;
+      border-color: var(--border, #334155) !important;
+    }
+    body.dark-theme .action-card span {
+      color: var(--text, #f8fafc) !important;
     }
   </style>
  
