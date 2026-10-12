@@ -1307,6 +1307,7 @@ function updateSidebarUIState() {
     const sidebarIcon = document.getElementById('sidebarToggleIcon');
     const headerIcon  = document.getElementById('headerToggleIcon');
     const closeBtn    = document.getElementById('close-btn');
+    const headerBtn   = document.getElementById('toggle-btn');
 
     if (isDesktop) {
         if (sidebarIcon) {
@@ -1319,6 +1320,10 @@ function updateSidebarUIState() {
         if (headerIcon) {
             headerIcon.className = isCollapsed ? 'ph ph-list' : 'ph ph-text-align-left';
         }
+        if (headerBtn) {
+            headerBtn.setAttribute('title', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+            headerBtn.setAttribute('aria-label', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        }
     } else {
         if (sidebarIcon) {
             sidebarIcon.className = 'ph ph-x';
@@ -1329,6 +1334,10 @@ function updateSidebarUIState() {
         }
         if (headerIcon) {
             headerIcon.className = 'ph ph-list';
+        }
+        if (headerBtn) {
+            headerBtn.setAttribute('title', 'Open navigation menu');
+            headerBtn.setAttribute('aria-label', 'Open navigation menu');
         }
     }
 }
@@ -1361,6 +1370,31 @@ function initAsideEvents() {
             e.preventDefault();
             e.stopPropagation();
             toggleSidebar();
+        });
+    }
+
+    // Auto-close mobile drawer on link/widget click inside sidebar
+    if (aside) {
+        aside.querySelectorAll('a, .sidebar-user-widget, [onclick]').forEach((el) => {
+            el.addEventListener('click', () => {
+                if (!isDesktopSidebarView() && !el.closest('#close-btn')) {
+                    closeSidebarMobile();
+                }
+            });
+        });
+    }
+
+    // Escape key closes mobile sidebar drawer
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !isDesktopSidebarView() && aside && aside.classList.contains('open')) {
+            closeSidebarMobile();
+        }
+    });
+
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (backdrop) {
+        backdrop.addEventListener('click', () => {
+            closeSidebarMobile();
         });
     }
 

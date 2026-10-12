@@ -320,7 +320,7 @@ header {
 .sidebar-brand .header__logo-text,
 .header__logo-text {
     display: inline-block !important;
-    font-size: 40px !important;
+    font-size: 21px !important;
     font-weight: 800 !important;
     color: var(--text, #1E1B4B) !important;
     letter-spacing: -0.5px !important;
@@ -3649,7 +3649,7 @@ main > p {
 
   .dash-header .header__logo-text,
   .sidebar-brand .header__logo-text {
-    font-size: 40px !important;
+    font-size: 21px !important;
     font-weight: 800 !important;
     line-height: 1 !important;
     display: inline-block !important;
