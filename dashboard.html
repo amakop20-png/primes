@@ -43,9 +43,173 @@
 
   <!-- CSS -->
   <link rel="stylesheet" href="styles.css?v=2.8">
+  <link rel="stylesheet" href="dashboard-redesign.css?v=2.8">
 
-  <!-- Embedded Virtual Numbers Cards Styling for Zero Cache Latency -->
+  <!-- Embedded Dashboard Refinements -->
   <style>
+    /* Sidebar User Widget */
+    .sidebar-user-widget {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      margin: 8px 0 16px;
+      background: var(--border-light, #f8f6fc);
+      border: 1px solid var(--border, rgba(124, 58, 237, 0.14));
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    .sidebar-user-widget:hover {
+      background: var(--surface-hover, #f1ecfc);
+      border-color: var(--primary, #7c3aed);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08);
+    }
+    body.dark-theme .sidebar-user-widget {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    body.dark-theme .sidebar-user-widget:hover {
+      background: rgba(124, 58, 237, 0.15);
+      border-color: #7c3aed;
+    }
+    .sidebar-user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-light, #ede9fe);
+      color: var(--primary, #7c3aed);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    body.dark-theme .sidebar-user-avatar {
+      background: rgba(124, 58, 237, 0.25);
+      color: #c4b5fd;
+    }
+    .sidebar-user-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .sidebar-user-name {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text, #0f172a);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.2;
+    }
+    body.dark-theme .sidebar-user-name {
+      color: #f8fafc;
+    }
+    .sidebar-user-email {
+      font-size: 11px;
+      color: var(--muted, #64748b);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .sidebar-user-gear {
+      color: var(--muted, #64748b);
+      font-size: 15px;
+      opacity: 0.7;
+    }
+    .sidebar-nav-group-label {
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      color: var(--muted, #94a3b8);
+      padding: 12px 12px 6px;
+      text-transform: uppercase;
+    }
+
+    /* Top Compliance / Notice Banner */
+    .dash-notice-pill-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 18px;
+      border-radius: 12px;
+      background: #fbf9ff;
+      border: 1px solid rgba(124, 58, 237, 0.16);
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: var(--text, #1e1b4b);
+    }
+    body.dark-theme .dash-notice-pill-banner {
+      background: rgba(124, 58, 237, 0.08);
+      border-color: rgba(124, 58, 237, 0.22);
+      color: #e2e8f0;
+    }
+    .notice-pill-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .notice-pill-icon {
+      color: var(--primary, #7c3aed);
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    /* Quick Navigation Action Pills */
+    .dash-quick-nav-pills {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 20px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .quick-nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border, rgba(124, 58, 237, 0.14));
+      background: var(--surface, #ffffff);
+      color: var(--text, #0f172a);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      transition: all 0.15s ease;
+    }
+    .quick-nav-pill:hover {
+      background: var(--surface-hover, #f6f2fd);
+      border-color: var(--primary, #7c3aed);
+      color: var(--primary, #7c3aed);
+      transform: translateY(-1px);
+    }
+    .quick-nav-pill.active {
+      background: var(--primary, #7c3aed);
+      color: #ffffff;
+      border-color: var(--primary, #7c3aed);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.28);
+    }
+    .quick-nav-pill.active i {
+      color: #ffffff;
+    }
+    body.dark-theme .quick-nav-pill {
+      background: var(--surface, #151221);
+      border-color: var(--border, rgba(124, 58, 237, 0.2));
+      color: #f8fafc;
+    }
+    body.dark-theme .quick-nav-pill:hover {
+      background: rgba(124, 58, 237, 0.15);
+      border-color: #7c3aed;
+      color: #c4b5fd;
+    }
     .vnum-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -148,10 +312,15 @@
     }
   </script>
 
+  <!-- Screen Loader (Original Logo 40px x 40px) -->
+  <div class="loader-wrapper" id="loaderWrapper" aria-hidden="true">
+    <img src="nuraxq-icon.png" alt="Loading" class="loader-logo">
+  </div>
+
   <header class="dash-header">
     <div class="header-left">
         <div class="toggle-btn" id="toggle-btn" aria-label="Toggle Navigation">
-            <i class="ph ph-list"></i>
+            <i class="ph ph-list" id="headerToggleIcon"></i>
         </div>
         <a href="dashboard.html" class="logo" style="text-decoration:none;">
             <img src="nuraxq-icon.png" alt="NuraXQ" class="nuraxq-logo nura-sq-logo">
@@ -159,6 +328,12 @@
         </a>
     </div>
     <div class="header-right">
+        <!-- Sound Notification Toggle Button -->
+        <button type="button" class="btn-sound-toggle sound-toggle-btn wfin-icon-btn" id="soundToggleBtn" onclick="window.NuraSound && window.NuraSound.toggleSound()" aria-label="Toggle Sound Notifications" title="Sound Notifications">
+            <i class="ph ph-speaker-high"></i>
+        </button>
+
+        <!-- Currency Switcher Toggle -->
         <button type="button" class="currency-switch currency-switch-toggle" id="currencySwitch" aria-label="Switch Currency" title="Switch Currency">
             <span class="cswitch-track">
                 <span class="cswitch-item curr-segment-ngn active" data-curr="NGN">
@@ -173,6 +348,8 @@
             <span id="currencySymbol" style="display:none;" aria-hidden="true">₦</span>
             <span id="currencyName" style="display:none;" aria-hidden="true">NGN</span>
         </button>
+
+        <!-- Notifications Dropdown -->
         <div class="notifications profile-dropdown">
             <button class="profile-toggle" onclick="toggleNotifDropdown()" id="notifToggle" type="button" aria-expanded="false" style="background:transparent; border:none; position:relative; padding: 4px; cursor: pointer;">
                 <i class="ph ph-bell" style="font-size: 18px; color: var(--text);"></i>
@@ -188,6 +365,8 @@
               </div>
             </div>
         </div>
+
+        <!-- User Profile Dropdown -->
         <div class="profile-dropdown">
             <button class="profile-toggle" onclick="toggleDropdown()" id="profileToggle" type="button" aria-expanded="false">
                 <i class="ph ph-user-circle" style="font-size: 1.5em; vertical-align: middle;"></i>
@@ -197,8 +376,8 @@
               <div class="dropdown-header">
                 <i class="ph ph-user-circle" style="font-size: 40px; vertical-align: middle;"></i>
                 <div>
-                  <p class="dropdown-name">username</p>
-                  <p class="dropdown-email">precious@example.com</p>
+                  <p class="dropdown-name" id="dropdownUsername">User</p>
+                  <p class="dropdown-email" id="dropdownEmail">user@nuraxq.com</p>
                 </div>
               </div>
               <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
@@ -210,6 +389,9 @@
     </div>
   </header>
 
+  <!-- Mobile Sidebar Backdrop -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebarMobile()"></div>
+
   <!-- Sidebar -->
   <aside id="aside">
     <div class="top">
@@ -218,27 +400,51 @@
           <img src="nuraxq-icon.png" alt="NuraXQ" class="sidebar-logo">
           <span class="header__logo-text">NuraXQ</span>
         </a>
-        <div class="close" id="close-btn" aria-label="Close sidebar">
-          <i class="ph ph-x"></i>
+        <div class="close" id="close-btn" aria-label="Close sidebar" title="Collapse sidebar">
+          <i class="ph ph-caret-left" id="sidebarToggleIcon"></i>
         </div>
       </div>
+
+      <!-- User Profile Widget -->
+      <div class="sidebar-user-widget" id="sidebarUserWidget" onclick="openSettings(); switchSettingsTab('profile'); return false;" title="Manage Account Profile">
+        <div class="sidebar-user-avatar">
+          <i class="ph ph-user-circle"></i>
+        </div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name username" id="sidebarUserName">Account User</div>
+          <div class="sidebar-user-email" id="sidebarUserEmail">user@nuraxq.com</div>
+        </div>
+        <i class="ph ph-gear sidebar-user-gear"></i>
+      </div>
+
+      <!-- Group: SERVICES -->
+      <div class="sidebar-nav-group-label">SERVICES</div>
       <a href="dashboard.html" class="active">
         <span><i class="ph ph-squares-four"></i> Dashboard</span>
       </a>
-      <a href="#" id="sidebarWalletBtn" onclick="document.getElementById('walletOverviewSection')?.scrollIntoView({behavior:'smooth'}); return false;">
-        <span><i class="ph ph-wallet"></i> Wallet</span>
+      <a href="buy.html?tab=products">
+        <span><i class="ph ph-sim-card"></i> Buy Numbers</span>
       </a>
       <a href="buy.html?tab=countries">
         <span><i class="ph ph-globe"></i> Countries</span>
       </a>
-      <a href="buy.html?tab=products">
-        <span><i class="ph ph-sim-card"></i> Buy Number</span>
+
+      <!-- Group: FINANCE & HISTORY -->
+      <div class="sidebar-nav-group-label">FINANCE &amp; HISTORY</div>
+      <a href="#" id="sidebarWalletBtn" onclick="openPopup(); return false;">
+        <span><i class="ph ph-wallet"></i> Wallet</span>
       </a>
       <a href="#recentActivity" id="sidebarActivityBtn">
-        <span><i class="ph ph-clock-counter-clockwise"></i> Activity</span>
+        <span><i class="ph ph-receipt"></i> Transactions</span>
       </a>
+
+      <!-- Group: ACCOUNT -->
+      <div class="sidebar-nav-group-label">ACCOUNT</div>
       <a href="#" id="sidebarSettingsBtn">
         <span><i class="ph ph-gear"></i> Settings</span>
+      </a>
+      <a href="login.html" class="logout" onclick="logout(); return false;">
+        <span><i class="ph ph-sign-out"></i> Logout</span>
       </a>
     </div>
 
@@ -254,74 +460,85 @@
   <main class="container">
 
     <div class="dashboard-title-container">
-        <h1 id="dashboardWelcomeHeading">Welcome back!</h1>
-        <p class="dash-welcome-sub">Manage your wallet and account activities.</p>
+        <div>
+          <h1 id="dashboardWelcomeHeading">Welcome back!</h1>
+          <p class="dash-welcome-sub">Manage your virtual numbers, wallet, and OTP verifications.</p>
+        </div>
+        <div class="dash-live-badge">
+          <span class="dash-live-dot"></span>
+          <span>Systems Active</span>
+        </div>
+    </div>
+
+    <!-- Legitimacy / Compliance Top Notice Banner -->
+    <div class="dash-notice-pill-banner">
+      <div class="notice-pill-content">
+        <i class="ph ph-shield-check notice-pill-icon"></i>
+        <span>This platform provides virtual numbers for <strong>legitimate verification use only</strong>.</span>
+      </div>
+      <span style="font-size:12px; color:var(--muted); font-weight:600;">Fast Delivery &bull; Instant SMS</span>
+    </div>
+
+    <!-- Quick Navigation Action Pills -->
+    <div class="dash-quick-nav-pills">
+      <button type="button" class="quick-nav-pill active" onclick="openDepositModal()">
+        <i class="ph ph-plus-circle-fill"></i>
+        <span>+ Fund Account</span>
+      </button>
+      <button type="button" class="quick-nav-pill" onclick="window.location.href='buy.html?tab=products'">
+        <i class="ph ph-sim-card"></i>
+        <span>Buy Number</span>
+      </button>
+      <button type="button" class="quick-nav-pill" onclick="window.location.href='buy.html?tab=countries'">
+        <i class="ph ph-globe"></i>
+        <span>Countries</span>
+      </button>
+      <button type="button" class="quick-nav-pill" onclick="openPopup()">
+        <i class="ph ph-bank"></i>
+        <span>Virtual Account</span>
+      </button>
+      <button type="button" class="quick-nav-pill" onclick="document.getElementById('recentActivity').scrollIntoView({behavior:'smooth'})">
+        <i class="ph ph-receipt"></i>
+        <span>Transactions</span>
+      </button>
     </div>
 
     <!-- Hero Row: Dual-Card Fintech Grid -->
     <div class="dash-hero-grid">
       <!-- Wallet Section -->
       <section class="wallet-overview-section" id="walletOverviewSection" aria-label="Wallet Overview">
-        <div class="wallet-fintech-card activities-card referral-card wallet-card">
-          <!-- Top Meta & Controls Header -->
-          <div class="wfin-header-row">
-            <div class="wfin-brand-meta">
-              <span class="wfin-status-dot"></span>
-              <span class="wfin-label-title">Available Balance</span>
-            </div>
-
-            <div class="wfin-controls-cluster">
-              <!-- NGN / USD Segmented Switcher -->
-              <div class="wcard-currency-toggle" role="group" aria-label="Currency selection">
-                <button type="button" class="wcard-curr-btn curr-segment-ngn active" onclick="setDashboardCurrency('NGN')" title="Switch to NGN">NGN</button>
-                <button type="button" class="wcard-curr-btn curr-segment-usd" onclick="setDashboardCurrency('USD')" title="Switch to USD">USD</button>
-              </div>
-
-              <!-- Privacy Eye Toggle -->
-              <button type="button" class="btn-balance-privacy wfin-icon-btn" id="toggleBalancePrivacyBtn" onclick="toggleBalancePrivacy(event)" aria-label="Hide wallet balance" title="Hide balance">
+        <div class="nura-ref-wallet-card wallet-card">
+          <div class="nura-wallet-facet-bg"></div>
+          <div class="nura-wallet-left-content">
+            <h2 class="nura-wallet-greeting">
+              <span>Hi, <span id="dashboardUsername" class="username">User</span></span>
+              <span class="wave-emoji">👋</span>
+            </h2>
+            <div class="nura-wallet-balance-row">
+              <span class="nura-wallet-balance-label">Available Balance</span>
+              <button type="button" class="nura-wallet-eye-btn btn-balance-privacy" id="toggleBalancePrivacyBtn" onclick="toggleBalancePrivacy(event)" aria-label="Hide wallet balance" title="Hide balance">
                 <i class="ph ph-eye" id="balancePrivacyIcon"></i>
               </button>
-
-              <!-- Refresh Balance -->
-              <button type="button" class="wfin-icon-btn" onclick="refreshWalletBalanceWithSpin(this)" title="Refresh balance" aria-label="Refresh balance">
+              <button type="button" class="nura-wallet-refresh-btn" id="walletRefreshBtn" onclick="refreshWalletBalanceWithSpin(this)" title="Refresh balance" aria-label="Refresh balance">
                 <i class="ph ph-arrows-clockwise" id="walletRefreshIcon"></i>
               </button>
             </div>
-          </div>
-
-          <!-- Primary & Dual-Balance Row -->
-          <div class="wfin-balance-block">
-            <div class="wfin-amount-row">
-              <div id="displayBalanceNGN" class="whero-amount wfin-amount-hero">₦0.00</div>
-            </div>
-            <div class="wfin-secondary-row">
-              <div class="wfin-dual-pill" title="Equivalent balance in alternate currency">
-                <i class="ph ph-arrows-left-right"></i>
-                <span id="displayBalanceUSD">≈ $0.00</span>
-              </div>
-              <div class="wfin-rate-chip" id="walletRateChip" title="Dynamic conversion rate">
-                <i class="ph ph-trend-up"></i>
-                <span id="walletRateChipText">1 USD ≈ ₦1,500</span>
-              </div>
+            <div class="nura-wallet-amount-row">
+              <div id="displayBalanceNGN" class="nura-wallet-amount whero-amount wfin-amount-hero">₦0.00</div>
+              <div id="displayBalanceUSD" class="nura-wallet-sub-amount wfin-dual-pill">≈ $0.00</div>
             </div>
           </div>
-
-          <!-- Quick Action Bar -->
-          <div class="wfin-action-bar">
-            <button type="button" id="addFundsBtn" class="wfin-btn-primary btn-wallet-fund" onclick="openDepositModal()" title="Add Funds via Paystack">
-              <i class="ph ph-plus-circle-fill"></i>
+          <div class="nura-wallet-actions-col">
+            <button type="button" id="addFundsBtn" class="nura-wallet-btn-add btn-wallet-fund" onclick="openDepositModal()" title="Add Funds via Paystack">
+              <span class="btn-plus-sym">+</span>
               <span>Add Funds</span>
             </button>
-            <button type="button" class="wfin-btn-ghost" onclick="openPopup()" title="View Virtual Bank Account">
-              <i class="ph ph-bank"></i>
-              <span>Virtual Account</span>
-            </button>
-            <button type="button" class="wfin-btn-ghost" onclick="document.getElementById('recentActivity').scrollIntoView({behavior:'smooth'})" title="Transactions">
-              <i class="ph ph-receipt"></i>
-              <span>Transactions</span>
+            <div class="nura-wallet-action-dot"></div>
+            <button type="button" class="nura-wallet-btn-history" onclick="document.getElementById('recentActivity').scrollIntoView({behavior:'smooth'})" title="Transactions History">
+              <span>History</span>
+              <i class="ph ph-arrow-right"></i>
             </button>
           </div>
-
           <!-- Hidden Compatibility Anchors (Keeps existing JS completely safe) -->
           <span id="activeCurrencyTag" style="display:none;">Active: NGN</span>
           <span id="cardBalanceNGN" style="display:none;"></span>
@@ -333,35 +550,36 @@
 
       <!-- Referral & Rewards Section -->
       <section class="referral-section">
-        <div class="activities-card referral-card wfin-referral-card">
-          <div class="wfin-header-row">
-            <div class="wfin-brand-meta">
-              <i class="ph ph-gift" style="font-size: 18px; color: #fff;"></i>
-              <span class="wfin-label-title">Rewards</span>
+        <div class="nura-ref-referral-card activities-card referral-card wfin-referral-card">
+          <div class="nura-wallet-facet-bg"></div>
+          <div class="wfin-referral-content">
+            <div class="wfin-header-row">
+              <div class="wfin-brand-meta">
+                <i class="ph ph-gift" style="font-size: 18px; color: #fff;"></i>
+                <span class="wfin-label-title" style="color:rgba(255,255,255,0.88);">Rewards Program</span>
+              </div>
+              <button type="button" onclick="loadReferralBalance()" class="nura-wallet-refresh-btn" style="background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.25); color:#fff; cursor:pointer;" title="Refresh rewards">
+                <i class="ph ph-arrows-clockwise"></i>
+              </button>
             </div>
-            <button type="button" onclick="loadReferralBalance()" class="wfin-icon-btn" style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); color:#fff; cursor:pointer;" title="Refresh rewards">
-              <i class="ph ph-arrows-clockwise"></i>
-            </button>
-          </div>
-
-          <div class="wfin-balance-block">
-            <div class="wfin-amount-row">
-              <div id="displayReferralBalance" class="whero-amount wfin-amount-hero">₦0.00</div>
+            <div class="wfin-balance-block">
+              <div class="wfin-amount-row">
+                <div id="displayReferralBalance" class="nura-wallet-amount wfin-amount-hero">₦0.00</div>
+              </div>
+              <div class="wfin-secondary-row">
+                <span class="wfin-sub-note">Earn 10% instant bonus on referee recharges</span>
+              </div>
             </div>
-            <div class="wfin-secondary-row">
-              <span class="wfin-sub-note">Earn 10% bonus on referee recharges</span>
+            <div class="wfin-referral-bar">
+              <div class="wfin-ref-code-wrap">
+                <span class="wfin-ref-tag">CODE</span>
+                <span id="displayReferralCode" class="wfin-ref-code">REF-USER</span>
+              </div>
+              <button type="button" id="btnCopyReferral" class="wfin-btn-copy btn-copy-ref-badge" onclick="copyReferralCode()" title="Copy referral code">
+                <i class="ph ph-copy" id="copyRefIcon"></i>
+                <span id="copyRefBtnText">Copy</span>
+              </button>
             </div>
-          </div>
-
-          <div class="wfin-referral-bar">
-            <div class="wfin-ref-code-wrap">
-              <span class="wfin-ref-tag">CODE</span>
-              <span id="displayReferralCode" class="wfin-ref-code">REF-USER</span>
-            </div>
-            <button type="button" id="btnCopyReferral" class="wfin-btn-copy btn-copy-ref-badge" onclick="copyReferralCode()" title="Copy referral code">
-              <i class="ph ph-copy" id="copyRefIcon"></i>
-              <span id="copyRefBtnText">Copy</span>
-            </button>
           </div>
         </div>
       </section>

@@ -1090,6 +1090,14 @@ async function loadActiveNumbers() {
                         ? { ...item, status: status || 'PENDING' } 
                         : { id: String(orderId), status: status || 'PENDING' };
                     stillActive.push(updatedObj);
+
+                    // Check for OTP arrival to trigger sound notification
+                    const smsCode = orderData?.smsCode || orderData?.sms || orderData?.code;
+                    if (smsCode || status === 'RECEIVED') {
+                        if (window.NuraSound && typeof window.NuraSound.playOtpChime === 'function') {
+                            window.NuraSound.playOtpChime(orderId);
+                        }
+                    }
                 }
             } else {
                 stillActive.push(item);
@@ -1191,10 +1199,10 @@ function renderUserInfo() {
     const displayName  = session.name || session.username || 'User';
     const displayEmail = session.email || '';
 
-    document.querySelectorAll('#dashboardUsername, #Username, #dropdown .dropdown-name, .username').forEach(el => {
+    document.querySelectorAll('#dashboardUsername, #Username, #dropdown .dropdown-name, #dropdownUsername, .username, #sidebarUserName').forEach(el => {
         el.textContent = displayName;
     });
-    document.querySelectorAll('#dropdown .dropdown-email, #profileEmail').forEach(el => {
+    document.querySelectorAll('#dropdown .dropdown-email, #dropdownEmail, #profileEmail, #sidebarUserEmail').forEach(el => {
         if (displayEmail) el.textContent = displayEmail;
     });
 
@@ -1784,6 +1792,20 @@ function init() {
             loadActiveNumbers();
         }
     });
+
+    // 8. Sync sound notification UI state
+    if (window.NuraSound && typeof window.NuraSound.updateSoundUI === 'function') {
+        window.NuraSound.updateSoundUI();
+    }
+
+    // 9. Periodically poll active orders to detect incoming OTP and trigger chime
+    setInterval(() => {
+        const count = parseInt(localStorage.getItem('primes_active_count') || '0', 10);
+        const hasCurrent = !!localStorage.getItem('currentOrderId');
+        if (count > 0 || hasCurrent) {
+            loadActiveNumbers().catch(() => {});
+        }
+    }, 10000);
 }
 
 document.addEventListener('DOMContentLoaded', init);

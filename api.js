@@ -13,7 +13,6 @@ const REQUEST_TIMEOUT_MS = 25000; // 25s ceiling as specified in project require
 ========================================== */
 
 function getAuthToken() {
-Total Users
     let token = localStorage.getItem('primes_token');
     if (!token) {
         // One-time fallback and migration from legacy token keys
