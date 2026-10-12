@@ -316,6 +316,20 @@
   <div class="loader-wrapper" id="loaderWrapper" aria-hidden="true">
     <img src="nuraxq-icon.png" alt="Loading" class="loader-logo">
   </div>
+  <script>
+    // Fail-safe watchdog: Guarantees loader dismisses even under slow network or script delay
+    window.__loaderFailsafe = setTimeout(function() {
+      var l = document.getElementById('loaderWrapper');
+      if (l && !l._dismissed) {
+        l._dismissed = true;
+        l.classList.add('hidden');
+        l.style.opacity = '0';
+        l.style.visibility = 'hidden';
+        l.style.pointerEvents = 'none';
+        setTimeout(function() { if (l) l.style.display = 'none'; }, 350);
+      }
+    }, 2500);
+  </script>
 
   <header class="dash-header">
     <div class="header-left">
@@ -863,11 +877,6 @@
     </div>
   </div>
 
-  <script src="https://js.paystack.co/v1/inline.js"></script>
-  <script src="api.js?v=2.6"></script>
-  <script src="ui-shared.js?v=2.6"></script>
-  <script src="script.js?v=2.6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 
 
@@ -971,5 +980,10 @@
     </div>
   </div>
 
+  <!-- Application Scripts -->
+  <script src="https://js.paystack.co/v1/inline.js" defer></script>
+  <script src="api.js?v=3.0"></script>
+  <script src="ui-shared.js?v=3.0"></script>
+  <script src="script.js?v=3.0"></script>
 </body>
 </html>

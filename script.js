@@ -1266,6 +1266,13 @@ function scrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function initScrollEvents() {
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    if (scrollTopBtn) {
+        scrollTopBtn.addEventListener('click', scrollToTop);
+    }
+}
+
 function isDesktopSidebarView() {
     return window.innerWidth > 768;
 }
@@ -1628,21 +1635,30 @@ function initReferralCopy() {
    SCREEN LOADER
 ══════════════════════════════════════════ */
 function dismissScreenLoader() {
+    if (window.__loaderFailsafe) {
+        clearTimeout(window.__loaderFailsafe);
+        window.__loaderFailsafe = null;
+    }
     const loader = document.getElementById('loaderWrapper') || document.querySelector('.loader-wrapper');
     if (!loader || loader._dismissed) return;
     loader._dismissed = true;
-    loader.style.transition = 'opacity 0.35s ease, visibility 0.35s ease';
+    loader.classList.add('hidden');
+    loader.style.transition = 'opacity 0.3s ease, visibility 0.3s ease';
     loader.style.opacity = '0';
     loader.style.visibility = 'hidden';
     loader.style.pointerEvents = 'none';
     setTimeout(() => {
-        if (loader) loader.style.display = 'none';
-    }, 400);
+        if (loader) {
+            loader.style.display = 'none';
+            loader.setAttribute('aria-hidden', 'true');
+        }
+    }, 350);
 }
 
+window.dismissScreenLoader = dismissScreenLoader;
 window.addEventListener('load', dismissScreenLoader);
-document.addEventListener('DOMContentLoaded', () => { setTimeout(dismissScreenLoader, 700); });
-setTimeout(dismissScreenLoader, 2200);
+document.addEventListener('DOMContentLoaded', () => { setTimeout(dismissScreenLoader, 300); });
+setTimeout(dismissScreenLoader, 1800);
 
 /* ══════════════════════════════════════════
    QUICK ACTION CARDS (navigation only)
@@ -1735,77 +1751,94 @@ document.addEventListener('DOMContentLoaded', function() {
 /* ══════════════════════════════════════════
    MAIN INITIALISATION
 ══════════════════════════════════════════ */
+let isDashboardInitialized = false;
+
 function init() {
+    if (isDashboardInitialized) return;
+
     // 1. Auth guard — redirect immediately if no token
-    if (!requireAuth()) return;
+    if (!requireAuth()) {
+        dismissScreenLoader();
+        return;
+    }
 
-    restoreTheme();
-    initPopupEvents();
-    initScrollEvents();
-    initAsideEvents();
+    try {
+        isDashboardInitialized = true;
 
-    // 2. Render cached user info immediately (no flicker)
-    renderUserInfo();
+        restoreTheme();
+        initPopupEvents();
+        initScrollEvents();
+        initAsideEvents();
 
-    // 2b. Sync currency symbol/label to whatever was last saved, so a
-    // page reload shows the correct currency immediately (not just NGN
-    // by default) before any balance data has even loaded.
-    updateCurrencyDisplay(getCurrency());
+        // 2. Render cached user info immediately (no flicker)
+        renderUserInfo();
 
-    // 2c. Restore balance privacy visibility state (show/hide with bullets)
-    updateBalancePrivacyDisplay();
+        // 2b. Sync currency symbol/label to whatever was last saved
+        updateCurrencyDisplay(getCurrency());
 
-    // Wire Balance Privacy Eye Buttons
-    document.querySelectorAll('#toggleBalancePrivacyBtn, .btn-balance-privacy, .btn-balance-privacy-sm').forEach(btn => {
-        if (!btn._privacyWired) {
-            btn.addEventListener('click', toggleBalancePrivacy);
-            btn._privacyWired = true;
+        // 2c. Restore balance privacy visibility state (show/hide with bullets)
+        updateBalancePrivacyDisplay();
+
+        // Wire Balance Privacy Eye Buttons
+        document.querySelectorAll('#toggleBalancePrivacyBtn, .btn-balance-privacy, .btn-balance-privacy-sm').forEach(btn => {
+            if (!btn._privacyWired) {
+                btn.addEventListener('click', toggleBalancePrivacy);
+                btn._privacyWired = true;
+            }
+        });
+
+        // 3. Wire currency switcher
+        const switchEl = document.getElementById('currencySwitch');
+        if (switchEl) switchEl.addEventListener('click', toggleCurrency);
+
+        // 4. Wire Add Funds buttons
+        const addBtn    = document.getElementById('addFundsBtn');
+        const popAddBtn = document.getElementById('popupAddFundsBtn');
+        if (addBtn)    addBtn.addEventListener('click', handleAddFunds);
+        if (popAddBtn) popAddBtn.addEventListener('click', handleAddFunds);
+
+        // 5. Referral copy
+        initReferralCopy();
+
+        // 7. Multi-tab and cross-page synchronization
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'currentOrderId' || e.key === 'primes_active_orders' || e.key === 'primes_active_count' || e.key === 'primes_order_update') {
+                loadActiveNumbers().catch(() => {});
+            }
+        });
+
+        // 8. Sync sound notification UI state
+        if (window.NuraSound && typeof window.NuraSound.updateSoundUI === 'function') {
+            window.NuraSound.updateSoundUI();
         }
-    });
 
-    // 3. Wire currency switcher
-    const switchEl = document.getElementById('currencySwitch');
-    if (switchEl) switchEl.addEventListener('click', toggleCurrency);
+        // 9. Periodically poll active orders to detect incoming OTP and trigger chime
+        setInterval(() => {
+            const count = parseInt(localStorage.getItem('primes_active_count') || '0', 10);
+            const hasCurrent = !!localStorage.getItem('currentOrderId');
+            if (count > 0 || hasCurrent) {
+                loadActiveNumbers().catch(() => {});
+            }
+        }, 10000);
 
-    // 4. Wire Add Funds buttons
-    const addBtn    = document.getElementById('addFundsBtn');
-    const popAddBtn = document.getElementById('popupAddFundsBtn');
-    if (addBtn)    addBtn.addEventListener('click', handleAddFunds);
-    if (popAddBtn) popAddBtn.addEventListener('click', handleAddFunds);
+    } catch (err) {
+        console.error('[Dashboard Init Error]', err);
+    } finally {
+        // ALWAYS dismiss the loader once the UI shell is initialized!
+        dismissScreenLoader();
+    }
 
-    // 5. Referral copy
-    initReferralCopy();
-
-    // 6. Load live data from backend
-    loadWalletBalance();
-    loadVirtualAccount();
-    loadTransactions(1);
-    loadActiveNumbers();
-    loadNotifications().catch(e => console.log('Notif check fail:', e));
+    // 6. Load live data independently in background (individual catch blocks so no endpoint blocks another or the UI)
+    loadWalletBalance().catch(e => console.warn('Wallet balance fetch warning:', e));
+    loadVirtualAccount().catch(e => console.warn('Virtual account fetch warning:', e));
+    loadTransactions(1).catch(e => console.warn('Transactions fetch warning:', e));
+    loadActiveNumbers().catch(e => console.warn('Active numbers fetch warning:', e));
+    if (typeof loadNotifications === 'function') {
+        loadNotifications().catch(e => console.warn('Notif check warning:', e));
+    }
     if (typeof checkForAnnouncements === 'function') {
-        checkForAnnouncements();
+        try { checkForAnnouncements(); } catch (e) { console.warn('Announcement check warning:', e); }
     }
-
-    // 7. Multi-tab and cross-page synchronization
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'currentOrderId' || e.key === 'primes_active_orders' || e.key === 'primes_active_count' || e.key === 'primes_order_update') {
-            loadActiveNumbers();
-        }
-    });
-
-    // 8. Sync sound notification UI state
-    if (window.NuraSound && typeof window.NuraSound.updateSoundUI === 'function') {
-        window.NuraSound.updateSoundUI();
-    }
-
-    // 9. Periodically poll active orders to detect incoming OTP and trigger chime
-    setInterval(() => {
-        const count = parseInt(localStorage.getItem('primes_active_count') || '0', 10);
-        const hasCurrent = !!localStorage.getItem('currentOrderId');
-        if (count > 0 || hasCurrent) {
-            loadActiveNumbers().catch(() => {});
-        }
-    }, 10000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
