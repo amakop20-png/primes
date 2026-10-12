@@ -3675,7 +3675,7 @@ main > p {
   header { padding: 10px 14px; }
   .dash-header { padding: 0 14px; }
 
-  .username { display: none; }
+  .profile-toggle .username { display: none; }
 
   .activities-card { padding: 22px 20px; }
   .activities-card p { font-size: 32px; }

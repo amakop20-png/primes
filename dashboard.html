@@ -189,6 +189,15 @@
       border-color: rgba(124, 58, 237, 0.22);
       color: #e2e8f0;
     }
+    @media (max-width: 600px) {
+      .dash-notice-pill-banner {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        padding: 10px 14px !important;
+        font-size: 12px !important;
+      }
+    }
     .notice-pill-content {
       display: flex;
       align-items: center;
@@ -206,9 +215,23 @@
       align-items: center;
       gap: 10px;
       overflow-x: auto;
-      padding-bottom: 4px;
+      padding-bottom: 6px;
       margin-bottom: 20px;
       -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .dash-quick-nav-pills::-webkit-scrollbar {
+      display: none;
+    }
+    @media (max-width: 480px) {
+      .dash-quick-nav-pills {
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .quick-nav-pill {
+        padding: 7px 13px !important;
+        font-size: 12px !important;
+      }
     }
     .quick-nav-pill {
       display: inline-flex;
@@ -294,8 +317,17 @@
       .nura-ref-wallet-card,
       .wfin-referral-card,
       .nura-ref-referral-card {
-        padding: 22px 20px !important;
+        padding: 20px 18px !important;
+        border-radius: 20px !important;
         min-height: auto !important;
+      }
+    }
+    @media (max-width: 480px) {
+      .nura-ref-wallet-card,
+      .wfin-referral-card,
+      .nura-ref-referral-card {
+        padding: 18px 16px !important;
+        border-radius: 18px !important;
       }
     }
 
@@ -316,7 +348,17 @@
     @media (max-width: 680px) {
       .vnum-grid {
         grid-template-columns: 1fr !important;
-        gap: 12px !important;
+        gap: 10px !important;
+      }
+    }
+    @media (max-width: 480px) {
+      .vnum-card {
+        padding: 14px 16px !important;
+        min-height: 94px !important;
+        border-radius: 14px !important;
+      }
+      .vnum-card-value {
+        font-size: 24px !important;
       }
     }
     .vnum-card {
@@ -426,7 +468,7 @@
     @media (max-width: 480px) {
       .jacket {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 10px !important;
+        gap: 8px !important;
       }
     }
     .action-card {
@@ -466,6 +508,20 @@
     }
     body.dark-theme .action-card span {
       color: var(--text, #f8fafc) !important;
+    }
+    @media (max-width: 480px) {
+      .action-card {
+        padding: 11px 10px !important;
+        gap: 8px !important;
+        min-height: 52px !important;
+        border-radius: 12px !important;
+      }
+      .action-card i {
+        font-size: 18px !important;
+      }
+      .action-card span {
+        font-size: 12px !important;
+      }
     }
   </style>
  
@@ -546,7 +602,7 @@
                 <i class="ph ph-bell" style="font-size: 18px; color: var(--text);"></i>
                 <span class="badge" id="notifBadge" style="display:none; position:absolute; top:-2px; right:-2px; background:var(--primary); color:#fff; font-size:10px; font-weight:bold; width:16px; height:16px; border-radius:50%; align-items:center; justify-content:center;">0</span>
             </button>
-            <div id="notifDropdown" class="dropdown-content" aria-label="Notifications" style="width: 300px; padding: 0;">
+            <div id="notifDropdown" class="dropdown-content" aria-label="Notifications" style="padding: 0;">
               <div class="dropdown-header" style="border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                 <p class="dropdown-name" style="margin:0; font-size:14px; font-weight:700;">Notifications</p>
                 <button onclick="markAllNotifRead()" style="background:none; border:none; color:var(--primary); font-size:12px; font-weight:600; cursor:pointer;">Mark all as read</button>
