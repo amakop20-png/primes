@@ -22,28 +22,55 @@
 
   <!-- start webpushr tracking code -->
   <script>
-  (function(w,d,s,id) {
-      if(typeof(w.webpushr)!=='undefined') return;
-      w.webpushr=w.webpushr||function(){
-          (w.webpushr.q=w.webpushr.q||[]).push(arguments)
-      };
-      var js, fjs=d.getElementsByTagName(s)[0];
-      js=d.createElement(s);
-      js.id=id;
-      js.async=1;
-      js.src="https://cdn.webpushr.com/app.min.js";
-      fjs.parentNode.appendChild(js);
-  }(window,document,'script','webpushr-jssdk'));
+  (function() {
+    window.addEventListener('unhandledrejection', function(event) {
+      if (event.reason && (
+        String(event.reason).includes('webpushr') ||
+        String(event.reason?.stack || '').includes('webpushr') ||
+        String(event.reason?.message || '').includes('Failed to fetch')
+      )) {
+        console.warn('[Webpushr] Network request handled gracefully:', event.reason?.message || event.reason);
+        event.preventDefault();
+      }
+    });
 
-  webpushr('setup',{
-      'key':'BM23b9moGySmnAwvyGTR9UqyN5Klu4lm1O-kaaqulN5fL76PGJmyaYTbFaImOQLqq00bn0LuddyXUcpGa6Y92eA'
-  });
+    try {
+      var isLocalHost = ['localhost', '127.0.0.1', ''].includes(window.location.hostname) || window.location.protocol === 'file:';
+      if (isLocalHost) {
+        console.warn('[Webpushr] Local environment detected. Webpushr bell/prompt is suppressed locally.');
+        window.webpushr = window.webpushr || function() {};
+        return;
+      }
+
+      (function(w,d,s,id) {
+          if(typeof(w.webpushr)!=='undefined') return;
+          w.webpushr=w.webpushr||function(){
+              (w.webpushr.q=w.webpushr.q||[]).push(arguments)
+          };
+          var js, fjs=d.getElementsByTagName(s)[0];
+          js=d.createElement(s);
+          js.id=id;
+          js.async=1;
+          js.src="https://cdn.webpushr.com/app.min.js";
+          js.onerror = function(e) {
+              console.warn('[Webpushr] SDK script failed to load:', e);
+          };
+          fjs.parentNode.appendChild(js);
+      }(window,document,'script','webpushr-jssdk'));
+
+      webpushr('setup',{
+          'key':'BM23b9moGySmnAwvyGTR9UqyN5Klu4lm1O-kaaqulN5fL76PGJmyaYTbFaImOQLqq00bn0LuddyXUcpGa6Y92eA'
+      });
+    } catch (error) {
+      console.warn('[Webpushr] Initialization failed:', error);
+    }
+  })();
   </script>
   <!-- end webpushr tracking code -->
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=2.8">
-  <link rel="stylesheet" href="dashboard-redesign.css?v=2.8">
+  <link rel="stylesheet" href="styles.css?v=3.1">
+  <link rel="stylesheet" href="dashboard-redesign.css?v=3.1">
 
   <!-- Embedded Dashboard Refinements -->
   <style>
@@ -317,18 +344,25 @@
     <img src="nuraxq-icon.png" alt="Loading" class="loader-logo">
   </div>
   <script>
-    // Fail-safe watchdog: Guarantees loader dismisses even under slow network or script delay
-    window.__loaderFailsafe = setTimeout(function() {
-      var l = document.getElementById('loaderWrapper');
-      if (l && !l._dismissed) {
-        l._dismissed = true;
-        l.classList.add('hidden');
-        l.style.opacity = '0';
-        l.style.visibility = 'hidden';
-        l.style.pointerEvents = 'none';
-        setTimeout(function() { if (l) l.style.display = 'none'; }, 350);
+    (function() {
+      function dismissEarlyLoader() {
+        var l = document.getElementById('loaderWrapper');
+        if (l && !l._dismissed) {
+          l._dismissed = true;
+          l.classList.add('hidden');
+          l.style.opacity = '0';
+          l.style.visibility = 'hidden';
+          l.style.pointerEvents = 'none';
+          setTimeout(function() { if (l) l.style.display = 'none'; }, 300);
+        }
       }
-    }, 2500);
+      window.dismissEarlyLoader = dismissEarlyLoader;
+      window.__loaderFailsafe = setTimeout(dismissEarlyLoader, 800);
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(dismissEarlyLoader, 200);
+      });
+      window.addEventListener('load', dismissEarlyLoader);
+    })();
   </script>
 
   <header class="dash-header">
@@ -982,8 +1016,8 @@
 
   <!-- Application Scripts -->
   <script src="https://js.paystack.co/v1/inline.js" defer></script>
-  <script src="api.js?v=3.0"></script>
-  <script src="ui-shared.js?v=3.0"></script>
-  <script src="script.js?v=3.0"></script>
+  <script src="api.js?v=3.1"></script>
+  <script src="ui-shared.js?v=3.1"></script>
+  <script src="script.js?v=3.1"></script>
 </body>
 </html>
