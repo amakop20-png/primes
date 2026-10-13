@@ -85,11 +85,44 @@
   <script src="brand-logo.js?v=1.1"></script>
 
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css?v=3.1">
-  <link rel="stylesheet" href="dashboard-redesign.css?v=3.1">
+  <link rel="stylesheet" href="styles.css?v=3.2">
+  <link rel="stylesheet" href="dashboard-redesign.css?v=3.2">
 
   <!-- Embedded Dashboard Refinements -->
   <style>
+    /* Waving Hand Friendly Greeting Animation */
+    .welcome-wave,
+    .wave-emoji {
+      display: inline-block !important;
+      transform-origin: 70% 70% !important;
+      animation: nuraxq-wave 1.8s ease-in-out infinite !important;
+      vertical-align: middle !important;
+      user-select: none !important;
+      will-change: transform !important;
+    }
+
+    @keyframes nuraxq-wave {
+      0%, 60%, 100% {
+        transform: rotate(0deg);
+      }
+      10%, 30% {
+        transform: rotate(18deg);
+      }
+      20%, 40% {
+        transform: rotate(-10deg);
+      }
+      50% {
+        transform: rotate(12deg);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .welcome-wave,
+      .wave-emoji {
+        animation: none !important;
+      }
+    }
+
     /* Sidebar User Widget */
     .sidebar-user-widget {
       display: flex;
@@ -764,7 +797,7 @@
             <div class="wallet-welcome-header" style="margin-bottom: 10px;">
               <h2 class="nura-wallet-greeting" id="dashboardWelcomeHeading" style="margin: 0; font-size: 14px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 6px; letter-spacing: -0.2px;">
                 <span>Welcome back, <span id="dashboardUsername" class="username" style="font-size: 14px; font-weight: 700; color: #ffffff;">User</span></span>
-                <span class="wave-emoji" style="font-size: 15px;">👋</span>
+                <span class="welcome-wave wave-emoji" id="welcomeWaveEmoji" style="display: inline-block; transform-origin: 70% 70%; font-size: 16px; animation: nuraxq-wave 1.8s ease-in-out infinite;">👋</span>
               </h2>
             </div>
             <div class="nura-wallet-balance-row">

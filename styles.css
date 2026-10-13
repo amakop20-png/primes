@@ -6935,3 +6935,36 @@ body.dark-theme .vnum-title-wrap h2,
 body.dark-theme .tx-header-title {
   color: #f3f4f6;
 }
+
+/* ── Friendly Waving Hand Greeting Animation ── */
+.welcome-wave,
+.wave-emoji {
+  display: inline-block !important;
+  transform-origin: 70% 70% !important;
+  animation: nuraxq-wave 1.8s ease-in-out infinite !important;
+  vertical-align: middle !important;
+  user-select: none !important;
+  will-change: transform !important;
+}
+
+@keyframes nuraxq-wave {
+  0%, 60%, 100% {
+    transform: rotate(0deg);
+  }
+  10%, 30% {
+    transform: rotate(18deg);
+  }
+  20%, 40% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-wave,
+  .wave-emoji {
+    animation: none !important;
+  }
+}

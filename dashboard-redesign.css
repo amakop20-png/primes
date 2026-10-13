@@ -1920,28 +1920,34 @@ body.dark-theme .nura-ref-referral-card {
   display: inline !important;
 }
 
+.welcome-wave,
 .nura-wallet-greeting .wave-emoji {
-  font-size: 16px !important;
   display: inline-block !important;
-  transform-origin: 70% 75% !important;
-  animation: friendlyWave 2.4s ease-in-out infinite !important;
+  transform-origin: 70% 70% !important;
+  animation: nuraxq-wave 1.8s ease-in-out infinite !important;
   vertical-align: middle !important;
   user-select: none !important;
   will-change: transform !important;
+  font-size: 16px !important;
 }
 
-@keyframes friendlyWave {
-  0% { transform: rotate(0deg); }
-  10% { transform: rotate(14deg); }
-  20% { transform: rotate(-8deg); }
-  30% { transform: rotate(14deg); }
-  40% { transform: rotate(-4deg); }
-  50% { transform: rotate(10deg); }
-  60% { transform: rotate(0deg); }
-  100% { transform: rotate(0deg); }
+@keyframes nuraxq-wave {
+  0%, 60%, 100% {
+    transform: rotate(0deg);
+  }
+  10%, 30% {
+    transform: rotate(18deg);
+  }
+  20%, 40% {
+    transform: rotate(-10deg);
+  }
+  50% {
+    transform: rotate(12deg);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .welcome-wave,
   .nura-wallet-greeting .wave-emoji {
     animation: none !important;
   }
