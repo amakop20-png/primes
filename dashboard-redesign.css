@@ -2696,7 +2696,7 @@ body.dark-theme aside .mode-dot {
   .dash-header .nuraxq-theme-logo {
     width: 200px !important;
     height: auto !important;
-    max-width: min(200px, calc(100vw - 150px)) !important;
+    max-width: 200px !important;
     object-fit: contain !important;
     flex-shrink: 0 !important;
   }
@@ -3129,11 +3129,13 @@ body.dark-theme aside .mode-dot {
   }
 
   .dash-header .logo img,
-  .dash-header .nuraxq-logo {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    min-height: 32px !important;
+  .dash-header .nuraxq-logo,
+  .dash-header .nuraxq-theme-logo {
+    width: 200px !important;
+    height: auto !important;
+    max-width: 200px !important;
+    object-fit: contain !important;
+    flex-shrink: 0 !important;
   }
 
   .dash-header .header__logo-text {

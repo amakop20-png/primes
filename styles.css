@@ -3636,12 +3636,9 @@ main > p {
   .dash-header .nuraxq-theme-logo,
   .sidebar-logo,
   .sidebar-brand-link img {
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-    min-height: 40px !important;
-    max-width: 40px !important;
-    max-height: 40px !important;
+    width: 200px !important;
+    height: auto !important;
+    max-width: 200px !important;
     object-fit: contain !important;
     display: block !important;
   }
