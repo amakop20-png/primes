@@ -1874,6 +1874,9 @@ function init() {
     if (typeof loadNotifications === 'function') {
         loadNotifications().catch(() => {});
     }
+    if (typeof initDevicePushEngine === 'function') {
+        initDevicePushEngine().catch(() => {});
+    }
     if (typeof checkForAnnouncements === 'function') {
         try { checkForAnnouncements(); } catch (e) { console.warn('Announcement check warning:', e); }
     }
@@ -1952,16 +1955,174 @@ async function markAllNotifRead() {
 window.loadNotifications = loadNotifications;
 window.markAllNotifRead = markAllNotifRead;
 
-// Listen for cross-component and storage notification updates
-window.addEventListener('primes_notification_updated', () => {
-    loadNotifications().catch(() => {});
-});
-window.addEventListener('primes_notification_created', () => {
-    loadNotifications().catch(() => {});
-});
-window.addEventListener('storage', (e) => {
-    if (e.key && e.key.startsWith('primes_notifications')) {
-        loadNotifications().catch(() => {});
+/* ══════════════════════════════════════════
+   REAL DEVICE WEB PUSH NOTIFICATIONS ENGINE
+   Seamless Webpushr / Browser Service Worker integration
+   Supports background desktop & mobile push alerts
+══════════════════════════════════════════ */
+let swRegistration = null;
+
+async function initDevicePushEngine() {
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) {
+        updateDevicePushUIState('unsupported');
+        return;
+    }
+
+    try {
+        swRegistration = await navigator.serviceWorker.register('/webpushr-sw.js', { scope: '/' });
+        console.log('[Push] Service worker registered successfully');
+    } catch (swErr) {
+        console.warn('[Push] Service worker registration notice:', swErr);
+    }
+
+    updateDevicePushUIState(Notification.permission);
+}
+
+function updateDevicePushUIState(status) {
+    const perm = status || (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
+    
+    const badgeDropdown = document.getElementById('pushPermissionBadge');
+    const badgeSettings = document.getElementById('settingsPushStatusBadge');
+    const btnDropdown   = document.getElementById('btnEnableDevicePush');
+    const btnSettings   = document.getElementById('settingsPushBtn');
+
+    const setBadge = (el, text, bg, color) => {
+        if (!el) return;
+        el.textContent = text;
+        el.style.background = bg;
+        el.style.color = color;
+    };
+
+    if (perm === 'granted') {
+        setBadge(badgeDropdown, 'Active', 'rgba(16, 185, 129, 0.15)', '#10b981');
+        setBadge(badgeSettings, 'Enabled', 'rgba(16, 185, 129, 0.15)', '#10b981');
+        if (btnDropdown) {
+            btnDropdown.disabled = true;
+            btnDropdown.style.background = 'rgba(16, 185, 129, 0.15)';
+            btnDropdown.style.color = '#10b981';
+            btnDropdown.innerHTML = '<i class="ph ph-check-circle"></i><span>Notifications Active</span>';
+        }
+        if (btnSettings) {
+            btnSettings.disabled = true;
+            btnSettings.innerHTML = '<i class="ph ph-check"></i> Enabled';
+            btnSettings.classList.remove('sbtn-primary');
+            btnSettings.classList.add('sbtn-outline');
+        }
+    } else if (perm === 'denied') {
+        setBadge(badgeDropdown, 'Blocked', 'rgba(239, 68, 68, 0.15)', '#ef4444');
+        setBadge(badgeSettings, 'Blocked', 'rgba(239, 68, 68, 0.15)', '#ef4444');
+        if (btnDropdown) {
+            btnDropdown.disabled = false;
+            btnDropdown.style.background = 'rgba(239, 68, 68, 0.1)';
+            btnDropdown.style.color = '#ef4444';
+            btnDropdown.innerHTML = '<i class="ph ph-warning-circle"></i><span>Permission Blocked in Browser</span>';
+            btnDropdown.onclick = () => showToast('Notifications are blocked in your browser settings. Please enable them in site settings.', 'warning');
+        }
+        if (btnSettings) {
+            btnSettings.disabled = false;
+            btnSettings.innerHTML = '<i class="ph ph-lock"></i> Blocked';
+            btnSettings.onclick = () => showToast('Notifications are blocked in your browser settings. Please enable them in site settings.', 'warning');
+        }
+    } else if (perm === 'unsupported') {
+        setBadge(badgeDropdown, 'Not Supported', 'rgba(148, 163, 184, 0.15)', '#94a3b8');
+        setBadge(badgeSettings, 'Not Supported', 'rgba(148, 163, 184, 0.15)', '#94a3b8');
+        if (btnDropdown) btnDropdown.style.display = 'none';
+        if (btnSettings) btnSettings.style.display = 'none';
+    } else {
+        setBadge(badgeDropdown, 'Not Enabled', 'rgba(124, 58, 237, 0.12)', 'var(--primary)');
+        setBadge(badgeSettings, 'Action Needed', 'rgba(124, 58, 237, 0.12)', 'var(--primary)');
+        if (btnDropdown) {
+            btnDropdown.disabled = false;
+            btnDropdown.style.background = 'var(--primary)';
+            btnDropdown.style.color = '#fff';
+            btnDropdown.innerHTML = '<i class="ph ph-device-mobile"></i><span>Enable Device Notifications</span>';
+            btnDropdown.onclick = enableDeviceNotifications;
+        }
+        if (btnSettings) {
+            btnSettings.disabled = false;
+            btnSettings.innerHTML = '<i class="ph ph-bell"></i> Enable';
+            btnSettings.onclick = enableDeviceNotifications;
+        }
+    }
+}
+
+async function enableDeviceNotifications(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    if (!('Notification' in window)) {
+        showToast('Push notifications are not supported by this browser.', 'warning');
+        return;
+    }
+
+    try {
+        const result = await Notification.requestPermission();
+        updateDevicePushUIState(result);
+
+        if (result === 'granted') {
+            showToast('✅ Real device notifications enabled successfully!', 'success');
+
+            // Send welcoming confirmation notification to verify device pipeline
+            sendNativeDeviceNotification({
+                title: 'NuraXQ Notifications Active',
+                message: 'You will now receive instant OTP codes and wallet deposit updates on this device.',
+                tag: 'welcome'
+            });
+
+            // If Webpushr SDK is active, trigger subscription
+            if (typeof window.webpushr === 'function') {
+                try {
+                    window.webpushr('subscribe', function(res) {
+                        console.log('[Webpushr] User subscribed:', res);
+                    });
+                } catch (_) {}
+            }
+        } else if (result === 'denied') {
+            showToast('Notification permission was blocked. Check browser address bar to allow.', 'warning');
+        }
+    } catch (err) {
+        console.error('[Push] Error requesting permission:', err);
+        showToast('Could not enable notifications: ' + (err.message || 'Permission error'), 'error');
+    }
+}
+
+function sendNativeDeviceNotification(options) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    const title = options.title || 'NuraXQ Update';
+    const body  = options.message || options.body || '';
+    const icon  = options.icon || 'nuraxq-icon.png';
+    const tag   = options.tag || ('nuraxq_' + Date.now());
+
+    if (swRegistration && swRegistration.showNotification) {
+        swRegistration.showNotification(title, {
+            body: body,
+            icon: icon,
+            badge: icon,
+            tag: tag,
+            vibrate: [200, 100, 200],
+            data: { url: options.url || window.location.href }
+        }).catch(() => {
+            try { new Notification(title, { body, icon, tag }); } catch (_) {}
+        });
+    } else {
+        try { new Notification(title, { body, icon, tag }); } catch (_) {}
+    }
+}
+
+window.enableDeviceNotifications = enableDeviceNotifications;
+window.sendNativeDeviceNotification = sendNativeDeviceNotification;
+window.updateDevicePushUIState = updateDevicePushUIState;
+
+// Trigger device push on in-app notification creations
+window.addEventListener('primes_notification_created', (e) => {
+    if (e && e.detail && Notification.permission === 'granted') {
+        const n = e.detail;
+        sendNativeDeviceNotification({
+            title: n.title || 'NuraXQ Notification',
+            message: n.message || '',
+            tag: n.id || 'notif'
+        });
     }
 });
 

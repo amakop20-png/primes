@@ -82,6 +82,7 @@
   })();
   </script>
   <!-- end webpushr tracking code -->
+  <script src="brand-logo.js?v=1.1"></script>
 
   <!-- CSS -->
   <link rel="stylesheet" href="styles.css?v=3.1">
@@ -534,9 +535,9 @@
     }
   </script>
 
-  <!-- Screen Loader (Original Logo 40px x 40px) -->
+  <!-- Screen Loader (Original Logo) -->
   <div class="loader-wrapper" id="loaderWrapper" role="status" aria-live="polite" aria-label="Loading">
-    <img src="nuraxq-icon.png" alt="Loading" class="loader-logo">
+    <img src="nurasms.comLF.png" alt="Loading" class="loader-logo nuraxq-theme-logo">
   </div>
   <script>
     (function() {
@@ -570,8 +571,7 @@
             <i class="ph ph-list" id="headerToggleIcon"></i>
         </div>
         <a href="dashboard.html" class="logo" style="text-decoration:none;">
-            <img src="nuraxq-icon.png" alt="NuraXQ" class="nuraxq-logo nura-sq-logo">
-            <span class="header__logo-text">NuraXQ</span>
+            <img src="nurasms.comLF.png" alt="NuraXQ" class="nuraxq-logo nura-sq-logo nuraxq-theme-logo">
         </a>
     </div>
     <div class="header-right">
@@ -607,7 +607,22 @@
                 <p class="dropdown-name" style="margin:0; font-size:14px; font-weight:700;">Notifications</p>
                 <button onclick="markAllNotifRead()" style="background:none; border:none; color:var(--primary); font-size:12px; font-weight:600; cursor:pointer;">Mark all as read</button>
               </div>
-              <div id="notifList" style="max-height: 300px; overflow-y: auto;">
+              <div class="notif-push-banner" id="notifPushBanner" style="padding: 12px 14px; background: rgba(124, 58, 237, 0.08); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size: 12px; font-weight: 700; color: var(--text); display:flex; align-items:center; gap: 5px;">
+                    <i class="ph ph-bell-ringing" style="color:var(--primary); font-size:15px;"></i> Device Push Alerts
+                  </span>
+                  <span id="pushPermissionBadge" style="font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--border-light); color: var(--muted);">Checking...</span>
+                </div>
+                <p style="font-size: 11.5px; color: var(--muted); margin: 0; line-height: 1.35;">
+                  Get live SMS and OTP alerts on your phone or desktop even when the app is in the background.
+                </p>
+                <button type="button" id="btnEnableDevicePush" onclick="enableDeviceNotifications(event)" style="width: 100%; padding: 7px 12px; border-radius: 8px; border: none; background: var(--primary); color: #fff; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  <i class="ph ph-device-mobile"></i>
+                  <span>Enable Device Notifications</span>
+                </button>
+              </div>
+              <div id="notifList" style="max-height: 280px; overflow-y: auto;">
                   <!-- dynamically populated -->
               </div>
             </div>
@@ -644,8 +659,7 @@
     <div class="top">
       <div class="sidebar-brand">
         <a href="dashboard.html" class="sidebar-brand-link">
-          <img src="nuraxq-icon.png" alt="NuraXQ" class="sidebar-logo">
-          <span class="header__logo-text">NuraXQ</span>
+          <img src="nurasms.comLF.png" alt="NuraXQ" class="sidebar-logo nuraxq-theme-logo">
         </a>
         <div class="close" id="close-btn" aria-label="Close sidebar" title="Collapse sidebar">
           <i class="ph ph-caret-left" id="sidebarToggleIcon"></i>
@@ -708,7 +722,7 @@
 
     <div class="dashboard-title-container">
         <div>
-          <h1 id="dashboardWelcomeHeading">Welcome back!</h1>
+          <h1 class="dash-overview-title" style="font-size: 24px; font-weight: 800; color: var(--text); margin: 0 0 2px 0;">Dashboard Overview</h1>
           <p class="dash-welcome-sub">Manage your virtual numbers, wallet, and OTP verifications.</p>
         </div>
         <div class="dash-live-badge">
@@ -757,10 +771,13 @@
         <div class="nura-ref-wallet-card wallet-card">
           <div class="nura-wallet-facet-bg"></div>
           <div class="nura-wallet-left-content">
-            <h2 class="nura-wallet-greeting">
-              <span>Hi, <span id="dashboardUsername" class="username">User</span></span>
-              <span class="wave-emoji">👋</span>
-            </h2>
+            <div class="wallet-welcome-header" style="margin-bottom: 12px;">
+              <span class="wallet-welcome-title" id="dashboardWelcomeHeading" style="font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255, 255, 255, 0.82); display: block; margin-bottom: 2px;">Welcome Back</span>
+              <h2 class="nura-wallet-greeting" style="margin: 0; font-size: 20px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 6px;">
+                <span>Hi, <span id="dashboardUsername" class="username">User</span></span>
+                <span class="wave-emoji">👋</span>
+              </h2>
+            </div>
             <div class="nura-wallet-balance-row">
               <span class="nura-wallet-balance-label">Available Balance</span>
               <button type="button" class="nura-wallet-eye-btn btn-balance-privacy" id="toggleBalancePrivacyBtn" onclick="toggleBalancePrivacy(event)" aria-label="Hide wallet balance" title="Hide balance">
@@ -1161,6 +1178,20 @@
       </div>
       <div class="stab-content" id="stab-notifs">
         <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Choose which alerts you want to receive.</p>
+        <div class="notif-row" style="background: rgba(124, 58, 237, 0.05); padding: 12px 14px; border-radius: 12px; margin-bottom: 14px; border: 1px solid var(--border);">
+          <div style="flex:1; padding-right:12px;">
+            <div class="notif-title" style="display:flex; align-items:center; gap:6px;">
+              <i class="ph ph-bell-ringing" style="color:var(--primary);"></i> Real Device Push Notifications
+              <span id="settingsPushStatusBadge" style="font-size:10px; font-weight:700; padding:2px 6px; border-radius:999px; background:var(--border-light); color:var(--muted);">Checking...</span>
+            </div>
+            <div class="notif-sub" style="font-size:12px; margin-top:2px;">Receive native phone &amp; desktop alerts for OTP verifications and wallet credits even when this tab is closed.</div>
+          </div>
+          <div>
+            <button type="button" class="sbtn sbtn-primary" id="settingsPushBtn" onclick="enableDeviceNotifications(event)" style="padding: 7px 12px; font-size: 12px; white-space: nowrap;">
+              <i class="ph ph-bell"></i> Enable
+            </button>
+          </div>
+        </div>
         <div class="notif-row"><div><div class="notif-title">OTP Received</div><div class="notif-sub">Alert when a new OTP arrives on your number</div></div><label class="stoggle"><input type="checkbox" id="notifOtp" checked><span class="stoggle-knob"></span></label></div>
         <div class="notif-row"><div><div class="notif-title">Order Status Updates</div><div class="notif-sub">Notify on order completion or cancellation</div></div><label class="stoggle"><input type="checkbox" id="notifOrder" checked><span class="stoggle-knob"></span></label></div>
         <div class="notif-row"><div><div class="notif-title">Low Balance Warning</div><div class="notif-sub">Alert when your wallet balance is below ₦500</div></div><label class="stoggle"><input type="checkbox" id="notifBalance" checked><span class="stoggle-knob"></span></label></div>

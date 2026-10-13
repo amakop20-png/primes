@@ -21,6 +21,7 @@
     '.header__logo-img',
     '.sidebar-logo',
     '.nuraxq-logo',
+    '.nura-sq-logo',
     '.admin-sidebar-logo',
     '.admin-gate-logo-img',
     '.auth-banner-logo',

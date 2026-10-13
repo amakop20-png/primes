@@ -239,6 +239,10 @@ function openSettings() {
     const n = (id, def) => { const el = document.getElementById(id); if (el) el.checked = notifSettings[id] !== undefined ? notifSettings[id] : def; };
     n('notifOtp', true); n('notifOrder', true); n('notifBalance', true); n('notifPromo', false);
 
+    if (typeof updateDevicePushUIState === 'function') {
+        updateDevicePushUIState();
+    }
+
     const newPwEl = document.getElementById('settingsNewPw');
     if (newPwEl && !newPwEl._strengthWired) {
         newPwEl.addEventListener('input', () => checkPasswordStrength(newPwEl.value));
