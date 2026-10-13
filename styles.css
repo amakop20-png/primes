@@ -299,9 +299,9 @@ header {
 .header__logo-img,
 .header__logo img,
 .nuraxq-theme-logo {
-    width: 50px !important;
+    width: 200px !important;
     height: auto !important;
-    max-width: 50px !important;
+    max-width: 200px !important;
     object-fit: contain;
     display: block;
     flex-shrink: 0;
