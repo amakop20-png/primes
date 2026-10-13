@@ -646,6 +646,7 @@
               <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
               <a href="buy.html"><i class="ph ph-sim-card"></i> Buy Number</a>
               <a href="#contact"><i class="ph ph-headset"></i> Contact</a>
+              <a href="#" onclick="toggleDark(); return false;" class="dropdown-theme-link" title="Toggle Light/Dark Mode"><i class="ph ph-moon" id="headerDropdownThemeIcon"></i> <span id="headerDropdownThemeText">Theme Mode</span></a>
               <a href="login.html" class="logout" onclick="logout()"><i class="ph ph-sign-out"></i> Logout</a>
             </div>
         </div>
@@ -708,13 +709,12 @@
       <a href="login.html" class="logout" onclick="logout(); return false;">
         <span><i class="ph ph-sign-out"></i> Logout</span>
       </a>
-    </div>
-
-    <div class="mode-tag" onclick="toggleDark()">
-      <div class="mode-dot">
-        <i class="ph ph-moon"></i>
+      <div class="mode-tag" id="sidebarModeTag" onclick="toggleDark()" title="Toggle Light/Dark Theme">
+        <div class="mode-dot">
+          <i class="ph ph-moon"></i>
+        </div>
+        <span id="modeText">Light mode</span>
       </div>
-      <span id="modeText">Light mode</span>
     </div>
   </aside>
 

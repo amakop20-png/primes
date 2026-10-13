@@ -1921,17 +1921,30 @@ body.dark-theme .nura-ref-referral-card {
 }
 
 .nura-wallet-greeting .wave-emoji {
-  font-size: 15px !important;
-  display: inline-block;
-  transform-origin: 70% 70%;
-  animation: waveHand 2s infinite ease-in-out;
-  vertical-align: middle;
+  font-size: 16px !important;
+  display: inline-block !important;
+  transform-origin: 70% 75% !important;
+  animation: friendlyWave 2.4s ease-in-out infinite !important;
+  vertical-align: middle !important;
+  user-select: none !important;
+  will-change: transform !important;
 }
 
-@keyframes waveHand {
-  0%, 100% { transform: rotate(0deg); }
-  20%, 60% { transform: rotate(14deg); }
-  40%, 80% { transform: rotate(-10deg); }
+@keyframes friendlyWave {
+  0% { transform: rotate(0deg); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  30% { transform: rotate(14deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+  60% { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nura-wallet-greeting .wave-emoji {
+    animation: none !important;
+  }
 }
 
 .nura-wallet-balance-row {
@@ -2561,9 +2574,10 @@ body.dark-theme aside .top a.active {
   color: #C4B5FD !important;
 }
 
-/* ── Mode Tag (Theme Switcher at Sidebar Bottom) ── */
+/* ── Mode Tag (Theme Switcher positioned next to Logout) ── */
 aside .mode-tag {
-  margin-top: 14px !important;
+  margin-top: 6px !important;
+  margin-bottom: 8px !important;
   flex-shrink: 0 !important;
   display: flex !important;
   align-items: center !important;
@@ -2859,6 +2873,8 @@ body.dark-theme aside .mode-dot {
   aside .mode-tag {
     min-height: 44px !important;
     padding: 10px 14px !important;
+    margin-top: 6px !important;
+    margin-bottom: 8px !important;
     box-sizing: border-box !important;
   }
 

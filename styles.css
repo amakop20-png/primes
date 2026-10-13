@@ -338,11 +338,12 @@ body.dark-theme .header__logo-text {
 .help-header-logo-img,
 .policy-header-logo-img,
 .auth-card-logo-img {
-    height: 48px;
-    width: auto;
-    max-width: 200px;
-    object-fit: contain;
-    display: block;
+    width: 40% !important;
+    height: auto !important;
+    max-width: 200px !important;
+    min-width: 135px !important;
+    object-fit: contain !important;
+    display: block !important;
 }
 
 .header__nav {
@@ -1387,10 +1388,13 @@ body.dark-theme .hero-main-img {
 
     .header__logo-img,
     .header__logo img {
-        height: 20px;
-        width: auto;
-        max-height: 20px;
-        object-fit: contain;
+        width: 40% !important;
+        height: auto !important;
+        max-width: 175px !important;
+        min-width: 135px !important;
+        max-height: none !important;
+        object-fit: contain !important;
+        display: block !important;
     }
 
     .header__logo-text {
@@ -1575,10 +1579,13 @@ body.dark-theme .hero-main-img {
 
     .header__logo-img,
     .header__logo img {
-        height: 18px;
-        width: auto;
-        max-height: 18px;
-        object-fit: contain;
+        width: 40% !important;
+        height: auto !important;
+        max-width: 170px !important;
+        min-width: 135px !important;
+        max-height: none !important;
+        object-fit: contain !important;
+        display: block !important;
     }
 
     .header__logo-text {
@@ -1694,10 +1701,13 @@ body.dark-theme .hero-main-img {
 
     .header__logo-img,
     .header__logo img {
-        height: 16px;
-        width: auto;
-        max-height: 16px;
-        object-fit: contain;
+        width: 40% !important;
+        height: auto !important;
+        max-width: 160px !important;
+        min-width: 130px !important;
+        max-height: none !important;
+        object-fit: contain !important;
+        display: block !important;
     }
 
     .header__logo-text {
@@ -3638,8 +3648,8 @@ main > p {
   .sidebar-brand-link img {
     width: 40% !important;
     height: auto !important;
-    max-width: 180px !important;
-    min-width: 110px !important;
+    max-width: 175px !important;
+    min-width: 135px !important;
     object-fit: contain !important;
     display: block !important;
   }

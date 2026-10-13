@@ -10,6 +10,10 @@ function updateThemeUI(isDark) {
     if (modeIcon) {
         modeIcon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
     }
+    const dropText = document.getElementById('headerDropdownThemeText');
+    if (dropText) dropText.textContent = isDark ? 'Light mode' : 'Dark mode';
+    const dropIcon = document.getElementById('headerDropdownThemeIcon');
+    if (dropIcon) dropIcon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
     if (window.NuraLogo && typeof window.NuraLogo.updateAllLogos === 'function') {
         window.NuraLogo.updateAllLogos(isDark);
     }
