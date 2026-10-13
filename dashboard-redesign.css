@@ -143,12 +143,10 @@ body.dark-theme .dash-header {
 .dash-header .nuraxq-theme-logo,
 .sidebar-logo,
 .sidebar-brand-link img {
-  width: auto !important;
-  height: 48px !important;
-  min-width: unset !important;
-  min-height: unset !important;
-  max-width: 180px !important;
-  max-height: 54px !important;
+  width: 50px !important;
+  height: auto !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
   object-fit: contain !important;
   display: block !important;
   flex-shrink: 0 !important;
@@ -2286,12 +2284,10 @@ aside .top::-webkit-scrollbar-thumb {
 }
 
 .sidebar-logo {
-  width: auto !important;
-  height: 46px !important;
-  min-width: unset !important;
-  min-height: unset !important;
-  max-width: 170px !important;
-  max-height: 50px !important;
+  width: 50px !important;
+  height: auto !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
   object-fit: contain !important;
   display: block !important;
   flex-shrink: 0 !important;
@@ -2700,11 +2696,10 @@ body.dark-theme aside .mode-dot {
   .dash-header .logo img,
   .dash-header .nuraxq-logo,
   .dash-header .nuraxq-theme-logo {
-    width: auto !important;
-    height: 40px !important;
-    min-width: unset !important;
-    min-height: unset !important;
-    max-width: 150px !important;
+    width: 50px !important;
+    height: auto !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
     object-fit: contain !important;
     flex-shrink: 0 !important;
   }

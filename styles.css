@@ -299,10 +299,9 @@ header {
 .header__logo-img,
 .header__logo img,
 .nuraxq-theme-logo {
-    height: 46px;
-    width: auto;
-    max-height: 52px;
-    max-width: 190px;
+    width: 50px !important;
+    height: auto !important;
+    max-width: 50px !important;
     object-fit: contain;
     display: block;
     flex-shrink: 0;
