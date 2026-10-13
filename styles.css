@@ -299,7 +299,7 @@ header {
 .header__logo-img,
 .header__logo img,
 .nuraxq-theme-logo {
-    width: 200px !important;
+    width: 40% !important;
     height: auto !important;
     max-width: 200px !important;
     object-fit: contain;
@@ -3636,9 +3636,10 @@ main > p {
   .dash-header .nuraxq-theme-logo,
   .sidebar-logo,
   .sidebar-brand-link img {
-    width: 200px !important;
+    width: 40% !important;
     height: auto !important;
-    max-width: 200px !important;
+    max-width: 180px !important;
+    min-width: 110px !important;
     object-fit: contain !important;
     display: block !important;
   }
