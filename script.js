@@ -764,10 +764,122 @@ window.copyVirtualAccount = copyVirtualAccount;
 let currentTransactionsList = [];
 let activeTxFilter = 'all';
 
+function normalizeTxFilterType(type) {
+    const t = String(type || 'all').toLowerCase().trim();
+    if (t === 'deposit' || t === 'deposits' || t === 'credit') return 'deposit';
+    if (t === 'purchase' || t === 'purchases' || t === 'debit') return 'purchase';
+    return 'all';
+}
+
+function classifyTransaction(tx) {
+    if (!tx || typeof tx !== 'object') {
+        return { isCredit: false, isDeposit: false, isPurchase: false, isReward: false, title: 'Transaction', iconClass: 'tx-type-debit', iconName: 'ph-receipt' };
+    }
+
+    const typeStr   = String(tx.type || tx.transactionType || tx.action || tx.category || '').toLowerCase().trim();
+    const reasonStr = String(tx.reason || tx.description || tx.memo || tx.note || '').toLowerCase().trim();
+    const refStr    = String(tx.reference || tx.ref || '').toLowerCase().trim();
+    const rawAmount = parseFloat(tx.amount);
+
+    // Explicit referral/reward checks
+    const isReward = typeStr.includes('referral') || typeStr.includes('reward') || reasonStr.includes('referral') || reasonStr.includes('reward');
+
+    // Purchase checks (debit, purchase, activation, buy, number, etc.)
+    const isExplicitPurchase = (
+        typeStr === 'debit' ||
+        typeStr === 'purchase' ||
+        typeStr === 'purchases' ||
+        typeStr === 'buy' ||
+        typeStr === 'activation' ||
+        typeStr === 'number_purchase' ||
+        reasonStr.includes('purchase') ||
+        reasonStr.includes('activation') ||
+        reasonStr.includes('buy number') ||
+        refStr.startsWith('adm-dr-') ||
+        refStr.startsWith('buy-') ||
+        refStr.startsWith('act-')
+    );
+
+    // Deposit checks (credit, deposit, funding, topup, paystack, etc.)
+    const isExplicitDeposit = (
+        typeStr === 'credit' ||
+        typeStr === 'deposit' ||
+        typeStr === 'deposits' ||
+        typeStr === 'funding' ||
+        typeStr === 'wallet_funding' ||
+        typeStr === 'topup' ||
+        reasonStr.includes('deposit') ||
+        reasonStr.includes('funding') ||
+        reasonStr.includes('paystack') ||
+        reasonStr.includes('credited') ||
+        reasonStr.includes('top-up') ||
+        reasonStr.includes('topup') ||
+        refStr.startsWith('adm-cr-') ||
+        refStr.startsWith('pstk-') ||
+        refStr.startsWith('paystack-') ||
+        refStr.startsWith('dep-')
+    );
+
+    let isDeposit = false;
+    let isPurchase = false;
+
+    if (isReward) {
+        isDeposit = true;
+    } else if (isExplicitPurchase) {
+        isPurchase = true;
+    } else if (isExplicitDeposit) {
+        isDeposit = true;
+    } else if (!isNaN(rawAmount)) {
+        if (rawAmount < 0) {
+            isPurchase = true;
+        } else {
+            isDeposit = true;
+        }
+    }
+
+    const isCredit = isDeposit;
+
+    let title = 'Transaction';
+    let iconClass = isCredit ? 'tx-type-credit' : 'tx-type-debit';
+    let iconName = isCredit ? 'ph-arrow-down-left' : 'ph-sim-card';
+
+    if (isReward) {
+        title = 'Referral Reward';
+        iconClass = 'tx-type-reward';
+        iconName = 'ph-gift';
+    } else if (isPurchase) {
+        title = 'Number Purchase';
+        iconClass = 'tx-type-debit';
+        iconName = 'ph-sim-card';
+        if (reasonStr && reasonStr.length < 40) {
+            title = tx.reason || tx.description || 'Number Purchase';
+        }
+    } else if (isDeposit) {
+        title = 'Wallet Deposit';
+        iconClass = 'tx-type-credit';
+        iconName = 'ph-arrow-down-left';
+        if (reasonStr && (reasonStr.includes('paystack') || reasonStr.includes('admin') || reasonStr.includes('manual')) && reasonStr.length < 40) {
+            title = tx.reason || tx.description || 'Wallet Deposit';
+        }
+    }
+
+    return {
+        isCredit,
+        isDeposit,
+        isPurchase,
+        isReward,
+        title,
+        iconClass,
+        iconName
+    };
+}
+window.classifyTransaction = classifyTransaction;
+
 function filterTransactions(type) {
-    activeTxFilter = type;
+    activeTxFilter = normalizeTxFilterType(type);
     document.querySelectorAll('.tx-filter-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-tx-filter') === type);
+        const btnFilter = normalizeTxFilterType(btn.getAttribute('data-tx-filter'));
+        btn.classList.toggle('active', btnFilter === activeTxFilter);
     });
     renderCachedTransactions();
 }
@@ -781,25 +893,31 @@ function renderCachedTransactions() {
     const symbol = isUSD ? '$' : '₦';
     const rate = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
 
-    let filtered = currentTransactionsList;
-    if (activeTxFilter === 'credit') {
-        filtered = currentTransactionsList.filter(tx => {
-            const rawAmount = parseFloat(tx.amount) || 0;
-            return (tx.type && tx.type.toLowerCase() === 'credit') || rawAmount > 0;
-        });
-    } else if (activeTxFilter === 'debit') {
-        filtered = currentTransactionsList.filter(tx => {
-            const rawAmount = parseFloat(tx.amount) || 0;
-            return (tx.type && tx.type.toLowerCase() !== 'credit') && rawAmount <= 0;
-        });
+    const sourceList = Array.isArray(currentTransactionsList) ? currentTransactionsList : [];
+    let filtered = sourceList;
+
+    if (activeTxFilter === 'deposit') {
+        filtered = sourceList.filter(tx => classifyTransaction(tx).isDeposit);
+    } else if (activeTxFilter === 'purchase') {
+        filtered = sourceList.filter(tx => classifyTransaction(tx).isPurchase);
     }
 
     if (!filtered || filtered.length === 0) {
+        let emptyTitle = 'No transactions found';
+        let emptyDesc = `Your ${curr} transactions will appear here as soon as you fund your wallet or activate a number.`;
+        if (activeTxFilter === 'deposit') {
+            emptyTitle = 'No deposit transactions';
+            emptyDesc = `You have not made any deposits in ${curr} yet. When you fund your wallet, your deposit history will appear here.`;
+        } else if (activeTxFilter === 'purchase') {
+            emptyTitle = 'No purchase transactions';
+            emptyDesc = `You have not made any number purchases in ${curr} yet. Purchased virtual numbers will appear here.`;
+        }
+
         listEl.innerHTML = `
             <li class="tx-empty-state">
                 <div class="tx-empty-icon"><i class="ph ph-receipt"></i></div>
-                <div class="tx-empty-title">No transactions found</div>
-                <p class="tx-empty-desc">Your ${curr} transactions will appear here as soon as you fund your wallet or activate a number.</p>
+                <div class="tx-empty-title">${emptyTitle}</div>
+                <p class="tx-empty-desc">${emptyDesc}</p>
             </li>
         `;
         return;
@@ -808,7 +926,8 @@ function renderCachedTransactions() {
     listEl.innerHTML = filtered.map(tx => {
         const rawAmount = parseFloat(tx.amount) || 0;
         const txCur = (tx.currency || 'NGN').toUpperCase();
-        const isCredit = (tx.type && tx.type.toLowerCase() === 'credit') || rawAmount > 0;
+        const classified = classifyTransaction(tx);
+        const isCredit = classified.isCredit;
         const absAmount = Math.abs(rawAmount);
 
         let convertedAmt;
@@ -819,39 +938,24 @@ function renderCachedTransactions() {
         }
 
         const amtStr = (isCredit ? '+' : '−') + symbol + convertedAmt.toLocaleString(isUSD ? 'en-US' : 'en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const dateStr = tx.createdAt ? new Date(tx.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-        const status = (tx.status || 'success').toLowerCase();
+        const dateRaw = tx.createdAt || tx.created_at || tx.date;
+        const dateStr = dateRaw ? new Date(dateRaw).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+        const status = String(tx.status || 'success').toLowerCase();
         const isSuccess = status === 'success' || status === 'completed';
         const isPending = status === 'pending';
         const statusClass = isSuccess ? 'status-success' : (isPending ? 'status-pending' : 'status-failed');
         const statusLabel = isSuccess ? 'Success' : (isPending ? 'Pending' : 'Failed');
 
-        let iconClass = 'tx-type-debit';
-        let iconName = 'ph-sim-card';
-        let title = 'Number Purchase';
-
-        if (isCredit) {
-            iconClass = 'tx-type-credit';
-            iconName = 'ph-arrow-down-left';
-            title = 'Wallet Deposit';
-        } else if ((tx.type || '').toLowerCase().includes('referral') || (tx.type || '').toLowerCase().includes('reward')) {
-            iconClass = 'tx-type-reward';
-            iconName = 'ph-gift';
-            title = 'Referral Reward';
-        } else if (tx.type) {
-            title = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
-        }
-
-        const refBadge = tx.reference ? `<span class="tx-ref-badge">${tx.reference}</span>` : '';
+        const refBadge = tx.reference ? `<span class="tx-ref-badge">${escapeHTML(String(tx.reference))}</span>` : '';
 
         return `
         <li class="tx-card-row">
             <div class="tx-left-col">
-                <div class="tx-icon-bubble ${iconClass}">
-                    <i class="ph ${iconName}"></i>
+                <div class="tx-icon-bubble ${classified.iconClass}">
+                    <i class="ph ${classified.iconName}"></i>
                 </div>
                 <div class="tx-meta-info">
-                    <span class="tx-title-text">${title}</span>
+                    <span class="tx-title-text">${escapeHTML(classified.title)}</span>
                     <div class="tx-sub-row">
                         <span>${dateStr}</span>
                         ${refBadge}
@@ -865,9 +969,11 @@ function renderCachedTransactions() {
         </li>`;
     }).join('');
 }
+window.renderCachedTransactions = renderCachedTransactions;
 
 async function loadTransactions(page = 1, currency) {
-    txPage = page;
+    const validPage = Math.max(1, parseInt(page, 10) || 1);
+    txPage = validPage;
     const curr   = currency || getCurrency();
     const isUSD  = curr === 'USD';
     const rate   = typeof getExchangeRate === 'function' ? getExchangeRate() : 1500;
@@ -885,15 +991,15 @@ async function loadTransactions(page = 1, currency) {
     if (nextBtn) nextBtn.disabled = true;
 
     try {
-        const data = await getTransactions(page, TX_LIMIT, curr);
-        let txs    = data?.transactions || data?.data || [];
-        const pg   = data?.pagination || {};
+        const data = await getTransactions(validPage, TX_LIMIT, curr);
+        let txs = Array.isArray(data?.transactions) ? data.transactions : (Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []));
+        const pg = data?.pagination || {};
 
         // If backend returned empty when curr is USD, fallback to NGN query so user sees converted history
         if ((!txs || txs.length === 0) && isUSD) {
             try {
-                const fallbackData = await getTransactions(page, TX_LIMIT, 'NGN');
-                const fallbackTxs  = fallbackData?.transactions || fallbackData?.data || [];
+                const fallbackData = await getTransactions(validPage, TX_LIMIT, 'NGN');
+                const fallbackTxs = Array.isArray(fallbackData?.transactions) ? fallbackData.transactions : (Array.isArray(fallbackData?.data) ? fallbackData.data : []);
                 if (fallbackTxs.length > 0) {
                     txs = fallbackTxs;
                 }
@@ -908,7 +1014,8 @@ async function loadTransactions(page = 1, currency) {
         txs.forEach(tx => {
             const rawAmount = parseFloat(tx.amount) || 0;
             const txCur     = (tx.currency || 'NGN').toUpperCase();
-            const isCredit  = (tx.type && tx.type.toLowerCase() === 'credit') || rawAmount > 0;
+            const classified = classifyTransaction(tx);
+            const isCredit  = classified.isCredit;
             const absAmount = Math.abs(rawAmount);
             const amountInNGN = (txCur === 'USD') ? (absAmount * rate) : absAmount;
             if (isCredit) {
@@ -937,9 +1044,19 @@ async function loadTransactions(page = 1, currency) {
         // Pagination controls
         if (paginEl) paginEl.style.display = 'flex';
         const totalPages = pg.totalPages || (pg.total ? Math.ceil(pg.total / TX_LIMIT) : 1);
-        if (pageLabel) pageLabel.textContent = `Page ${pg.page || page} of ${totalPages || 1}`;
-        if (prevBtn) prevBtn.disabled = !(pg.hasPrevPage || page > 1);
-        if (nextBtn) nextBtn.disabled = !(pg.hasNextPage || (totalPages && page < totalPages));
+        if (pageLabel) pageLabel.textContent = `Page ${pg.page || validPage} of ${totalPages || 1}`;
+        if (prevBtn) {
+            prevBtn.disabled = !(pg.hasPrevPage || validPage > 1);
+            prevBtn.onclick = () => {
+                if (validPage > 1) loadTransactions(validPage - 1);
+            };
+        }
+        if (nextBtn) {
+            nextBtn.disabled = !(pg.hasNextPage || (totalPages && validPage < totalPages));
+            nextBtn.onclick = () => {
+                if (totalPages && validPage < totalPages) loadTransactions(validPage + 1);
+            };
+        }
 
     } catch (err) {
         console.error('loadTransactions error:', err);
@@ -1091,13 +1208,37 @@ async function loadActiveNumbers() {
                         : { id: String(orderId), status: status || 'PENDING' };
                     stillActive.push(updatedObj);
 
-                    // Check for OTP arrival to trigger sound notification
-                    const smsCode = orderData?.smsCode || orderData?.sms || orderData?.code;
-                    if (smsCode || status === 'RECEIVED') {
-                        if (window.NuraSound && typeof window.NuraSound.playOtpChime === 'function') {
-                            window.NuraSound.playOtpChime(orderId);
-                        }
+                    // Check for genuine OTP arrival to trigger sound notification (with event-level deduplication)
+                    let validSmsItems = [];
+                    if (Array.isArray(orderData?.sms)) {
+                        validSmsItems = orderData.sms;
+                    } else if (orderData?.sms && typeof orderData?.sms === 'object') {
+                        validSmsItems = [orderData.sms];
+                    } else if (typeof orderData?.sms === 'string' && orderData.sms.trim()) {
+                        validSmsItems = [{ text: orderData.sms.trim() }];
                     }
+
+                    const topCode = orderData?.code || orderData?.smsCode || orderData?.otp;
+                    if (validSmsItems.length === 0 && topCode && String(topCode).trim()) {
+                        validSmsItems = [{ code: String(topCode).trim() }];
+                    }
+
+                    validSmsItems.forEach((smsItem, sIdx) => {
+                        let c = '';
+                        let t = '';
+                        if (typeof smsItem === 'object' && smsItem !== null) {
+                            c = smsItem.code || smsItem.otp || smsItem.pin || '';
+                            t = smsItem.text || smsItem.message || '';
+                        } else if (typeof smsItem === 'string') {
+                            t = smsItem.trim();
+                        }
+                        if (c || t) {
+                            const eventId = `${orderId}_${c || t.slice(0, 30)}_${sIdx}`;
+                            if (window.NuraSound && typeof window.NuraSound.playOtpChime === 'function') {
+                                window.NuraSound.playOtpChime(orderId, eventId);
+                            }
+                        }
+                    });
                 }
             } else {
                 stillActive.push(item);

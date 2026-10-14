@@ -1070,7 +1070,30 @@ if (document.readyState === 'loading') {
 (function() {
     let audioCtx = null;
     let hasUserGesture = false;
-    const playedOtpOrders = new Set();
+    let pendingChime = null;
+
+    // Load persisted played events from session/local storage
+    function getStoredPlayedEvents() {
+        try {
+            const raw = sessionStorage.getItem('primes_played_sound_events') || localStorage.getItem('primes_played_sound_events');
+            return raw ? JSON.parse(raw) : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    const playedOtpEvents = new Set(getStoredPlayedEvents());
+
+    function markEventPlayed(key) {
+        if (!key) return;
+        playedOtpEvents.add(String(key));
+        try {
+            const arr = Array.from(playedOtpEvents);
+            const capped = arr.length > 200 ? arr.slice(arr.length - 200) : arr;
+            sessionStorage.setItem('primes_played_sound_events', JSON.stringify(capped));
+            localStorage.setItem('primes_played_sound_events', JSON.stringify(capped));
+        } catch (_) {}
+    }
 
     function getAudioContext(canCreate = false) {
         try {
@@ -1089,21 +1112,41 @@ if (document.readyState === 'loading') {
         }
     }
 
-    // Unlock audio context on first user gesture
-    function unlockAudio() {
+    // Explicit audio initialization during user interactions (e.g. buying a number, clicking order)
+    function initAudio() {
         hasUserGesture = true;
         try {
             const ctx = getAudioContext(true);
             if (ctx && ctx.state === 'suspended') {
-                ctx.resume().catch(() => {});
+                ctx.resume().then(() => {
+                    if (pendingChime) {
+                        const { orderId, eventId } = pendingChime;
+                        pendingChime = null;
+                        playOtpChime(orderId, eventId);
+                    }
+                }).catch(() => {});
+            } else if (ctx && ctx.state === 'running' && pendingChime) {
+                const { orderId, eventId } = pendingChime;
+                pendingChime = null;
+                playOtpChime(orderId, eventId);
             }
-        } catch (_) {}
-        ['click', 'touchstart', 'keydown'].forEach(evt => {
-            document.removeEventListener(evt, unlockAudio, true);
-        });
+            return ctx;
+        } catch (_) {
+            return null;
+        }
     }
+
+    function isAudioReady() {
+        return Boolean(audioCtx && audioCtx.state === 'running');
+    }
+
+    // Unlock audio context on any user interaction
+    function unlockAudio() {
+        initAudio();
+    }
+
     ['click', 'touchstart', 'keydown'].forEach(evt => {
-        document.addEventListener(evt, unlockAudio, true);
+        document.addEventListener(evt, unlockAudio, { capture: true, passive: true });
     });
 
     function isSoundEnabled() {
@@ -1119,7 +1162,7 @@ if (document.readyState === 'loading') {
         hasUserGesture = true;
         const next = !isSoundEnabled();
         setSoundEnabled(next);
-        getAudioContext(true);
+        initAudio();
         return next;
     }
 
@@ -1139,22 +1182,40 @@ if (document.readyState === 'loading') {
     }
 
     // Play two-note digital chime for new OTP: C6 (1046.5Hz) -> E6 (1318.5Hz)
-    function playOtpChime(orderId) {
-        if (!isSoundEnabled()) return;
-        if (orderId) {
-            const strId = String(orderId);
-            if (playedOtpOrders.has(strId)) return;
-            playedOtpOrders.add(strId);
+    // Deduplicates per individual OTP event (eventId), preserving subsequent OTPs for the order
+    function playOtpChime(orderId, eventId = null) {
+        if (!isSoundEnabled()) return false;
+
+        const dedupKey = eventId ? String(eventId) : (orderId ? String(orderId) : null);
+        if (dedupKey && playedOtpEvents.has(dedupKey)) {
+            return false;
         }
-        const ctx = getAudioContext(false);
-        if (!ctx) return;
+
+        const ctx = getAudioContext(true);
+        if (!ctx) {
+            if (dedupKey) pendingChime = { orderId, eventId: dedupKey };
+            return false;
+        }
+
         if (ctx.state === 'suspended') {
-            if (hasUserGesture) {
-                ctx.resume().then(() => playChimeNotes(ctx)).catch(() => {});
-            }
-        } else {
-            playChimeNotes(ctx);
+            ctx.resume().then(() => {
+                if (ctx.state === 'running') {
+                    if (dedupKey) markEventPlayed(dedupKey);
+                    playChimeNotes(ctx);
+                }
+            }).catch(() => {
+                if (dedupKey) pendingChime = { orderId, eventId: dedupKey };
+            });
+            return false;
         }
+
+        if (ctx.state === 'running') {
+            if (dedupKey) markEventPlayed(dedupKey);
+            return playChimeNotes(ctx);
+        }
+
+        if (dedupKey) pendingChime = { orderId, eventId: dedupKey };
+        return false;
     }
 
     function playChimeNotes(ctx) {
@@ -1185,19 +1246,23 @@ if (document.readyState === 'loading') {
             gain2.connect(ctx.destination);
             osc2.start(now + 0.12);
             osc2.stop(now + 0.40);
-        } catch (_) {}
+            return true;
+        } catch (_) {
+            return false;
+        }
     }
 
     // Play subtle success tone on purchase: G5 (783.99Hz) -> C6 (1046.5Hz)
     function playPurchaseTone() {
-        if (!isSoundEnabled()) return;
+        if (!isSoundEnabled()) return false;
         hasUserGesture = true;
         const ctx = getAudioContext(true);
-        if (!ctx) return;
+        if (!ctx) return false;
         if (ctx.state === 'suspended') {
             ctx.resume().then(() => playPurchaseNotes(ctx)).catch(() => {});
+            return false;
         } else {
-            playPurchaseNotes(ctx);
+            return playPurchaseNotes(ctx);
         }
     }
 
@@ -1227,7 +1292,10 @@ if (document.readyState === 'loading') {
             gain2.connect(ctx.destination);
             osc2.start(now + 0.10);
             osc2.stop(now + 0.35);
-        } catch (_) {}
+            return true;
+        } catch (_) {
+            return false;
+        }
     }
 
     window.NuraSound = {
@@ -1236,7 +1304,10 @@ if (document.readyState === 'loading') {
         toggleSound,
         updateSoundUI,
         playOtpChime,
-        playPurchaseTone
+        playPurchaseTone,
+        initAudio,
+        unlockAudio,
+        isAudioReady
     };
 
     if (document.readyState === 'loading') {

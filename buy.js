@@ -27,7 +27,56 @@ let remainingTime    = 300;  // 300 seconds / 5-minute countdown timeout
 let pollInterval     = null; // Reference for SMS polling
 let isBuying         = false; // Guard against double-click on Buy
 let isActionBusy     = false; // Guard against multiple finish/cancel/ban requests
-const notifiedOtpOrders = new Set(); // Prevent duplicate OTP notifications on polling
+
+/* ── Stable Event-Level OTP Deduplication Storage ── */
+function getSmsEventId(orderId, smsItem, index = 0) {
+    const cleanOrderId = String(orderId || currentOrderId || 'order').trim();
+    if (!smsItem) return `${cleanOrderId}_otp_${index}`;
+
+    if (typeof smsItem === 'object') {
+        const directId = smsItem.id || smsItem.sms_id || smsItem._id;
+        if (directId) {
+            return `${cleanOrderId}_id_${String(directId).trim()}`;
+        }
+        const code = String(smsItem.code || smsItem.otp || smsItem.pin || extractOTP(smsItem.text || '') || '').trim();
+        const text = String(smsItem.text || smsItem.message || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+        const date = String(smsItem.created_at || smsItem.date || smsItem.time || '').trim();
+        return `${cleanOrderId}_${code}_${text}${date ? '_' + date : '_' + index}`;
+    }
+
+    const text = String(smsItem).trim().replace(/\s+/g, ' ');
+    const code = String(extractOTP(text) || '').trim();
+    return `${cleanOrderId}_${code}_${text.slice(0, 40)}_${index}`;
+}
+
+function getStoredProcessedOtpEvents() {
+    try {
+        const raw = sessionStorage.getItem('primes_processed_otp_events') || localStorage.getItem('primes_processed_otp_events');
+        return raw ? JSON.parse(raw) : [];
+    } catch (_) {
+        return [];
+    }
+}
+
+function isOtpEventProcessed(eventId) {
+    if (!eventId) return false;
+    const events = getStoredProcessedOtpEvents();
+    return events.includes(String(eventId));
+}
+
+function markOtpEventProcessed(eventId) {
+    if (!eventId) return;
+    try {
+        let events = getStoredProcessedOtpEvents();
+        const strId = String(eventId);
+        if (!events.includes(strId)) {
+            events.push(strId);
+            if (events.length > 200) events = events.slice(events.length - 200);
+            sessionStorage.setItem('primes_processed_otp_events', JSON.stringify(events));
+            localStorage.setItem('primes_processed_otp_events', JSON.stringify(events));
+        }
+    } catch (_) {}
+}
 
 /* ══════════════════════════════════════════
    ACTIVE ORDER TRACKING & CROSS-PAGE SYNC
@@ -1271,6 +1320,11 @@ function renderSearchResultsDropdown(query) {
    Uses: buyActivation(country, product) from api.js
 ══════════════════════════════════════════ */
 async function handleBuyClick(country, product, btnEl) {
+    // Direct user gesture: unlock/resume audio context for immediate OTP chime playback
+    if (window.NuraSound && typeof window.NuraSound.initAudio === 'function') {
+        window.NuraSound.initAudio();
+    }
+
     if (isBuying) return;
 
     if (!country || !product) {
@@ -1399,9 +1453,10 @@ async function handleBuyClick(country, product, btnEl) {
             });
         }
 
-        await loadWalletBalanceBuyPage();
+        // Refresh wallet balance asynchronously without delaying modal opening
+        loadWalletBalanceBuyPage().catch(() => {});
 
-        // Requirement 2 & 3: Use the new order ID to fetch order, get number, and poll
+        // Requirement 2 & 3: Use the new order ID to fetch order, get number, and poll immediately
         openOrderModal(orderId);
     } catch (error) {
         console.error("[PURCHASE] Network/backend error:", error);
@@ -1437,6 +1492,14 @@ async function openOrderModal(orderId) {
         console.error('[OTP] Missing order ID');
         return;
     }
+
+    // Direct user action: ensure audio context is active
+    if (window.NuraSound && typeof window.NuraSound.initAudio === 'function') {
+        window.NuraSound.initAudio();
+    }
+
+    // Clean up any existing polling loop before opening
+    stopPolling('Opening order modal');
 
     currentOrderId = orderId;
     localStorage.setItem('currentOrderId', String(orderId));
@@ -1506,6 +1569,8 @@ function setModalError(msg) {
 function parseOrderSms(order) {
     if (!order) return { hasReceivedSms: false, otp: null, fullText: '', sender: '', smsTime: '', smsList: [] };
 
+    const orderId = order.id || order._id || order.orderId || currentOrderId || 'order';
+
     let rawSmsList = [];
     if (Array.isArray(order.sms)) {
         rawSmsList = order.sms;
@@ -1518,65 +1583,70 @@ function parseOrderSms(order) {
     const topLevelCode = order.code || order.smsCode || order.otp || order.verification_code || order.passcode;
     const topLevelText = order.text || order.smsText || order.message;
 
-    let otp = null;
-    let fullText = '';
-    let sender = '';
-    let smsTime = '';
-    const validSmsList = [];
+    const parsedItems = [];
 
-    // Filter and inspect valid SMS items from list
-    for (let i = 0; i < rawSmsList.length; i++) {
-        const item = rawSmsList[i];
-        if (typeof item === 'string' && item.trim()) {
-            validSmsList.push(item.trim());
-        } else if (item && typeof item === 'object') {
-            const hasContent = String(item.code || item.otp || item.pin || '').trim() !== '' ||
-                               String(item.text || item.message || '').trim() !== '';
-            if (hasContent) {
-                validSmsList.push(item);
-            }
+    // Filter and normalize valid SMS items from list
+    rawSmsList.forEach((item, idx) => {
+        if (!item) return;
+        let itemCode = '';
+        let itemText = '';
+        let itemSender = '';
+        let itemTime = '';
+
+        if (typeof item === 'string') {
+            itemText = item.trim();
+            itemCode = extractOTP(itemText) || '';
+        } else if (typeof item === 'object') {
+            const rawCode = item.code || item.otp || item.pin || item.passcode;
+            itemText = String(item.text || item.message || '').trim();
+            itemCode = (rawCode && String(rawCode).trim()) ? String(rawCode).trim() : (extractOTP(itemText) || '');
+            itemSender = String(item.sender || item.from || '').trim();
+            itemTime = String(item.created_at || item.date || item.time || '').trim();
+        }
+
+        if (itemCode || itemText) {
+            const eventId = getSmsEventId(orderId, item, idx);
+            parsedItems.push({
+                code: itemCode || null,
+                text: itemText || (itemCode ? `Verification code: ${itemCode}` : ''),
+                sender: itemSender,
+                time: itemTime,
+                eventId: eventId,
+                raw: item
+            });
+        }
+    });
+
+    // If no items in rawSmsList but top-level code or text is provided by the API:
+    if (parsedItems.length === 0 && (topLevelCode || topLevelText)) {
+        const topCode = (topLevelCode && String(topLevelCode).trim()) ? String(topLevelCode).trim() : (topLevelText ? extractOTP(String(topLevelText)) : '');
+        const topTxt = (topLevelText && String(topLevelText).trim()) ? String(topLevelText).trim() : (topCode ? `Verification code: ${topCode}` : '');
+        if (topCode || topTxt) {
+            const eventId = getSmsEventId(orderId, { code: topCode, text: topTxt }, 0);
+            parsedItems.push({
+                code: topCode || null,
+                text: topTxt,
+                sender: order.sender || order.from || '',
+                time: order.created_at || order.date || '',
+                eventId: eventId,
+                raw: { code: topCode, text: topTxt }
+            });
         }
     }
 
-    if (validSmsList.length > 0) {
-        const latestSms = validSmsList[validSmsList.length - 1];
-        if (typeof latestSms === 'string') {
-            fullText = latestSms;
-            otp = extractOTP(latestSms);
-        } else if (latestSms && typeof latestSms === 'object') {
-            const itemCode = latestSms.code || latestSms.otp || latestSms.pin;
-            const itemText = latestSms.text || latestSms.message;
-            otp = (itemCode && String(itemCode).trim()) ? String(itemCode).trim() : extractOTP(itemText || '');
-            fullText = (itemText && String(itemText).trim()) ? String(itemText).trim() : (otp ? `Verification code: ${otp}` : '');
-            sender = latestSms.sender || latestSms.from || '';
-            smsTime = latestSms.created_at || latestSms.date || '';
-        }
-    }
+    const latest = parsedItems.length > 0 ? parsedItems[parsedItems.length - 1] : null;
 
-    if (!otp && topLevelCode && String(topLevelCode).trim()) {
-        otp = String(topLevelCode).trim();
-    }
-    if (!otp && topLevelText && String(topLevelText).trim()) {
-        otp = extractOTP(String(topLevelText).trim());
-    }
-    if (!fullText && topLevelText && String(topLevelText).trim()) {
-        fullText = String(topLevelText).trim();
-    }
-    if (!fullText && otp) {
-        fullText = `Verification code: ${otp}`;
-    }
-
-    // CRITICAL: hasReceivedSms is TRUE ONLY when an actual OTP or actual message text is present.
+    // CRITICAL: hasReceivedSms is TRUE ONLY when at least one valid SMS item with code or text exists.
     // Empty array or status "RECEIVED" without an actual SMS/text/code MUST NOT trigger hasReceivedSms!
-    const hasReceivedSms = Boolean((otp && String(otp).trim()) || (fullText && String(fullText).trim()));
+    const hasReceivedSms = parsedItems.length > 0;
 
     return {
         hasReceivedSms,
-        otp: otp || null,
-        fullText: fullText || '',
-        sender,
-        smsTime,
-        smsList: validSmsList
+        otp: latest ? latest.code : null,
+        fullText: latest ? latest.text : '',
+        sender: latest ? latest.sender : '',
+        smsTime: latest ? latest.time : '',
+        smsList: parsedItems
     };
 }
 
@@ -1886,7 +1956,6 @@ async function checkOrder(orderId) {
         console.log("[OTP] Order ID:", orderId);
         console.log("[OTP] API response:", response);
         console.log("[OTP] Status:", currentStatus);
-        console.log("[OTP] SMS:", smsList);
         console.log("[OTP] SMS count:", smsList.length);
 
         // Requirement 3: Get the number from the order response
@@ -1912,36 +1981,51 @@ async function checkOrder(orderId) {
 
         const parsed = parseOrderSms(currentOrderData);
 
-        // Update UI
+        // Update UI status and buttons
         updateOrderUI(currentOrderData);
 
-        // Requirement 5 & 6:
-        // Only show "Code Received" when an actual SMS/code has been returned from order endpoint
+        // Handle newly arrived SMS items
         if (parsed.hasReceivedSms) {
-            console.log("[OTP] Real SMS code received for order ID:", orderId, parsed);
+            console.log("[OTP] Valid SMS code received for order ID:", orderId, parsed);
 
-            // Retrieve the actual code: if sms.code exists use it, or parsed.otp
-            const firstSms = smsList[0];
-            const smsCode = (firstSms && typeof firstSms === 'object' && firstSms.code) ? firstSms.code : parsed.otp;
-            const smsText = (firstSms && typeof firstSms === 'object' && firstSms.text) ? firstSms.text : (parsed.fullText || (typeof firstSms === 'string' ? firstSms : ''));
-            const smsSender = (firstSms && typeof firstSms === 'object' && firstSms.sender) ? firstSms.sender : parsed.sender;
+            // Announce each individual SMS event exactly once
+            parsed.smsList.forEach((smsItem) => {
+                if (!isOtpEventProcessed(smsItem.eventId)) {
+                    markOtpEventProcessed(smsItem.eventId);
+                    console.log(`[OTP] Newly detected SMS event: ${smsItem.eventId}`);
 
-            if (smsCode) {
-                displayOTP(smsCode);
-            } else {
-                displayOTP('Code received');
-            }
+                    // 1. Play OTP chime immediately without false positive reporting
+                    if (window.NuraSound && typeof window.NuraSound.playOtpChime === 'function') {
+                        window.NuraSound.playOtpChime(orderId, smsItem.eventId);
+                    }
 
-            // Also display the SMS text when available
-            if (smsText) {
-                displaySMS(smsText, smsSender);
-            }
+                    // 2. Dispatch in-app notification once per new SMS event
+                    if (typeof createNotification === 'function') {
+                        const prod = (selectedProduct || 'Verification').toUpperCase();
+                        createNotification({
+                            title: 'OTP Received',
+                            message: `Verification code for ${prod}: ${smsItem.code || 'Received'}. Order #${orderId}.`,
+                            type: 'otp'
+                        });
+                    }
 
-            stopPolling(`SMS code received for order ${orderId}`);
-            return;
+                    // 3. Show toast notification once per new SMS event
+                    showToast(`📨 Verification code received: ${smsItem.code || 'New SMS'}`, 'success');
+                }
+            });
+
+            // Update OTP display box with latest code (announcement handled per-event above)
+            displayOTP(parsed.otp, false);
+
+            // Render all received messages in the SMS inbox list
+            renderSmsInbox(parsed.smsList, parsed.fullText, parsed.sender);
+
+            // NOTE: Do NOT call stopPolling here.
+            // The provider may send subsequent legitimate SMS codes for the same order.
+            // Polling will continue until order is finished, cancelled, expired, or modal closed.
         }
 
-        // Terminal failure / finished states (only if no SMS was received above)
+        // Terminal failure / finished states
         const terminalStates = ['FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
         if (terminalStates.includes(currentStatus)) {
             console.log(`[POLL] Terminal status reached: ${currentStatus}. Stopping polling.`);
@@ -1953,9 +2037,11 @@ async function checkOrder(orderId) {
             return;
         }
 
-        // If PENDING or waiting for SMS: keep UI updated as waiting
-        const statusText = document.getElementById('statusText');
-        if (statusText) statusText.textContent = 'Waiting for SMS...';
+        // If PENDING and waiting for SMS
+        if (!parsed.hasReceivedSms) {
+            const statusText = document.getElementById('statusText');
+            if (statusText) statusText.textContent = 'Waiting for SMS...';
+        }
     } catch (err) {
         console.error("[OTP] Error checking order:", err);
         console.error("[OTP] Error status:", err?.status);
@@ -1995,7 +2081,45 @@ async function checkOrder(orderId) {
     }
 }
 
-function displayOTP(code) {
+function renderSmsInbox(smsList, latestText, latestSender) {
+    const otpFullText = document.getElementById('otpFullText');
+    if (otpFullText && latestText) {
+        const senderLabel = latestSender ? `[${escapeHTML(latestSender)}] ` : '';
+        otpFullText.textContent = `Message: ${senderLabel}${latestText}`;
+    }
+
+    const inboxList = document.getElementById('smsInboxList');
+    if (!inboxList) return;
+
+    if (!Array.isArray(smsList) || smsList.length === 0) {
+        if (latestText) {
+            inboxList.style.display = 'block';
+            const sLabel = latestSender ? escapeHTML(latestSender) : 'SMS';
+            inboxList.innerHTML = `<div style="padding:10px 14px;margin-bottom:8px;background:var(--border-light);border-radius:10px;font-size:12px;text-align:left;border:1px solid var(--border);">
+                <div style="font-weight:700;color:var(--text);margin-bottom:2px;">[${sLabel}]</div>
+                <div style="color:var(--muted);">${escapeHTML(latestText)}</div>
+            </div>`;
+        }
+        return;
+    }
+
+    inboxList.style.display = 'block';
+    inboxList.innerHTML = smsList.map((item, idx) => {
+        const sLabel = item.sender ? escapeHTML(item.sender) : (smsList.length > 1 ? `SMS #${idx + 1}` : 'SMS');
+        const codeBadge = item.code ? `<span style="display:inline-block;padding:2px 8px;background:rgba(16,185,129,0.15);color:#10b981;border-radius:6px;font-weight:700;margin-left:8px;font-size:11px;">OTP: ${escapeHTML(item.code)}</span>` : '';
+        const timeStr = item.time ? `<span style="font-size:11px;color:var(--muted);margin-left:auto;">${escapeHTML(item.time)}</span>` : '';
+        return `<div style="padding:10px 14px;margin-bottom:8px;background:var(--border-light);border-radius:10px;font-size:12px;text-align:left;border:1px solid var(--border);">
+            <div style="display:flex;align-items:center;margin-bottom:4px;">
+                <span style="font-weight:700;color:var(--text);">[${sLabel}]</span>
+                ${codeBadge}
+                ${timeStr}
+            </div>
+            <div style="color:var(--muted);word-break:break-word;">${escapeHTML(item.text || '')}</div>
+        </div>`;
+    }).join('');
+}
+
+function displayOTP(code, shouldAnnounce = false) {
     let otp = code;
     if (!otp && currentOrderData) {
         const parsed = parseOrderSms(currentOrderData);
@@ -2037,43 +2161,29 @@ function displayOTP(code) {
     const cancelBtn = document.getElementById('btnCancelOrder');
     if (cancelBtn) cancelBtn.disabled = true;
 
-    // Trigger in-app notification for OTP received (guarded against duplicate poll alerts)
-    if (otp && currentOrderId && !notifiedOtpOrders.has(String(currentOrderId))) {
-        notifiedOtpOrders.add(String(currentOrderId));
-        if (typeof createNotification === 'function') {
-            const prod = (selectedProduct || 'Verification').toUpperCase();
-            createNotification({
-                title: 'OTP Received',
-                message: `Verification code for ${prod}: ${otp}. Order #${currentOrderId}.`,
-                type: 'otp'
-            });
-        }
-        if (window.NuraSound && typeof window.NuraSound.playOtpChime === 'function') {
-            window.NuraSound.playOtpChime(currentOrderId);
+    // Optional direct announcement (only if shouldAnnounce is explicitly requested)
+    if (shouldAnnounce && otp && currentOrderId) {
+        const eventId = getSmsEventId(currentOrderId, { code: otp }, 0);
+        if (!isOtpEventProcessed(eventId)) {
+            markOtpEventProcessed(eventId);
+            if (typeof createNotification === 'function') {
+                const prod = (selectedProduct || 'Verification').toUpperCase();
+                createNotification({
+                    title: 'OTP Received',
+                    message: `Verification code for ${prod}: ${otp}. Order #${currentOrderId}.`,
+                    type: 'otp'
+                });
+            }
+            if (window.NuraSound && typeof window.NuraSound.playOtpChime === 'function') {
+                window.NuraSound.playOtpChime(currentOrderId, eventId);
+            }
         }
     }
 }
 
 function displaySMS(text, sender = '') {
     console.log("[OTP] Displaying complete SMS:", text);
-
-    const otpFullText = document.getElementById('otpFullText');
-    if (otpFullText) {
-        const senderLabel = sender ? `[${escapeHTML(sender)}] ` : '';
-        otpFullText.textContent = `Message: ${senderLabel}${text || ''}`;
-    }
-
-    const inboxList = document.getElementById('smsInboxList');
-    if (inboxList && text) {
-        inboxList.style.display = 'block';
-        const senderLabel = sender ? escapeHTML(sender) : 'SMS';
-        inboxList.innerHTML = `<div style="padding:10px 14px;margin-bottom:8px;background:var(--border-light);border-radius:10px;font-size:12px;text-align:left;border:1px solid var(--border);">
-            <div style="font-weight:700;color:var(--text);margin-bottom:2px;">[${senderLabel}]</div>
-            <div style="color:var(--muted);">${escapeHTML(text)}</div>
-        </div>`;
-    }
-
-    showToast('📨 SMS received! Your verification code is ready.', 'success');
+    renderSmsInbox([], text, sender);
 }
 
 function stopPolling(reason = 'Manual stop / cleanup') {
@@ -2110,6 +2220,7 @@ window.startOrderPolling = startOrderPolling;
 window.checkOrder        = checkOrder;
 window.displayOTP        = displayOTP;
 window.displaySMS        = displaySMS;
+window.renderSmsInbox    = renderSmsInbox;
 window.stopOrderPolling  = stopOrderPolling;
 
 function closeSmsModal() {
@@ -2127,13 +2238,8 @@ async function refreshInbox() {
         btn.textContent = 'Refreshing…';
     }
     try {
-        const res = await getOrder(currentOrderId);
-        const order = res?.order || res?.data || res;
-        if (order) {
-            currentOrderData = order;
-            updateOrderUI(order);
-            showToast('Inbox refreshed', 'info');
-        }
+        await checkOrder(currentOrderId);
+        showToast('Inbox refreshed', 'info');
     } catch (err) {
         showToast(err.message || 'Failed to refresh inbox.', 'error');
     } finally {
@@ -2468,6 +2574,9 @@ function showErrorState(grid, msg) {
    when loadCountries() runs more than once (initial load, retry-click).
 ══════════════════════════════════════════ */
 function attachEventListeners() {
+    if (window._buyListenersAttached) return;
+    window._buyListenersAttached = true;
+
     // Top Tabs: Countries vs Products
     const tabCountriesBtn = document.getElementById('tabCountriesBtn');
     const tabProductsBtn  = document.getElementById('tabProductsBtn');
