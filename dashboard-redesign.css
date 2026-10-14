@@ -136,20 +136,8 @@ body.dark-theme .dash-header {
   text-decoration: none;
 }
 
-.dash-header .logo img,
-.dash-header .logo-container img,
-.dash-header .nuraxq-logo,
-.dash-header .nura-sq-logo,
-.dash-header .nuraxq-theme-logo,
-.sidebar-logo,
-.sidebar-brand-link img {
-  width: 40% !important;
-  height: auto !important;
-  max-width: 200px !important;
-  object-fit: contain !important;
-  display: block !important;
-  flex-shrink: 0 !important;
-}
+/* Header + sidebar logo sizing lives in styles.css ("NuraXQ header / sidebar
+   logo sizing") so dashboard.html and buy.html share one rule set. */
 
 .dash-header .header__logo-text,
 .sidebar-brand .header__logo-text,
@@ -2315,16 +2303,9 @@ aside .top::-webkit-scrollbar-thumb {
   gap: 10px !important;
   text-decoration: none !important;
   min-width: 0 !important;
-  flex-shrink: 0 !important;
-}
-
-.sidebar-logo {
-  width: 40% !important;
-  height: auto !important;
-  max-width: 200px !important;
-  object-fit: contain !important;
-  display: block !important;
-  flex-shrink: 0 !important;
+  flex: 1 1 0% !important;
+  max-width: 12rem !important;
+  overflow: hidden !important; /* clips only the transparent PNG padding */
 }
 
 .sidebar-brand .header__logo-text {
@@ -2712,7 +2693,6 @@ body.dark-theme aside .mode-dot {
     gap: 10px !important;
     min-width: 0 !important;
     flex: 1 1 auto !important;
-    max-width: 55% !important;
   }
 
   .dash-header .toggle-btn {
@@ -2728,17 +2708,6 @@ body.dark-theme aside .mode-dot {
     align-items: center !important;
     gap: 8px !important;
     min-width: 0 !important;
-  }
-
-  .dash-header .logo img,
-  .dash-header .nuraxq-logo,
-  .dash-header .nuraxq-theme-logo {
-    width: 40% !important;
-    height: auto !important;
-    max-width: 180px !important;
-    min-width: 110px !important;
-    object-fit: contain !important;
-    flex-shrink: 0 !important;
   }
 
   .dash-header .header__logo-text {
@@ -3180,17 +3149,6 @@ body.dark-theme aside .mode-dot {
   .dash-header {
     padding: 8px 12px !important;
     min-height: 56px !important;
-  }
-
-  .dash-header .logo img,
-  .dash-header .nuraxq-logo,
-  .dash-header .nuraxq-theme-logo {
-    width: 40% !important;
-    height: auto !important;
-    max-width: 160px !important;
-    min-width: 100px !important;
-    object-fit: contain !important;
-    flex-shrink: 0 !important;
   }
 
   .dash-header .header__logo-text {

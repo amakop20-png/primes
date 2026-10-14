@@ -308,6 +308,72 @@ header {
     transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
+/* ── NuraXQ header / sidebar logo sizing ────────────────────────────
+   nurasms.comLF.png / nurasms.comDFC.png are 1024×576, but the visible
+   artwork only spans x 204–794 and y ≈205–355 (the rest is transparent
+   padding). Percent widths on the <img> inside a shrink-to-fit link were
+   also cyclic, collapsing the logo to ~80px with ~46px of visible artwork.
+
+   Fix: give each logo LINK a real responsive width, then scale/offset the
+   <img> inside it so the visible artwork fills 100% of that link.
+   (Percentage margins resolve against the link width, so it scales.)
+     img width   = 1024 / 590            = 173.56%
+     left offset = 204 / 590             = 34.58%
+     top / bottom offsets = 205/590, 221/590 = 34.75%, 37.46%
+   Visible logo height = 25.4% of the link width.                      */
+header .header__logo .header__logo-img,
+.dash-header .logo .nuraxq-logo,
+.sidebar-brand-link .sidebar-logo {
+    display: block !important;
+    width: 173.56% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: -34.75% 0 -37.46% -34.58% !important;
+    object-fit: contain !important;
+    flex-shrink: 0 !important;
+}
+
+/* Landing / info pages: logo container = 40% of the header row */
+header .header__logo {
+    flex: 0 1 40%;
+    min-width: 0;
+}
+
+header .header__logo .header__logo-link {
+    width: 100%;
+    max-width: 14rem;
+    overflow: hidden; /* clips only the transparent PNG padding */
+}
+
+/* Dashboard header: logo ≈ 40% of the (viewport-wide) header */
+.dash-header .header-left {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.dash-header .header-right {
+    flex-shrink: 0;
+}
+
+.dash-header .logo {
+    flex: 0 1 auto;
+    width: 40vw;
+    max-width: 13rem;
+    min-width: 0;
+    overflow: hidden;
+}
+
+@media (max-width: 860px) {
+    /* keep the mobile header ≈61px tall (the slide-down nav sits at top:61px) */
+    header .header__logo .header__logo-link { max-width: 9rem; }
+}
+
+@media (max-width: 768px) {
+    .dash-header .logo { max-width: 9rem; }
+}
+
 .dash-header .logo,
 .sidebar-brand-link {
     display: inline-flex !important;
@@ -410,6 +476,9 @@ body.dark-theme .header__logo-text {
     transition: background 0.2s ease, transform 0.2s ease;
     outline: none;
     flex-shrink: 0;
+    margin: 0;
+    line-height: 1;
+    align-self: center;
 }
 
 #themeToggle:hover {
@@ -1386,8 +1455,7 @@ body.dark-theme .hero-main-img {
         flex-shrink: 0;
     }
 
-    .header__logo-img,
-    .header__logo img {
+    .auth-header .header__logo-img {
         width: 40% !important;
         height: auto !important;
         max-width: 175px !important;
@@ -1577,8 +1645,7 @@ body.dark-theme .hero-main-img {
         gap: 6px;
     }
 
-    .header__logo-img,
-    .header__logo img {
+    .auth-header .header__logo-img {
         width: 40% !important;
         height: auto !important;
         max-width: 170px !important;
@@ -1614,7 +1681,6 @@ body.dark-theme .hero-main-img {
         padding: 4px !important;
         font-size: 0.95rem !important;
         margin-right: 0 !important;
-        transform: translateY(-5px);
     }
 
     .menu-toggle {
@@ -1699,8 +1765,7 @@ body.dark-theme .hero-main-img {
         gap: 5px;
     }
 
-    .header__logo-img,
-    .header__logo img {
+    .auth-header .header__logo-img {
         width: 40% !important;
         height: auto !important;
         max-width: 160px !important;
@@ -1735,7 +1800,6 @@ body.dark-theme .hero-main-img {
         padding: 3px !important;
         font-size: 0.85rem !important;
         margin-right: 0 !important;
-        transform: translateY(-6px);
     }
 
     .menu-toggle {
@@ -1876,17 +1940,15 @@ header {
   align-items: center;
   gap: 8px;
   text-decoration: none;
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 12rem;
+  overflow: hidden; /* clips only the transparent PNG padding */
 }
 
 .sidebar-logo {
-  height: 44px;
-  width: auto;
-  max-width: 185px;
-  max-height: 50px;
-  object-fit: contain;
-  display: block;
+  /* size handled by the shared NuraXQ logo crop rule near the top */
   transition: opacity 0.2s ease;
-  flex-shrink: 0;
 }
 
 .sidebar-logo:hover {
@@ -3639,20 +3701,7 @@ main > p {
     padding: 0 16px;
   }
 
-  .dash-header .logo img,
-  .dash-header .logo-container img,
-  .dash-header .nura-sq-logo,
-  .dash-header .nuraxq-logo,
-  .dash-header .nuraxq-theme-logo,
-  .sidebar-logo,
-  .sidebar-brand-link img {
-    width: 40% !important;
-    height: auto !important;
-    max-width: 175px !important;
-    min-width: 135px !important;
-    object-fit: contain !important;
-    display: block !important;
-  }
+  /* header/sidebar logo sizing: see the shared NuraXQ logo block near the top */
 
   .dash-header .header__logo-text,
   .sidebar-brand .header__logo-text {
