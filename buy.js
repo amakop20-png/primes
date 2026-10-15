@@ -269,10 +269,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (cached && terminalStatuses.includes(String(cached.status || '').toUpperCase())) {
             localStorage.removeItem('currentOrderId');
             unregisterActiveOrder(savedOrderId, cached.status);
+            clearOrderOtpEvents(savedOrderId);
             currentOrderId = null;
         } else {
-            currentOrderId = savedOrderId;
-            openOrderModal(currentOrderId, cached?.phone);
+            // Check the activation/order ID against the existing API before restoring an activation after refresh
+            try {
+                const res = await getOrder(savedOrderId);
+                const orderData = res?.order || {};
+                const currentStatus = String(res?.status || orderData?.status || 'PENDING').toUpperCase();
+
+                if (terminalStatuses.includes(currentStatus)) {
+                    // Server confirms order is completed or cancelled: clean up and do NOT restore
+                    localStorage.removeItem('currentOrderId');
+                    unregisterActiveOrder(savedOrderId, currentStatus);
+                    clearOrderOtpEvents(savedOrderId);
+                    currentOrderId = null;
+                    currentOrderData = null;
+                } else {
+                    // API confirms the order is active: restore it immediately with verified phone
+                    currentOrderId = savedOrderId;
+                    const verifiedPhone = orderData?.phone || res?.phone || cached?.phone || '';
+                    openOrderModal(currentOrderId, verifiedPhone);
+                }
+            } catch (err) {
+                const statusCode = err?.status || err?.statusCode;
+                if (statusCode === 404 || statusCode === 400) {
+                    localStorage.removeItem('currentOrderId');
+                    unregisterActiveOrder(savedOrderId, 'EXPIRED');
+                    clearOrderOtpEvents(savedOrderId);
+                    currentOrderId = null;
+                    currentOrderData = null;
+                } else {
+                    // Temporary network failure: only restore if we have cached active order
+                    if (cached && !terminalStatuses.includes(String(cached.status || '').toUpperCase())) {
+                        currentOrderId = savedOrderId;
+                        openOrderModal(currentOrderId, cached?.phone);
+                    } else {
+                        localStorage.removeItem('currentOrderId');
+                        currentOrderId = null;
+                    }
+                }
+            }
         }
     }
 });
@@ -1619,7 +1656,7 @@ function setModalLoading(orderId, preloadedPhone = null) {
     const finishBtn = document.getElementById('btnFinishOrder');
     if (cancelBtn) cancelBtn.disabled = false;
     if (banBtn)    banBtn.disabled    = false;
-    if (finishBtn) finishBtn.disabled = true;
+    if (finishBtn) finishBtn.disabled = !orderId;
 }
 
 function resetModalState() {
@@ -1897,7 +1934,7 @@ function updateOrderUI(order) {
 
     if (cancelBtn) cancelBtn.disabled = isFinal || hasReceivedSms;
     if (banBtn)    banBtn.disabled    = isFinal;
-    if (finishBtn) finishBtn.disabled = !hasReceivedSms;
+    if (finishBtn) finishBtn.disabled = isFinal;
 }
 
 function extractOTP(text) {
@@ -2391,20 +2428,30 @@ window.refreshInbox = refreshInbox;
    ORDER ACTIONS (Finish, Cancel, Ban)
    Uses: finishOrder, cancelOrder, banOrder from api.js
 ══════════════════════════════════════════ */
-async function handleFinishOrder() {
-    if (!currentOrderId || isActionBusy) return;
+async function handleFinishOrder(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (isActionBusy) return;
+
+    // Use the correct activation/order ID for the number currently being displayed
+    const targetOrderId = currentOrderId || localStorage.getItem('currentOrderId') || (document.getElementById('modalOrderId')?.textContent || '').replace(/[^\d]/g, '');
+    if (!targetOrderId) {
+        console.error('[Finish] No order ID found to finish.');
+        showToast('No active order ID found to complete.', 'error');
+        return;
+    }
 
     const btn = document.getElementById('btnFinishOrder');
     isActionBusy = true;
-    if (btn) { btn.disabled = true; btn.textContent = 'Finishing…'; }
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Finishing…';
+    }
 
-    const targetOrderId = currentOrderId;
     console.log(`[STEP 5] Request: POST /api/order/${targetOrderId}/finish`);
 
     try {
         const res = await finishOrder(targetOrderId);
-        console.log('[STEP 5] Status: 200');
-        console.log('[STEP 5] Response:', res);
+        console.log('[STEP 5] Status: 200', res);
         stopPolling(`Order finished by user (Order ID: ${targetOrderId})`);
         showToast('✅ Order finished and marked complete!', 'success');
 
@@ -2429,8 +2476,11 @@ async function handleFinishOrder() {
         await loadWalletBalanceBuyPage();
     } catch (err) {
         console.error(`[STEP 5] finishOrder error for Order ID ${targetOrderId}:`, err);
-        showToast(err.message || 'Failed to finish order.', 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '✅ Done'; }
+        showToast(err.message || 'Failed to finish order. Please try again.', 'error');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph ph-check-circle"></i> Done';
+        }
     } finally {
         isActionBusy = false;
     }
@@ -2471,13 +2521,18 @@ function hideCancelConfirmModal() {
     if (keepBtn) keepBtn.disabled = false;
 }
 
-function handleCancelOrder() {
-    if (!currentOrderId || isActionBusy) return;
+function handleCancelOrder(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const targetOrderId = currentOrderId || localStorage.getItem('currentOrderId') || (document.getElementById('modalOrderId')?.textContent || '').replace(/[^\d]/g, '');
+    if (!targetOrderId || isActionBusy) return;
     showCancelConfirmModal();
 }
 
 async function executeCancelOrder() {
-    if (!currentOrderId || isActionBusy) return;
+    if (isActionBusy) return;
+
+    const targetOrderId = currentOrderId || localStorage.getItem('currentOrderId') || (document.getElementById('modalOrderId')?.textContent || '').replace(/[^\d]/g, '');
+    if (!targetOrderId) return;
 
     const confirmBtn = document.getElementById('btnConfirmCancelNumber');
     const keepBtn    = document.getElementById('btnKeepNumber');
@@ -2497,7 +2552,6 @@ async function executeCancelOrder() {
         cancelBtn.textContent = 'Cancelling…';
     }
 
-    const targetOrderId = currentOrderId;
     console.log(`[STEP 6] Request: POST /api/order/${targetOrderId}/cancel`);
 
     try {
@@ -2539,15 +2593,16 @@ async function executeCancelOrder() {
     }
 }
 
-async function handleBanOrder() {
-    if (!currentOrderId || isActionBusy) return;
+async function handleBanOrder(e) {
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    const targetOrderId = currentOrderId || localStorage.getItem('currentOrderId') || (document.getElementById('modalOrderId')?.textContent || '').replace(/[^\d]/g, '');
+    if (!targetOrderId || isActionBusy) return;
     if (!confirm('Report this number as banned/unusable?')) return;
 
     const btn = document.getElementById('btnBanOrder');
     isActionBusy = true;
     if (btn) { btn.disabled = true; btn.textContent = 'Reporting…'; }
 
-    const targetOrderId = currentOrderId;
     console.log(`[STEP 7] Request: POST /api/order/${targetOrderId}/ban`);
 
     try {
