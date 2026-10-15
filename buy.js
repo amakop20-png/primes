@@ -16,6 +16,7 @@
 /* ── Module State ── */
 let allProducts      = [];   // Products from API for the selected country
 let selectedCountry  = '';   // Currently selected country key (e.g. 'usa')
+let selectedCountryName = ''; // Display name of selected country (e.g. 'United States')
 let selectedProduct  = '';   // Currently selected product key (e.g. 'whatsapp')
 
 let currentOrderId   = null; // Active order ID (from backend)
@@ -78,26 +79,53 @@ function markOtpEventProcessed(eventId) {
     } catch (_) {}
 }
 
+function clearOrderOtpEvents(orderId) {
+    if (!orderId) return;
+    try {
+        const strId = String(orderId);
+        let events = getStoredProcessedOtpEvents();
+        events = events.filter(e => !String(e).startsWith(`${strId}_`));
+        sessionStorage.setItem('primes_processed_otp_events', JSON.stringify(events));
+        localStorage.setItem('primes_processed_otp_events', JSON.stringify(events));
+    } catch (_) {}
+}
+
 /* ══════════════════════════════════════════
    ACTIVE ORDER TRACKING & CROSS-PAGE SYNC
 ══════════════════════════════════════════ */
+function getActiveOrder(orderId) {
+    if (!orderId) return null;
+    try {
+        const strId = String(orderId);
+        const activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
+        if (!Array.isArray(activeOrders)) return null;
+        return activeOrders.find(o => (typeof o === 'object' ? String(o.id || o.orderId || o._id) === strId : String(o) === strId)) || null;
+    } catch (_) {
+        return null;
+    }
+}
+
 function registerActiveOrder(orderId, country, product, phone) {
     if (!orderId) return;
     try {
         let activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
         if (!Array.isArray(activeOrders)) activeOrders = [];
         const strId = String(orderId);
-        const idx = activeOrders.findIndex(o => (typeof o === 'object' ? String(o.id) === strId : String(o) === strId));
+        const idx = activeOrders.findIndex(o => (typeof o === 'object' ? String(o.id || o.orderId || o._id) === strId : String(o) === strId));
+        const existing = (idx >= 0 && typeof activeOrders[idx] === 'object') ? activeOrders[idx] : {};
+        const safePhone = (phone && phone !== '—' && !phone.toLowerCase().includes('loading')) ? phone : (existing.phone || '');
+
         const orderData = {
             id: strId,
-            country: country || '',
-            product: product || '',
-            phone: phone || '',
+            orderId: strId,
+            country: country || existing.country || '',
+            product: product || existing.product || '',
+            phone: safePhone,
             status: 'PENDING',
-            createdAt: Date.now()
+            createdAt: existing.createdAt || Date.now()
         };
         if (idx >= 0) {
-            activeOrders[idx] = { ...activeOrders[idx], ...orderData };
+            activeOrders[idx] = { ...existing, ...orderData };
         } else {
             activeOrders.push(orderData);
         }
@@ -116,13 +144,13 @@ function registerActiveOrder(orderId, country, product, phone) {
                 id: strId,
                 userName: userSession?.name || userSession?.username || 'User',
                 userEmail: userSession?.email || '',
-                service: product || '—',
-                product: product || '—',
-                country: country || '—',
-                phone: phone || '—',
-                amountNGN: 0,
+                service: product || existing.product || '—',
+                product: product || existing.product || '—',
+                country: country || existing.country || '—',
+                phone: safePhone || '—',
+                amountNGN: existing.amountNGN || 0,
                 status: 'PENDING',
-                createdAt: new Date().toISOString()
+                createdAt: existing.createdAtIso || new Date().toISOString()
             };
             if (existingIdx >= 0) {
                 allOrders[existingIdx] = { ...allOrders[existingIdx], ...fullRecord };
@@ -149,7 +177,7 @@ function unregisterActiveOrder(orderId, finalStatus) {
         const strId = String(orderId);
         let activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
         if (Array.isArray(activeOrders)) {
-            activeOrders = activeOrders.filter(o => (typeof o === 'object' ? String(o.id) !== strId : String(o) !== strId));
+            activeOrders = activeOrders.filter(o => (typeof o === 'object' ? String(o.id || o.orderId || o._id) !== strId : String(o) !== strId));
             localStorage.setItem('primes_active_orders', JSON.stringify(activeOrders));
             localStorage.setItem('primes_active_count', String(activeOrders.length));
             localStorage.setItem('primes_order_update', Date.now().toString());
@@ -236,8 +264,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Restore any in-progress order from previous session
     const savedOrderId = localStorage.getItem('currentOrderId');
     if (savedOrderId) {
-        currentOrderId = savedOrderId;
-        openOrderModal(currentOrderId);
+        const cached = getActiveOrder(savedOrderId);
+        const terminalStatuses = ['FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
+        if (cached && terminalStatuses.includes(String(cached.status || '').toUpperCase())) {
+            localStorage.removeItem('currentOrderId');
+            unregisterActiveOrder(savedOrderId, cached.status);
+            currentOrderId = null;
+        } else {
+            currentOrderId = savedOrderId;
+            openOrderModal(currentOrderId, cached?.phone);
+        }
     }
 });
 
@@ -1069,6 +1105,7 @@ async function selectCountry(countryKey, targetProductKey = null) {
     // Find country details
     const countryObj = allCountriesData.find(c => c.key === countryKey);
     const countryName = countryObj ? countryObj.name : countryKey.toUpperCase();
+    selectedCountryName = countryName;
     const countryPrefix = countryObj?.prefix ? ` (${countryObj.prefix})` : '';
     const flag = getCountryFlagEmoji(countryKey);
 
@@ -1426,38 +1463,46 @@ async function handleBuyClick(country, product, btnEl) {
             throw new Error(response?.message || 'Server did not return a valid activation or order ID.');
         }
 
+        const purchasedPhone = response?.order?.phone || response?.phone || response?.data?.phone || response?.number || response?.order?.number || '';
+
         // Save the new order ID
         currentOrderId = orderId;
         localStorage.setItem("currentOrderId", String(orderId));
-        registerActiveOrder(orderId, country, product, response?.order?.phone || response?.phone);
+        registerActiveOrder(orderId, country, product, purchasedPhone);
         console.log("[ORDER] New order ID:", orderId);
         console.log("[OTP] Order ID:", orderId);
 
-        showToast('✅ Number purchased successfully! Opening order…', 'success');
+        showToast('✅ Purchase Successful! Opening order…', 'success');
 
         // Play subtle purchase success tone
         if (window.NuraSound && typeof window.NuraSound.playPurchaseTone === 'function') {
             window.NuraSound.playPurchaseTone();
         }
 
-        // Trigger in-app notification for number purchased
-        if (typeof createNotification === 'function') {
-            const countryName = (selectedCountryName || country || '').toUpperCase();
-            const prodName = (product || '').toUpperCase();
-            const purchasedPhone = response?.order?.phone || response?.phone;
-            const phoneStr = purchasedPhone ? ` (${purchasedPhone})` : '';
-            createNotification({
-                title: 'Number Purchased',
-                message: `Successfully purchased ${prodName} number${phoneStr} in ${countryName}. Order #${orderId}.`,
-                type: 'order'
-            });
+        // Trigger in-app notification for number purchased safely
+        try {
+            if (typeof createNotification === 'function') {
+                const cObj = (typeof allCountriesData !== 'undefined' && Array.isArray(allCountriesData))
+                    ? allCountriesData.find(c => c.key === country || c.key === selectedCountry)
+                    : null;
+                const countryName = (cObj?.name || (typeof selectedCountryName !== 'undefined' && selectedCountryName) || country || selectedCountry || '').toUpperCase();
+                const prodName = (product || selectedProduct || '').toUpperCase();
+                const phoneStr = purchasedPhone ? ` (${purchasedPhone})` : '';
+                createNotification({
+                    title: 'Purchase Successful',
+                    message: `Successfully purchased ${prodName} number${phoneStr} in ${countryName}. Order #${orderId}.`,
+                    type: 'order'
+                });
+            }
+        } catch (notifErr) {
+            console.warn('[Purchase] Could not create in-app notification:', notifErr);
         }
 
         // Refresh wallet balance asynchronously without delaying modal opening
         loadWalletBalanceBuyPage().catch(() => {});
 
         // Requirement 2 & 3: Use the new order ID to fetch order, get number, and poll immediately
-        openOrderModal(orderId);
+        openOrderModal(orderId, purchasedPhone);
     } catch (error) {
         console.error("[PURCHASE] Network/backend error:", error);
         console.error("[PURCHASE] Error status:", error?.status);
@@ -1487,7 +1532,7 @@ async function handleBuyClick(country, product, btnEl) {
    ORDER MODAL & DETAILS (Step 4 - Check Order)
    Uses: getOrder(orderId) from api.js
 ══════════════════════════════════════════ */
-async function openOrderModal(orderId) {
+async function openOrderModal(orderId, preloadedPhone = null) {
     if (!orderId) {
         console.error('[OTP] Missing order ID');
         return;
@@ -1511,19 +1556,39 @@ async function openOrderModal(orderId) {
     overlay.classList.add('show');
     document.body.style.overflow = 'hidden';
 
-    // Clear old UI and show loading state with new order ID
-    setModalLoading(orderId);
+    // Clear old UI and show loading state with new order ID and preloaded phone if available
+    setModalLoading(orderId, preloadedPhone);
 
-    // Keep the 5-minute activation timer
-    startCountdown();
+    // Calculate remaining countdown time from cached order creation
+    const cachedOrder = getActiveOrder(orderId);
+    let initialRemaining = 300;
+    if (cachedOrder && cachedOrder.createdAt) {
+        const elapsedSec = Math.floor((Date.now() - Number(cachedOrder.createdAt)) / 1000);
+        if (elapsedSec >= 0 && elapsedSec < 300) {
+            initialRemaining = 300 - elapsedSec;
+        } else if (elapsedSec >= 300) {
+            initialRemaining = 10;
+        }
+    }
+
+    // Keep activation timer with accurate remaining time
+    startCountdown(initialRemaining);
 
     // Fetch and poll the order using order ID as the single source of truth
     startOrderPolling(orderId);
 }
 
-function setModalLoading(orderId) {
+function setModalLoading(orderId, preloadedPhone = null) {
+    const cached = orderId ? getActiveOrder(orderId) : null;
+    const phone = (preloadedPhone && preloadedPhone !== '—' && !preloadedPhone.toLowerCase().includes('loading')) ? preloadedPhone : (cached?.phone || currentOrderData?.phone || '');
     const phoneEl = document.getElementById('modalPhone');
-    if (phoneEl) phoneEl.textContent = 'Loading…';
+    if (phoneEl) {
+        if (phone && phone !== '—' && !phone.toLowerCase().includes('loading')) {
+            phoneEl.textContent = phone;
+        } else {
+            phoneEl.textContent = 'Loading…';
+        }
+    }
     const orderIdEl = document.getElementById('modalOrderId');
     if (orderIdEl) orderIdEl.textContent = orderId ? `#${orderId}` : '—';
     const statusText = document.getElementById('statusText');
@@ -1554,6 +1619,42 @@ function setModalLoading(orderId) {
     const finishBtn = document.getElementById('btnFinishOrder');
     if (cancelBtn) cancelBtn.disabled = false;
     if (banBtn)    banBtn.disabled    = false;
+    if (finishBtn) finishBtn.disabled = true;
+}
+
+function resetModalState() {
+    const phoneEl = document.getElementById('modalPhone');
+    if (phoneEl) phoneEl.textContent = '—';
+    const orderIdEl = document.getElementById('modalOrderId');
+    if (orderIdEl) orderIdEl.textContent = '—';
+    const statusText = document.getElementById('statusText');
+    if (statusText) statusText.textContent = 'Waiting for SMS...';
+    const statusDot = document.getElementById('statusDot');
+    if (statusDot) {
+        statusDot.className = 'dot pulse';
+        statusDot.style.background = '#f59e0b';
+    }
+    const otpBox = document.getElementById('smsOtpBox');
+    if (otpBox) {
+        otpBox.classList.remove('code-received');
+        otpBox.classList.add('code-waiting');
+    }
+    const otpCode = document.getElementById('otpCode');
+    if (otpCode) otpCode.textContent = 'Waiting for code...';
+    const otpFullText = document.getElementById('otpFullText');
+    if (otpFullText) otpFullText.textContent = 'Send your verification SMS to this number. Code will appear automatically.';
+    const copyCodeBtn = document.getElementById('btnCopyCode');
+    if (copyCodeBtn) copyCodeBtn.style.display = 'none';
+    const inboxList = document.getElementById('smsInboxList');
+    if (inboxList) {
+        inboxList.style.display = 'none';
+        inboxList.innerHTML = '';
+    }
+    const cancelBtn = document.getElementById('btnCancelOrder');
+    const banBtn    = document.getElementById('btnBanOrder');
+    const finishBtn = document.getElementById('btnFinishOrder');
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (banBtn)    banBtn.disabled    = true;
     if (finishBtn) finishBtn.disabled = true;
 }
 
@@ -1653,11 +1754,21 @@ function parseOrderSms(order) {
 function updateOrderUI(order) {
     if (!order) return;
 
-    const phone = order.phone || order.number || order.phone_number || '—';
-    const phoneEl = document.getElementById('modalPhone');
-    if (phoneEl) phoneEl.textContent = phone;
-
     const orderId = order.id || order._id || order.orderId || currentOrderId || '—';
+    const phoneEl = document.getElementById('modalPhone');
+    const existingPhone = phoneEl ? phoneEl.textContent.trim() : '';
+    const cachedOrder = getActiveOrder(orderId);
+    const resolvedPhone = (order.phone && order.phone !== '—' && !order.phone.toLowerCase().includes('loading')) ? order.phone
+        : (order.number && order.number !== '—' ? order.number
+        : (order.phone_number && order.phone_number !== '—' ? order.phone_number
+        : (currentOrderData?.phone && currentOrderData.phone !== '—' && !currentOrderData.phone.toLowerCase().includes('loading') ? currentOrderData.phone
+        : (cachedOrder?.phone && cachedOrder.phone !== '—' ? cachedOrder.phone
+        : (existingPhone && existingPhone !== 'Loading…' && existingPhone !== '—' ? existingPhone : '—')))));
+
+    if (phoneEl && resolvedPhone !== '—') {
+        phoneEl.textContent = resolvedPhone;
+    }
+
     const orderIdEl = document.getElementById('modalOrderId');
     if (orderIdEl) orderIdEl.textContent = '#' + orderId;
 
@@ -1853,10 +1964,10 @@ function extractOTP(text) {
 ══════════════════════════════════════════ */
 let isPollRequestInProgress = false;
 
-function startCountdown() {
+function startCountdown(duration = 300) {
     clearInterval(countdownInterval);
 
-    remainingTime = 300;
+    remainingTime = Math.max(1, duration);
     updateCountdown();
 
     countdownInterval = setInterval(() => {
@@ -1958,11 +2069,35 @@ async function checkOrder(orderId) {
         console.log("[OTP] Status:", currentStatus);
         console.log("[OTP] SMS count:", smsList.length);
 
-        // Requirement 3: Get the number from the order response
+        // Terminal failure / finished states checked FIRST before UI announcement
+        const terminalStates = ['FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
+        if (terminalStates.includes(currentStatus)) {
+            console.log(`[POLL] Terminal status reached: ${currentStatus}. Cleaning up and stopping polling.`);
+            unregisterActiveOrder(orderId, currentStatus);
+            if (localStorage.getItem('currentOrderId') === String(orderId)) {
+                localStorage.removeItem('currentOrderId');
+            }
+            clearOrderOtpEvents(orderId);
+            stopPolling(`Terminal status reached: ${currentStatus}`);
+            currentOrderId = null;
+            currentOrderData = null;
+            closeSmsModal();
+            resetModalState();
+            return;
+        }
+
+        // Requirement 3: Get the number from the order response or active storage
         const phone = orderData?.phone || response?.phone || orderData?.phoneNumber || response?.phoneNumber || orderData?.number || response?.number;
-        if (phone && phone !== '—') {
+        const cachedOrder = getActiveOrder(orderId);
+        const resolvedPhone = (phone && phone !== '—' && !phone.toLowerCase().includes('loading')) ? phone
+            : (currentOrderData?.phone && currentOrderData.phone !== '—' && !currentOrderData.phone.toLowerCase().includes('loading') ? currentOrderData.phone
+            : (cachedOrder?.phone && cachedOrder.phone !== '—' ? cachedOrder.phone : ''));
+
+        if (resolvedPhone && resolvedPhone !== '—') {
             const phoneEl = document.getElementById('modalPhone');
-            if (phoneEl) phoneEl.textContent = phone;
+            if (phoneEl) phoneEl.textContent = resolvedPhone;
+            // Update storage with the verified phone
+            registerActiveOrder(orderId, orderData?.country || response?.country, orderData?.product || response?.product, resolvedPhone);
         }
 
         const activeId = orderData?.id || response?.id || orderId;
@@ -1974,7 +2109,7 @@ async function checkOrder(orderId) {
             ...orderData,
             ...response,
             id: activeId,
-            phone: phone || currentOrderData?.phone || '—',
+            phone: resolvedPhone || '—',
             status: currentStatus,
             sms: smsList
         };
@@ -2000,14 +2135,16 @@ async function checkOrder(orderId) {
                     }
 
                     // 2. Dispatch in-app notification once per new SMS event
-                    if (typeof createNotification === 'function') {
-                        const prod = (selectedProduct || 'Verification').toUpperCase();
-                        createNotification({
-                            title: 'OTP Received',
-                            message: `Verification code for ${prod}: ${smsItem.code || 'Received'}. Order #${orderId}.`,
-                            type: 'otp'
-                        });
-                    }
+                    try {
+                        if (typeof createNotification === 'function') {
+                            const prod = (selectedProduct || 'Verification').toUpperCase();
+                            createNotification({
+                                title: 'OTP Received',
+                                message: `Verification code for ${prod}: ${smsItem.code || 'Received'}. Order #${orderId}.`,
+                                type: 'otp'
+                            });
+                        }
+                    } catch (_) {}
 
                     // 3. Show toast notification once per new SMS event
                     showToast(`📨 Verification code received: ${smsItem.code || 'New SMS'}`, 'success');
@@ -2025,18 +2162,6 @@ async function checkOrder(orderId) {
             // Polling will continue until order is finished, cancelled, expired, or modal closed.
         }
 
-        // Terminal failure / finished states
-        const terminalStates = ['FINISHED', 'CANCELED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
-        if (terminalStates.includes(currentStatus)) {
-            console.log(`[POLL] Terminal status reached: ${currentStatus}. Stopping polling.`);
-            unregisterActiveOrder(orderId);
-            if (localStorage.getItem('currentOrderId') === String(orderId)) {
-                localStorage.removeItem('currentOrderId');
-            }
-            stopPolling(`Terminal status reached: ${currentStatus}`);
-            return;
-        }
-
         // If PENDING and waiting for SMS
         if (!parsed.hasReceivedSms) {
             const statusText = document.getElementById('statusText');
@@ -2047,6 +2172,25 @@ async function checkOrder(orderId) {
         console.error("[OTP] Error status:", err?.status);
         console.error("[OTP] Error message:", err?.message);
 
+        const statusCode = err?.status || err?.statusCode;
+        const errMsg = err?.message || 'Error checking order status';
+
+        if (statusCode === 404) {
+            console.warn(`[OTP] Order #${orderId} returned 404 on backend. Cleaning up.`);
+            unregisterActiveOrder(orderId, 'EXPIRED');
+            if (localStorage.getItem('currentOrderId') === String(orderId)) {
+                localStorage.removeItem('currentOrderId');
+            }
+            clearOrderOtpEvents(orderId);
+            stopPolling('Order not found (404)');
+            currentOrderId = null;
+            currentOrderData = null;
+            closeSmsModal();
+            resetModalState();
+            showToast(`Order #${orderId} is no longer active.`, 'info');
+            return;
+        }
+
         const statusText = document.getElementById('statusText');
         const otpFullText = document.getElementById('otpFullText');
         const statusDot = document.getElementById('statusDot');
@@ -2056,19 +2200,11 @@ async function checkOrder(orderId) {
             statusDot.style.background = '#ef4444';
         }
 
-        const statusCode = err?.status || err?.statusCode;
-        const errMsg = err?.message || 'Error checking order status';
-
         if (statusCode === 401) {
             if (statusText) statusText.textContent = 'Session Expired (401)';
             if (otpFullText) otpFullText.textContent = 'Your session has expired. Please log in again to view your order.';
             stopPolling('Authentication error (401)');
             showToast('Session expired. Please log in again.', 'error');
-        } else if (statusCode === 404) {
-            if (statusText) statusText.textContent = 'Order Not Found (404)';
-            if (otpFullText) otpFullText.textContent = `Order #${orderId} was not found on the server.`;
-            stopPolling('Order not found (404)');
-            showToast(`Order #${orderId} not found.`, 'error');
         } else if (statusCode === 500) {
             if (statusText) statusText.textContent = 'Server Error (500)';
             if (otpFullText) otpFullText.textContent = `Backend server error (${errMsg}). Retrying...`;
@@ -2273,19 +2409,23 @@ async function handleFinishOrder() {
         showToast('✅ Order finished and marked complete!', 'success');
 
         // Trigger in-app notification for order completed
-        if (typeof createNotification === 'function') {
-            createNotification({
-                title: 'Order Completed',
-                message: `Order #${targetOrderId} has been marked complete.`,
-                type: 'order'
-            });
-        }
+        try {
+            if (typeof createNotification === 'function') {
+                createNotification({
+                    title: 'Order Completed',
+                    message: `Order #${targetOrderId} has been marked complete.`,
+                    type: 'order'
+                });
+            }
+        } catch (_) {}
 
+        clearOrderOtpEvents(targetOrderId);
         unregisterActiveOrder(targetOrderId, 'FINISHED');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
         currentOrderData = null;
         closeSmsModal();
+        resetModalState();
         await loadWalletBalanceBuyPage();
     } catch (err) {
         console.error(`[STEP 5] finishOrder error for Order ID ${targetOrderId}:`, err);
@@ -2366,16 +2506,20 @@ async function executeCancelOrder() {
         stopPolling(`Order cancelled by user (Order ID: ${targetOrderId})`);
         hideCancelConfirmModal();
         closeSmsModal();
+        resetModalState();
+        clearOrderOtpEvents(targetOrderId);
         showToast('✅ Number has been successfully cancelled.', 'success');
 
         // Trigger in-app notification for order cancelled
-        if (typeof createNotification === 'function') {
-            createNotification({
-                title: 'Order Cancelled',
-                message: `Order #${targetOrderId} was cancelled. Wallet refunded.`,
-                type: 'order'
-            });
-        }
+        try {
+            if (typeof createNotification === 'function') {
+                createNotification({
+                    title: 'Order Cancelled',
+                    message: `Order #${targetOrderId} was cancelled. Wallet refunded.`,
+                    type: 'order'
+                });
+            }
+        } catch (_) {}
 
         unregisterActiveOrder(targetOrderId, 'CANCELED');
         localStorage.removeItem('currentOrderId');
@@ -2414,19 +2558,23 @@ async function handleBanOrder() {
         showToast('⚠️ Number reported as banned.', 'success');
 
         // Trigger in-app notification for number reported/banned
-        if (typeof createNotification === 'function') {
-            createNotification({
-                title: 'Number Reported',
-                message: `Order #${targetOrderId} was reported as banned/unusable.`,
-                type: 'order'
-            });
-        }
+        try {
+            if (typeof createNotification === 'function') {
+                createNotification({
+                    title: 'Number Reported',
+                    message: `Order #${targetOrderId} was reported as banned/unusable.`,
+                    type: 'order'
+                });
+            }
+        } catch (_) {}
 
+        clearOrderOtpEvents(targetOrderId);
         unregisterActiveOrder(targetOrderId, 'BANNED');
         localStorage.removeItem('currentOrderId');
         currentOrderId   = null;
         currentOrderData = null;
         closeSmsModal();
+        resetModalState();
         await loadWalletBalanceBuyPage();
     } catch (err) {
         console.error(`[STEP 7] banOrder error for Order ID ${targetOrderId}:`, err);

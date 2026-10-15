@@ -1169,7 +1169,7 @@ async function loadActiveNumbers() {
     const currentOrderId = localStorage.getItem('currentOrderId');
     if (currentOrderId) {
         const strId = String(currentOrderId);
-        if (!activeOrders.some(o => (typeof o === 'object' ? String(o.id) === strId : String(o) === strId))) {
+        if (!activeOrders.some(o => (typeof o === 'object' ? String(o.id || o.orderId || o._id) === strId : String(o) === strId))) {
             activeOrders.push({ id: strId, status: 'PENDING' });
         }
     }
@@ -1187,7 +1187,7 @@ async function loadActiveNumbers() {
     const stillActive = [];
 
     for (const item of activeOrders) {
-        const orderId = typeof item === 'object' ? (item.id || item.orderId) : item;
+        const orderId = typeof item === 'object' ? (item.id || item.orderId || item._id) : item;
         if (!orderId) continue;
 
         try {
@@ -1203,9 +1203,10 @@ async function loadActiveNumbers() {
                     }
                 } else {
                     // Active (e.g. PENDING or RECEIVED)
+                    const orderPhone = orderData?.phone || res?.phone || (typeof item === 'object' ? item.phone : '') || '';
                     const updatedObj = typeof item === 'object' 
-                        ? { ...item, status: status || 'PENDING' } 
-                        : { id: String(orderId), status: status || 'PENDING' };
+                        ? { ...item, phone: orderPhone || item.phone || '', status: status || 'PENDING' } 
+                        : { id: String(orderId), phone: orderPhone, status: status || 'PENDING' };
                     stillActive.push(updatedObj);
 
                     // Check for genuine OTP arrival to trigger sound notification (with event-level deduplication)
