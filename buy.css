@@ -45,21 +45,25 @@ body {
   gap: 14px;
 }
 
-/* LOGO */
+/* LOGO — Standardized to Match Dashboard Reference */
+.dash-header .logo,
 .logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  text-decoration: none !important;
+  flex: 0 1 auto !important;
+  width: 40vw !important;
+  max-width: 13rem !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
 }
 
-.logo img {
-  width: auto;  
-  height: 22px;
-  max-width: 28px;
-  max-height: 22px;
-  object-fit: contain;
-  border-radius: 4px;
+@media (max-width: 768px) {
+  .dash-header .logo,
+  .logo {
+    max-width: 9rem !important;
+  }
 }
 
 /* RIGHT */

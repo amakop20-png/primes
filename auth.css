@@ -57,6 +57,11 @@ body.dark-theme.auth-page::before {
 .auth-header .logo {
   display: flex;
   align-items: center;
+  flex: 0 1 auto;
+  width: 40vw;
+  max-width: 13rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .auth-header .logo .header__logo-link {
@@ -65,6 +70,9 @@ body.dark-theme.auth-page::before {
   gap: 10px;
   text-decoration: none;
   line-height: 1;
+  width: 100%;
+  max-width: 13rem;
+  overflow: hidden;
 }
 
 @keyframes logoFloat {
@@ -77,13 +85,33 @@ body.dark-theme.auth-page::before {
 }
 
 .auth-header .logo img.header__logo-img {
-  height: 32px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-  flex-shrink: 0;
+  display: block !important;
+  width: 173.56% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: -34.75% 0 -37.46% -34.58% !important;
+  object-fit: contain !important;
+  flex-shrink: 0 !important;
   animation: logoFloat 3s ease-in-out infinite;
   will-change: transform;
+}
+
+@media (max-width: 768px) {
+  .auth-header .logo,
+  .auth-header .logo .header__logo-link {
+    max-width: 9rem !important;
+  }
+}
+
+/* Auth Screens (Login, Signup, Reset Password): Show ONLY original logo image, hide separate text */
+body.auth-page .header__logo-text,
+.auth-header .header__logo-text,
+.auth-header .logo .header__logo-text,
+.auth-banner-badge .header__logo-text,
+.auth-card-logo-wrap .header__logo-text {
+  display: none !important;
 }
 
 .auth-header .logo .header__logo-text {
@@ -91,14 +119,14 @@ body.dark-theme.auth-page::before {
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #7C3AED;
+  color: #6B21A8 !important;
   line-height: 1;
-  display: inline-block;
   vertical-align: middle;
+  transition: color 0.2s ease;
 }
 
 body.dark-theme .auth-header .logo .header__logo-text {
-  color: #A78BFA;
+  color: #C084FC !important;
 }
 
 .auth-back-link {

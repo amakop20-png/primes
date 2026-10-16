@@ -224,6 +224,14 @@ body.dark-theme .loader-wrapper {
     animation: pulseSignal 1.1s ease-in-out infinite;
 }
 
+/* Loader Screen: Show ONLY original logo image, no separate text */
+.loader-wrapper .header__logo-text,
+.loader-wrapper .loader-text,
+.loader-wrapper span:not(.loader-logo),
+.loader-wrapper p {
+    display: none !important;
+}
+
 .loader-wrapper.hidden {
     opacity: 0 !important;
     visibility: hidden !important;
@@ -323,7 +331,8 @@ header {
    Visible logo height = 25.4% of the link width.                      */
 header .header__logo .header__logo-img,
 .dash-header .logo .nuraxq-logo,
-.sidebar-brand-link .sidebar-logo {
+.sidebar-brand-link .sidebar-logo,
+.auth-header .logo img.header__logo-img {
     display: block !important;
     width: 173.56% !important;
     min-width: 0 !important;
@@ -335,15 +344,17 @@ header .header__logo .header__logo-img,
     flex-shrink: 0 !important;
 }
 
-/* Landing / info pages: logo container = 40% of the header row */
+/* Landing / info / auth pages: logo container matches dashboard 13rem desktop reference */
 header .header__logo {
     flex: 0 1 40%;
     min-width: 0;
 }
 
-header .header__logo .header__logo-link {
+header .header__logo .header__logo-link,
+.auth-header .logo .header__logo-link,
+.auth-header .logo {
     width: 100%;
-    max-width: 14rem;
+    max-width: 13rem;
     overflow: hidden; /* clips only the transparent PNG padding */
 }
 
@@ -367,11 +378,16 @@ header .header__logo .header__logo-link {
 
 @media (max-width: 860px) {
     /* keep the mobile header ≈61px tall (the slide-down nav sits at top:61px) */
-    header .header__logo .header__logo-link { max-width: 9rem; }
+    header .header__logo .header__logo-link,
+    .auth-header .logo .header__logo-link,
+    .auth-header .logo { max-width: 9rem; }
 }
 
 @media (max-width: 768px) {
     .dash-header .logo { max-width: 9rem; }
+    header .header__logo .header__logo-link,
+    .auth-header .logo .header__logo-link,
+    .auth-header .logo { max-width: 9rem; }
 }
 
 .dash-header .logo,
@@ -387,18 +403,19 @@ header .header__logo .header__logo-link {
     display: inline-block !important;
     font-size: 21px !important;
     font-weight: 800 !important;
-    color: var(--text, #1E1B4B) !important;
+    color: #6B21A8 !important;
     letter-spacing: -0.5px !important;
     line-height: 1 !important;
     margin: 0 !important;
     padding: 0 !important;
     vertical-align: middle !important;
+    transition: color 0.2s ease;
 }
 
 body.dark-theme .dash-header .header__logo-text,
 body.dark-theme .sidebar-brand .header__logo-text,
 body.dark-theme .header__logo-text {
-    color: #ffffff !important;
+    color: #C084FC !important;
 }
 
 .help-header-logo-img,

@@ -145,18 +145,19 @@ body.dark-theme .dash-header {
   display: inline-block !important;
   font-size: 21px !important;
   font-weight: 800 !important;
-  color: var(--text, #1E1B4B) !important;
+  color: #6B21A8 !important;
   letter-spacing: -0.5px !important;
   line-height: 1 !important;
   margin: 0 !important;
   padding: 0 !important;
   vertical-align: middle !important;
+  transition: color 0.2s ease;
 }
 
 body.dark-theme .dash-header .header__logo-text,
 body.dark-theme .sidebar-brand .header__logo-text,
 body.dark-theme .header__logo-text {
-  color: #ffffff !important;
+  color: #C084FC !important;
 }
 
 .header-right {
@@ -1745,6 +1746,14 @@ body.dark-theme .loader-wrapper {
   animation: pulseLoaderSignal 1.1s ease-in-out infinite !important;
 }
 
+/* Loader Screen: Show ONLY original logo image, no separate text */
+.loader-wrapper .header__logo-text,
+.loader-wrapper .loader-text,
+.loader-wrapper span:not(.loader-logo),
+.loader-wrapper p {
+  display: none !important;
+}
+
 @keyframes pulseLoaderSignal {
   0%, 100% { transform: scale(1);   opacity: 1;   }
   50%      { transform: scale(0.9); opacity: 0.6; }
@@ -2313,15 +2322,16 @@ aside .top::-webkit-scrollbar-thumb {
   font-weight: 800 !important;
   letter-spacing: -0.4px !important;
   line-height: 1 !important;
-  color: var(--text, #1E1B4B) !important;
+  color: #6B21A8 !important;
   white-space: nowrap !important;
   margin: 0 !important;
   padding: 0 !important;
   vertical-align: middle !important;
+  transition: color 0.2s ease;
 }
 
 body.dark-theme .sidebar-brand .header__logo-text {
-  color: #ffffff !important;
+  color: #C084FC !important;
 }
 
 /* ── Collapse / Close Buttons ── */
