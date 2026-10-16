@@ -1,0 +1,31 @@
+# Render Infrastructure as Code Blueprint
+# Reference: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: nurasms-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: API_BASE_URL
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_SETUP_KEY
+        sync: false
+      - key: FIVESIM_API_TOKEN
+        sync: false
+      - key: WEBPUSHR_KEY
+        sync: false
+      - key: WEBPUSHR_AUTH_TOKEN
+        sync: false

@@ -656,6 +656,8 @@ router.get('/virtual-accounts/:userId', adminAuth, async (req, res) => {
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to retrieve virtual account' });
   }
+});
+
 /* ======================================================================
    ANNOUNCEMENTS (Base: /api/admin/announcements)
 ====================================================================== */
