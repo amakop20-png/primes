@@ -4,8 +4,15 @@
    All dashboard and application API communication is centralized here.
 ====================================================================== */
 
-// USING DIRECT BACKEND URL
-const API_BASE_URL = 'https://nurasms-api.onrender.com';
+// CENTRALIZED & REUSABLE API BASE URL
+// Automatically detects environment setting, window.ENV, or falls back to production endpoint
+const API_BASE_URL = (typeof window !== 'undefined' && ((window.ENV && window.ENV.API_BASE_URL) || window.API_BASE_URL))
+    ? ((window.ENV && window.ENV.API_BASE_URL) || window.API_BASE_URL)
+    : 'https://nurasms-api.onrender.com';
+
+if (typeof window !== 'undefined') {
+    window.API_BASE_URL = API_BASE_URL;
+}
 const REQUEST_TIMEOUT_MS = 25000; // 25s ceiling as specified in project requirements
 
 /* ==========================================

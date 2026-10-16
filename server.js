@@ -12,10 +12,28 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Dynamic public frontend configuration endpoint (Exposes only non-sensitive config)
+app.get('/config.js', (req, res) => {
+  res.type('application/javascript');
+  res.send(`window.ENV = Object.assign(window.ENV || {}, ${JSON.stringify({
+    API_BASE_URL: process.env.API_BASE_URL || ''
+  })});`);
+});
+
+// Explicit API Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
+// Root Health check endpoint
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'healthy' });
+});
+
 // Serve frontend static assets from root folder
 app.use(express.static(__dirname));
 
-// Health check endpoint
+// Health check fallback
 app.get('/', (req, res) => {
   res.json({ message: 'Server is working' });
 });
