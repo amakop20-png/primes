@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Numbers — NuraXQ</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Phosphor Icons -->
+  <link rel="stylesheet" href="assets/phosphor/regular/style.css">
+  <link rel="stylesheet" href="assets/phosphor/fill/style.css">
+  <link rel="stylesheet" href="assets/phosphor/bold/style.css">
+  <script src="assets/phosphor/phosphor.js"></script>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="192x192" href="nuraxq-icon.png">
+
+  <!-- Core Theme & Layout Styles -->
+  <link rel="stylesheet" href="styles.css?v=3.5">
+  <link rel="stylesheet" href="dashboard-redesign.css?v=3.5">
+  <link rel="stylesheet" href="transactions-numbers.css?v=1.0">
+
+  <!-- Official Theme-Aware Logo Switching Engine -->
+  <script src="brand-logo.js?v=1.1"></script>
+</head>
+<body class="dark-theme">
+  <script>
+    // Immediate early theme application
+    if (localStorage.getItem('dashboardTheme') === 'light') {
+      document.body.classList.remove('dark-theme');
+    } else {
+      document.body.classList.add('dark-theme');
+    }
+  </script>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SHARED COMPACT HEADER
+       ══════════════════════════════════════════════════════════════════ -->
+  <header class="tn-header">
+    <div class="tn-header-left">
+      <button type="button" class="tn-toggle-btn" id="toggle-btn" aria-label="Toggle Navigation">
+        <i class="ph ph-list"></i>
+      </button>
+      <a href="dashboard.html" class="logo" style="text-decoration:none;">
+        <img src="nurasms.comLF.png" alt="NuraXQ" class="nuraxq-logo nura-sq-logo nuraxq-theme-logo">
+      </a>
+    </div>
+
+    <div class="tn-header-right">
+      <!-- Theme Switcher Toggle -->
+      <button type="button" class="tn-theme-btn" id="themeToggleBtn" onclick="toggleDark()" title="Toggle Theme" aria-label="Toggle Theme">
+        <i class="ph ph-moon" id="headerDropdownThemeIcon"></i>
+      </button>
+
+      <!-- Live Wallet Balance Pill (clickable) -->
+      <a href="dashboard.html?open=wallet" class="tn-balance-pill" id="headerWalletBalancePill" title="View Wallet Balance">
+        <span class="tn-balance-icon">₦</span>
+        <span class="tn-balance-val" id="headerWalletBalanceAmount">₦ 0.00</span>
+      </a>
+
+      <!-- User Profile Dropdown -->
+      <div class="profile-dropdown" style="position:relative;">
+        <button class="tn-avatar-btn" onclick="toggleDropdown()" id="profileToggle" type="button" aria-expanded="false" title="User Menu">
+          <i class="ph ph-user-circle"></i>
+        </button>
+        <div id="dropdown" class="dropdown-content" aria-label="User menu">
+          <div class="dropdown-header">
+            <i class="ph ph-user-circle" style="font-size: 38px;"></i>
+            <div>
+              <p class="dropdown-name" id="dropdownUsername">User</p>
+              <p class="dropdown-email" id="dropdownEmail">user@nuraxq.com</p>
+            </div>
+          </div>
+          <a href="dashboard.html"><i class="ph ph-squares-four"></i> Dashboard</a>
+          <a href="buy.html"><i class="ph ph-sim-card"></i> Buy Numbers</a>
+          <a href="numbers.html" style="color:var(--tn-primary-light); font-weight:700;"><i class="ph ph-device-mobile"></i> My Numbers</a>
+          <a href="transactions.html"><i class="ph ph-receipt"></i> Transactions</a>
+          <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
+          <a href="login.html" class="logout" onclick="logout(); return false;"><i class="ph ph-sign-out"></i> Logout</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <!-- Sidebar Drawer Navigation -->
+  <aside id="aside">
+    <div class="top">
+      <div class="sidebar-brand">
+        <a href="dashboard.html" class="sidebar-brand-link">
+          <img src="nurasms.comLF.png" alt="NuraXQ" class="sidebar-logo nuraxq-theme-logo">
+        </a>
+        <div class="close" id="close-btn" onclick="document.getElementById('aside').classList.remove('active'); document.getElementById('sidebarBackdrop').classList.remove('active');" aria-label="Close sidebar">
+          <i class="ph ph-caret-left"></i>
+        </div>
+      </div>
+
+      <!-- User Profile Widget -->
+      <div class="sidebar-user-widget" id="sidebarUserWidget" onclick="openSettings(); switchSettingsTab('profile'); return false;">
+        <div class="sidebar-user-avatar">
+          <i class="ph ph-user-circle"></i>
+        </div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name username" id="sidebarUserName">Account User</div>
+          <div class="sidebar-user-email" id="sidebarUserEmail">user@nuraxq.com</div>
+        </div>
+        <i class="ph ph-gear sidebar-user-gear"></i>
+      </div>
+
+      <!-- Group: SERVICES -->
+      <div class="sidebar-nav-group-label">SERVICES</div>
+      <a href="dashboard.html">
+        <span><i class="ph ph-squares-four"></i> Dashboard</span>
+      </a>
+      <a href="buy.html?tab=products">
+        <span><i class="ph ph-sim-card"></i> Buy Numbers</span>
+      </a>
+      <a href="numbers.html" class="active">
+        <span><i class="ph ph-device-mobile"></i> My Numbers</span>
+      </a>
+      <a href="buy.html?tab=countries">
+        <span><i class="ph ph-globe"></i> Countries</span>
+      </a>
+
+      <!-- Group: FINANCE & HISTORY -->
+      <div class="sidebar-nav-group-label">FINANCE &amp; HISTORY</div>
+      <a href="dashboard.html?open=wallet">
+        <span><i class="ph ph-wallet"></i> Wallet</span>
+      </a>
+      <a href="transactions.html">
+        <span><i class="ph ph-receipt"></i> Transactions</span>
+      </a>
+
+      <!-- Group: ACCOUNT -->
+      <div class="sidebar-nav-group-label">ACCOUNT</div>
+      <a href="#" onclick="openSettings(); return false;">
+        <span><i class="ph ph-gear"></i> Settings</span>
+      </a>
+      <a href="login.html" class="logout" onclick="logout(); return false;">
+        <span><i class="ph ph-sign-out"></i> Logout</span>
+      </a>
+      <div class="mode-tag" id="sidebarModeTag" onclick="toggleDark()" title="Toggle Light/Dark Theme">
+        <div class="mode-dot">
+          <i class="ph ph-moon"></i>
+        </div>
+        <span id="modeText">Light mode</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       MAIN CONTENT: MY NUMBERS
+       ══════════════════════════════════════════════════════════════════ -->
+  <main class="tn-container">
+    <!-- Page Heading Card -->
+    <div class="tn-page-heading">
+      <div class="tn-heading-left">
+        <div class="tn-heading-icon">
+          <i class="ph ph-device-mobile"></i>
+        </div>
+        <div>
+          <h1 class="tn-heading-title">My Numbers</h1>
+          <p class="tn-heading-sub">Manage your virtual numbers and OTPs</p>
+        </div>
+      </div>
+      <div class="tn-heading-actions">
+        <button type="button" class="tn-btn-refresh" id="numbersRefreshBtn" title="Sync numbers and check OTP updates">
+          <i class="ph ph-arrows-clockwise"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Controls Bar: Search & Status Filters -->
+    <div class="tn-controls-bar">
+      <!-- Search Input -->
+      <div class="tn-search-wrap">
+        <i class="ph ph-magnifying-glass"></i>
+        <input type="text" id="numbersSearchInput" class="tn-search-input" placeholder="Search number, service, SMS..." autocomplete="off">
+        <button type="button" id="numbersSearchClear" class="tn-search-clear" title="Clear search">✕</button>
+      </div>
+
+      <!-- Filter Controls: Select dropdown + Buy button -->
+      <div class="tn-filters-row">
+        <div class="tn-select-wrap">
+          <select id="statusFilterSelect" class="tn-select" aria-label="Filter numbers by status">
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+            <option value="cancelled">Cancelled / Expired</option>
+          </select>
+        </div>
+        <a href="buy.html" class="tn-btn-primary">
+          <i class="ph ph-plus"></i>
+          <span>Buy Number</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Numbers Data Table Card -->
+    <div class="tn-table-card">
+      <table class="tn-table">
+        <thead>
+          <tr>
+            <th>Number <i class="ph ph-arrows-down-up" style="font-size:11px;"></i></th>
+            <th>SMS / OTP <i class="ph ph-arrows-down-up" style="font-size:11px;"></i></th>
+            <th class="tn-hide-mobile">Status</th>
+            <th style="text-align:right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="numbersTableBody">
+          <tr>
+            <td colspan="4" class="tn-state-box">
+              <div class="tn-state-icon"><i class="ph ph-circle-notch tn-spin"></i></div>
+              <h4 class="tn-state-title">Loading numbers...</h4>
+              <p class="tn-state-desc">Syncing your active orders and messages from server.</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- WhatsApp Promo Card (matching Reference Image 2) -->
+    <div class="tn-promo-card">
+      <div class="tn-promo-left">
+        <div class="tn-promo-icon">
+          <i class="ph ph-whatsapp-logo"></i>
+        </div>
+        <div>
+          <h3 class="tn-promo-title">Need a number for WhatsApp?</h3>
+          <p class="tn-promo-desc">Get instant SMS verification for WhatsApp, Telegram, and 500+ services.</p>
+        </div>
+      </div>
+      <a href="buy.html?country=usa&product=whatsapp" class="tn-btn-whatsapp">
+        <i class="ph ph-whatsapp-logo"></i>
+        <span>Buy WhatsApp Number</span>
+      </a>
+    </div>
+  </main>
+
+  <!-- Floating Support Buttons (Telegram & WhatsApp Us) -->
+  <div class="tn-floating-container">
+    <a href="https://t.me/nuraxq_support" target="_blank" rel="noopener noreferrer" class="tn-float-btn telegram" title="Telegram Support">
+      <i class="ph ph-telegram-logo"></i>
+    </a>
+    <a href="https://wa.me/message/nuraxq" target="_blank" rel="noopener noreferrer" class="tn-float-btn whatsapp-pill" title="WhatsApp Support">
+      <i class="ph ph-whatsapp-logo"></i>
+      <span>WhatsApp Us</span>
+    </a>
+  </div>
+
+  <!-- Floating Scroll-To-Top Button -->
+  <button type="button" class="tn-scroll-top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top" aria-label="Back to top">
+    <i class="ph ph-arrow-up"></i>
+  </button>
+
+  <!-- Core Scripts -->
+  <script src="api.js"></script>
+  <script src="ui-shared.js"></script>
+  <script src="numbers.js"></script>
+</body>
+</html>

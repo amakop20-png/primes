@@ -1475,8 +1475,11 @@
               <p class="dropdown-email">precious@example.com</p>
             </div>
           </div>
-          <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
+          <a href="dashboard.html"><i class="ph ph-squares-four"></i> Dashboard</a>
           <a href="buy.html"><i class="ph ph-sim-card"></i> Buy Number</a>
+          <a href="numbers.html"><i class="ph ph-device-mobile"></i> My Numbers</a>
+          <a href="transactions.html"><i class="ph ph-receipt"></i> Transactions</a>
+          <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
           <a href="#contact"><i class="ph ph-headset"></i> Contact</a>
           <a href="login.html" class="logout" onclick="logout()"><i class="ph ph-sign-out"></i> Logout</a>
         </div>
@@ -1498,17 +1501,20 @@
       <a href="dashboard.html">
         <span><i class="ph ph-squares-four"></i> Dashboard</span>
       </a>
-      <a href="dashboard.html?open=wallet">
-        <span><i class="ph ph-wallet"></i> Wallet</span>
+      <a href="buy.html?tab=products" id="sidebarProductsLink" class="active">
+        <span><i class="ph ph-sim-card"></i> Buy Numbers</span>
+      </a>
+      <a href="numbers.html" id="sidebarNumbersLink">
+        <span><i class="ph ph-device-mobile"></i> My Numbers</span>
       </a>
       <a href="buy.html?tab=countries" id="sidebarCountriesLink">
         <span><i class="ph ph-globe"></i> Countries</span>
       </a>
-      <a href="buy.html?tab=products" id="sidebarProductsLink" class="active">
-        <span><i class="ph ph-sim-card"></i> Products & Numbers</span>
+      <a href="dashboard.html?open=wallet">
+        <span><i class="ph ph-wallet"></i> Wallet</span>
       </a>
-      <a href="dashboard.html#recentActivity">
-        <span><i class="ph ph-clock-counter-clockwise"></i> Activity</span>
+      <a href="transactions.html" id="sidebarTransactionsLink">
+        <span><i class="ph ph-receipt"></i> Transactions</span>
       </a>
       <a href="#" id="sidebarSettingsBtn">
         <span><i class="ph ph-gear"></i> Settings</span>

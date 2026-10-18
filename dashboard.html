@@ -676,8 +676,11 @@
                   <p class="dropdown-email" id="dropdownEmail">user@nuraxq.com</p>
                 </div>
               </div>
+              <a href="dashboard.html"><i class="ph ph-squares-four"></i> Dashboard</a>
+              <a href="buy.html"><i class="ph ph-sim-card"></i> Buy Numbers</a>
+              <a href="numbers.html"><i class="ph ph-device-mobile"></i> My Numbers</a>
+              <a href="transactions.html"><i class="ph ph-receipt"></i> Transactions</a>
               <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
-              <a href="buy.html"><i class="ph ph-sim-card"></i> Buy Number</a>
               <a href="#contact"><i class="ph ph-headset"></i> Contact</a>
               <a href="#" onclick="toggleDark(); return false;" class="dropdown-theme-link" title="Toggle Light/Dark Mode"><i class="ph ph-moon" id="headerDropdownThemeIcon"></i> <span id="headerDropdownThemeText">Theme Mode</span></a>
               <a href="login.html" class="logout" onclick="logout()"><i class="ph ph-sign-out"></i> Logout</a>
@@ -721,6 +724,9 @@
       <a href="buy.html?tab=products">
         <span><i class="ph ph-sim-card"></i> Buy Numbers</span>
       </a>
+      <a href="numbers.html">
+        <span><i class="ph ph-device-mobile"></i> My Numbers</span>
+      </a>
       <a href="buy.html?tab=countries">
         <span><i class="ph ph-globe"></i> Countries</span>
       </a>
@@ -730,7 +736,7 @@
       <a href="#" id="sidebarWalletBtn" onclick="openPopup(); return false;">
         <span><i class="ph ph-wallet"></i> Wallet</span>
       </a>
-      <a href="#recentActivity" id="sidebarActivityBtn">
+      <a href="transactions.html" id="sidebarActivityBtn">
         <span><i class="ph ph-receipt"></i> Transactions</span>
       </a>
 
@@ -878,14 +884,19 @@
           <i class="ph ph-sim-card"></i>
           <h2>Virtual Numbers</h2>
         </div>
-        <a href="buy.html?tab=products" class="vnum-cta-link">
-          <span>Get Number</span> &rarr;
-        </a>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <a href="numbers.html" class="vnum-cta-link">
+            <span>My Numbers</span> &rarr;
+          </a>
+          <a href="buy.html?tab=products" class="vnum-cta-link">
+            <span>Get Number</span> &rarr;
+          </a>
+        </div>
       </div>
 
       <div class="vnum-grid">
         <!-- Card 1: Active Numbers -->
-        <div class="vnum-card">
+        <div class="vnum-card" onclick="window.location.href='numbers.html'" style="cursor:pointer;" title="View Active Numbers">
           <div class="vnum-card-top">
             <span class="vnum-card-label">Active</span>
             <div class="vnum-card-icon active"><i class="ph ph-broadcast"></i></div>
@@ -895,7 +906,7 @@
         </div>
 
         <!-- Card 2: Total Numbers -->
-        <div class="vnum-card">
+        <div class="vnum-card" onclick="window.location.href='numbers.html'" style="cursor:pointer;" title="View All Purchased Numbers">
           <div class="vnum-card-top">
             <span class="vnum-card-label">Total Purchased</span>
             <div class="vnum-card-icon total"><i class="ph ph-sim-card"></i></div>
@@ -905,7 +916,7 @@
         </div>
 
         <!-- Card 3: Available Numbers -->
-        <div class="vnum-card">
+        <div class="vnum-card" onclick="window.location.href='buy.html?tab=countries'" style="cursor:pointer;" title="Explore Available Countries">
           <div class="vnum-card-top">
             <span class="vnum-card-label">Available</span>
             <div class="vnum-card-icon available"><i class="ph ph-globe"></i></div>
@@ -923,15 +934,15 @@
           <i class="ph ph-sim-card action-icon"></i>
           <span>Products</span>
         </div>
-        <div class="action-card" data-action="sms-inbox" onclick="window.location.href='buy.html?tab=products'">
+        <div class="action-card" data-action="sms-inbox" onclick="window.location.href='numbers.html'">
           <i class="ph ph-chat-circle-dots action-icon"></i>
-          <span>Receive SMS</span>
+          <span>My Numbers</span>
         </div>
         <div class="action-card" data-action="countries" onclick="window.location.href='buy.html?tab=countries'">
           <i class="ph ph-globe action-icon"></i>
           <span>Countries</span>
         </div>
-        <div class="action-card" data-action="my-order" onclick="document.getElementById('recentActivity').scrollIntoView({behavior:'smooth'})">
+        <div class="action-card" data-action="my-order" onclick="window.location.href='transactions.html'">
           <i class="ph ph-receipt action-icon"></i>
           <span>Transactions</span>
         </div>
@@ -941,7 +952,7 @@
     <!-- Recent Activity / Transactions -->
     <section class="smart" id="recentActivity" aria-labelledby="tx-title" style="margin-bottom: 32px;">
       <div class="smile" style="padding: 0; overflow: hidden;">
-        <div class="tx-card-header">
+        <div class="tx-card-header" style="flex-wrap:wrap; gap:10px;">
           <div class="tx-header-title-wrap">
             <div class="tx-header-icon-box">
               <i class="ph ph-receipt"></i>
@@ -950,11 +961,16 @@
               <h3 id="tx-title" class="tx-header-title">Transactions</h3>
             </div>
           </div>
-          <!-- Filter Tabs -->
-          <div class="tx-filter-pills" role="tablist" aria-label="Transaction Filter">
-            <button type="button" class="tx-filter-btn active" data-tx-filter="all" onclick="filterTransactions('all')">All</button>
-            <button type="button" class="tx-filter-btn" data-tx-filter="deposit" onclick="filterTransactions('deposit')">Deposit</button>
-            <button type="button" class="tx-filter-btn" data-tx-filter="purchase" onclick="filterTransactions('purchase')">Purchase</button>
+          <!-- Filter Tabs & View All -->
+          <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex-wrap:wrap;">
+            <div class="tx-filter-pills" role="tablist" aria-label="Transaction Filter">
+              <button type="button" class="tx-filter-btn active" data-tx-filter="all" onclick="filterTransactions('all')">All</button>
+              <button type="button" class="tx-filter-btn" data-tx-filter="deposit" onclick="filterTransactions('deposit')">Deposit</button>
+              <button type="button" class="tx-filter-btn" data-tx-filter="purchase" onclick="filterTransactions('purchase')">Purchase</button>
+            </div>
+            <a href="transactions.html" style="font-size:12.5px; font-weight:800; color:var(--primary); text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:4px 8px;" title="View all transactions in full page">
+              <span>View All</span> <i class="ph ph-arrow-right"></i>
+            </a>
           </div>
         </div>
         <div class="tx-body-container">
