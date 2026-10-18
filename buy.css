@@ -52,17 +52,45 @@ body {
   align-items: center !important;
   gap: 10px !important;
   text-decoration: none !important;
-  flex: 0 1 auto !important;
-  width: 40vw !important;
-  max-width: 13rem !important;
-  min-width: 0 !important;
-  overflow: hidden !important;
+  width: 210px !important;
+  max-width: 230px !important;
+  min-width: 160px !important;
+}
+
+.dash-header .logo img,
+.logo img {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  object-fit: contain !important;
+  flex-shrink: 0 !important;
 }
 
 @media (max-width: 768px) {
   .dash-header .logo,
   .logo {
-    max-width: 9rem !important;
+    width: 100% !important;
+    max-width: 190px !important;
+    min-width: 130px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dash-header .logo,
+  .logo {
+    max-width: 170px !important;
+    min-width: 120px !important;
+  }
+}
+
+@media (max-width: 375px) {
+  .dash-header .logo,
+  .logo {
+    max-width: 150px !important;
+    min-width: 110px !important;
   }
 }
 

@@ -57,11 +57,9 @@ body.dark-theme.auth-page::before {
 .auth-header .logo {
   display: flex;
   align-items: center;
-  flex: 0 1 auto;
-  width: 40vw;
-  max-width: 13rem;
-  min-width: 0;
-  overflow: hidden;
+  width: 210px;
+  max-width: 240px;
+  min-width: 160px;
 }
 
 .auth-header .logo .header__logo-link {
@@ -71,8 +69,6 @@ body.dark-theme.auth-page::before {
   text-decoration: none;
   line-height: 1;
   width: 100%;
-  max-width: 13rem;
-  overflow: hidden;
 }
 
 @keyframes logoFloat {
@@ -86,12 +82,11 @@ body.dark-theme.auth-page::before {
 
 .auth-header .logo img.header__logo-img {
   display: block !important;
-  width: 173.56% !important;
-  min-width: 0 !important;
-  max-width: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
   height: auto !important;
   max-height: none !important;
-  margin: -34.75% 0 -37.46% -34.58% !important;
+  margin: 0 !important;
   object-fit: contain !important;
   flex-shrink: 0 !important;
   animation: logoFloat 3s ease-in-out infinite;
@@ -101,7 +96,23 @@ body.dark-theme.auth-page::before {
 @media (max-width: 768px) {
   .auth-header .logo,
   .auth-header .logo .header__logo-link {
-    max-width: 9rem !important;
+    width: 100% !important;
+    max-width: 185px !important;
+    min-width: 130px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-header .logo,
+  .auth-header .logo .header__logo-link {
+    max-width: 165px !important;
+  }
+}
+
+@media (max-width: 375px) {
+  .auth-header .logo,
+  .auth-header .logo .header__logo-link {
+    max-width: 145px !important;
   }
 }
 

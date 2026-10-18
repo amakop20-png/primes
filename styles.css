@@ -316,50 +316,79 @@ header {
     transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-/* ── NuraXQ header / sidebar logo sizing ────────────────────────────
-   nurasms.comLF.png / nurasms.comDFC.png are 1024×576, but the visible
-   artwork only spans x 204–794 and y ≈205–355 (the rest is transparent
-   padding). Percent widths on the <img> inside a shrink-to-fit link were
-   also cyclic, collapsing the logo to ~80px with ~46px of visible artwork.
+/* ── NuraXQ Dedicated Logo Sizing & Responsive Containers ───────────
+   Logo images use 100% of their dedicated container width, with
+   max-width: 100% and height: auto to preserve the original aspect ratio
+   without distortion. Dedicated logo containers are sized generously so
+   the logo appears large, bold, and clearly visible across all pages. */
 
-   Fix: give each logo LINK a real responsive width, then scale/offset the
-   <img> inside it so the visible artwork fills 100% of that link.
-   (Percentage margins resolve against the link width, so it scales.)
-     img width   = 1024 / 590            = 173.56%
-     left offset = 204 / 590             = 34.58%
-     top / bottom offsets = 205/590, 221/590 = 34.75%, 37.46%
-   Visible logo height = 25.4% of the link width.                      */
 header .header__logo .header__logo-img,
+.dash-header .logo img,
 .dash-header .logo .nuraxq-logo,
+.dash-header .logo .nura-sq-logo,
+.dash-header .logo .nuraxq-theme-logo,
 .sidebar-brand-link .sidebar-logo,
-.auth-header .logo img.header__logo-img {
+.sidebar-brand .sidebar-logo,
+.sidebar-logo,
+.auth-header .logo img.header__logo-img,
+.help-header-logo-img,
+.policy-header-logo-img,
+.auth-card-logo-img,
+.admin-sidebar-logo,
+.admin-gate-logo-img,
+.nuraxq-theme-logo:not(.loader-logo),
+.nuraxq-logo {
     display: block !important;
-    width: 173.56% !important;
-    min-width: 0 !important;
-    max-width: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
     height: auto !important;
     max-height: none !important;
-    margin: -34.75% 0 -37.46% -34.58% !important;
+    margin: 0 !important;
     object-fit: contain !important;
     flex-shrink: 0 !important;
 }
 
-/* Landing / info / auth pages: logo container matches dashboard 13rem desktop reference */
+/* Landing / Info Pages: Dedicated Header Logo Container */
 header .header__logo {
-    flex: 0 1 40%;
-    min-width: 0;
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    width: 210px;
+    max-width: 240px;
+    min-width: 160px;
 }
 
-header .header__logo .header__logo-link,
-.auth-header .logo .header__logo-link,
-.auth-header .logo {
+header .header__logo .header__logo-link {
+    display: inline-flex;
+    align-items: center;
     width: 100%;
-    max-width: 13rem;
-    overflow: hidden; /* clips only the transparent PNG padding */
+    text-decoration: none;
 }
 
-/* Dashboard header: logo ≈ 40% of the (viewport-wide) header */
+/* Auth Pages: Dedicated Header Logo Container */
+.auth-header .logo {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    width: 210px;
+    max-width: 240px;
+    min-width: 160px;
+}
+
+.auth-header .logo .header__logo-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    line-height: 1;
+    width: 100%;
+}
+
+/* Dashboard / App Header: Dedicated Logo Container */
 .dash-header .header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
     flex: 1 1 auto;
     min-width: 0;
 }
@@ -369,32 +398,91 @@ header .header__logo .header__logo-link,
 }
 
 .dash-header .logo {
-    flex: 0 1 auto;
-    width: 40vw;
-    max-width: 13rem;
-    min-width: 0;
-    overflow: hidden;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    text-decoration: none !important;
+    width: 210px !important;
+    max-width: 230px !important;
+    min-width: 160px !important;
 }
 
-@media (max-width: 860px) {
-    /* keep the mobile header ≈61px tall (the slide-down nav sits at top:61px) */
-    header .header__logo .header__logo-link,
-    .auth-header .logo .header__logo-link,
-    .auth-header .logo { max-width: 9rem; }
-}
-
-@media (max-width: 768px) {
-    .dash-header .logo { max-width: 9rem; }
-    header .header__logo .header__logo-link,
-    .auth-header .logo .header__logo-link,
-    .auth-header .logo { max-width: 9rem; }
-}
-
-.dash-header .logo,
+/* Sidebar: Dedicated Logo Container */
 .sidebar-brand-link {
     display: inline-flex !important;
     align-items: center !important;
     gap: 10px !important;
+    text-decoration: none !important;
+    width: 195px !important;
+    max-width: 205px !important;
+    min-width: 150px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Tablet & Mobile Responsive Container Sizing */
+@media (max-width: 860px) {
+    header .header__logo {
+        width: 180px;
+        max-width: 200px;
+    }
+    header .header__logo .header__logo-link {
+        width: 100%;
+    }
+    .auth-header .logo,
+    .auth-header .logo .header__logo-link {
+        width: 180px;
+        max-width: 200px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dash-header .logo {
+        width: 100% !important;
+        max-width: 190px !important;
+        min-width: 130px !important;
+    }
+    header .header__logo,
+    header .header__logo .header__logo-link {
+        width: 100% !important;
+        max-width: 185px !important;
+        min-width: 130px !important;
+    }
+    .auth-header .logo,
+    .auth-header .logo .header__logo-link {
+        width: 100% !important;
+        max-width: 185px !important;
+        min-width: 130px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .dash-header .logo {
+        max-width: 170px !important;
+        min-width: 120px !important;
+    }
+    header .header__logo,
+    header .header__logo .header__logo-link {
+        max-width: 165px !important;
+    }
+    .auth-header .logo,
+    .auth-header .logo .header__logo-link {
+        max-width: 165px !important;
+    }
+}
+
+@media (max-width: 375px) {
+    .dash-header .logo {
+        max-width: 150px !important;
+        min-width: 110px !important;
+    }
+    header .header__logo,
+    header .header__logo .header__logo-link {
+        max-width: 145px !important;
+    }
+    .auth-header .logo,
+    .auth-header .logo .header__logo-link {
+        max-width: 145px !important;
+    }
 }
 
 .dash-header .header__logo-text,

@@ -71,20 +71,40 @@ html, body {
 .brand-logo-wrap {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   background: transparent;
   padding: 0;
   border-radius: 0;
   border: none;
+  width: 180px;
+  max-width: 100%;
 }
 
 .admin-sidebar-logo {
-  height: 36px;
-  width: auto;
-  max-width: 140px;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
   object-fit: contain;
   display: block;
   transition: opacity 0.2s ease;
+}
+
+.admin-gate-logo {
+  width: 200px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.admin-gate-logo-img {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  object-fit: contain;
+  display: block;
 }
 
 .brand-name {
