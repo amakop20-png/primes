@@ -587,6 +587,25 @@ async function resetPassword(token, newPassword) {
 }
 
 /* ==========================================
+   REFERRAL SYSTEM INTEGRATION
+========================================== */
+
+async function getReferralStats() {
+    return await apiRequest('/api/referrals', {
+        method: 'GET'
+    });
+}
+
+async function validateReferralCode(code) {
+    if (!code) throw new Error('Referral code is required.');
+    return await apiRequest(`/api/referrals/validate/${encodeURIComponent(String(code).trim().toUpperCase())}`, {
+        method: 'GET',
+        suppressAuthRedirect: true
+    });
+}
+
+
+/* ==========================================
    USER-SPECIFIC NOTIFICATION SYSTEM
 ========================================== */
 

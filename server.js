@@ -42,10 +42,16 @@ app.get('/', (req, res) => {
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 const notificationRoutes = require('./routes/notifications');
+const referralRoutes = require('./routes/referrals');
 
 // Mount Customer Notifications Router at /api/notifications & /api/user/notifications
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/user/notifications', notificationRoutes);
+
+// ✅ Mount Official Referral Routes at /api/referrals, /api/referral, /api/user/referral
+app.use('/api/referrals', referralRoutes);
+app.use('/api/referral', referralRoutes);
+app.use('/api/user/referral', referralRoutes);
 
 // ✅ Mount Official Admin Router at /api/admin
 // This exposes:
@@ -69,6 +75,11 @@ app.post('/api/login', (req, res) => {
 
 app.post('/api/signup', (req, res) => {
   req.url = '/signup';
+  authRoutes(req, res);
+});
+
+app.get('/api/me', (req, res) => {
+  req.url = '/me';
   authRoutes(req, res);
 });
 
