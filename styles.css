@@ -286,7 +286,7 @@ header {
 .dash-header .header-left {
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: 10px;
 }
 
 .dash-header .header-right {
@@ -415,7 +415,7 @@ header .header__logo .header__logo-link {
 .dash-header .header-left {
     display: flex;
     align-items: center;
-    gap: 30px;
+    gap: 10px;
     flex: 1 1 auto;
     min-width: 0;
 }
