@@ -1,3 +1,6 @@
+try { require('dotenv').config(); } catch (_) {}
+const BASE_URL = (process.env.API_BASE_URL || process.env.API_URL || 'https://nuraxq.com/api').replace(/\/+$/, '');
+function getApiUrl(p) { return BASE_URL.endsWith('/api') && p.startsWith('/api/') ? `${BASE_URL}${p.slice(4)}` : `${BASE_URL}${p.startsWith('/') ? p : '/' + p}`; }
 // test-verification.js
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const https = require('https');
@@ -53,7 +56,7 @@ function request(url, options = {}, postData = null) {
         console.log('--- AUTHENTICATION SETUP ---');
         const testEmail = `verify_${Date.now()}@test.com`;
         const testPass = 'Password123!';
-        const signupRes = await request('https://nurasms-api.onrender.com/api/signup', {
+        const signupRes = await request(getApiUrl('/signup'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         }, JSON.stringify({
@@ -66,7 +69,7 @@ function request(url, options = {}, postData = null) {
         }));
         assert(signupRes.status === 201, 'Signup successful (201)');
 
-        const loginRes = await request('https://nurasms-api.onrender.com/api/login', {
+        const loginRes = await request(getApiUrl('/login'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         }, JSON.stringify({ identifier: testEmail, password: testPass }));
@@ -74,19 +77,19 @@ function request(url, options = {}, postData = null) {
         const token = loginRes.body.accessToken;
 
         console.log('\n--- DOCUMENTED STEP 1: GET /api/countries ---');
-        const countriesRes = await request('https://nurasms-api.onrender.com/api/countries');
+        const countriesRes = await request(getApiUrl('/countries'));
         assert(countriesRes.status === 200, 'Step 1: GET /api/countries returns 200 OK');
         assert(typeof (countriesRes.body.countries || countriesRes.body) === 'object', 'Step 1: Returns countries object');
 
         console.log('\n--- DOCUMENTED STEP 2: GET /api/products/:country ---');
-        const productsRes = await request('https://nurasms-api.onrender.com/api/products/usa');
+        const productsRes = await request(getApiUrl('/products/usa'));
         assert(productsRes.status === 200, 'Step 2: GET /api/products/usa returns 200 OK');
         assert(typeof (productsRes.body.products || productsRes.body) === 'object', 'Step 2: Returns products map');
 
         console.log('\n--- DOCUMENTED STEP 3: POST /api/buy/activation ---');
         // Validating payload structure
         const buyPayload = { country: 'usa', product: 'whatsapp' };
-        const buyRes = await request('https://nurasms-api.onrender.com/api/buy/activation', {
+        const buyRes = await request(getApiUrl('/buy/activation'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -115,7 +118,7 @@ function request(url, options = {}, postData = null) {
         assert(orderId === 1080296451, 'Step 3: Successfully extracted dynamic Order ID (1080296451)');
 
         console.log('\n--- DOCUMENTED STEP 4: GET /api/order/:orderId (Polling & OTP check) ---');
-        const orderRes = await request(`https://nurasms-api.onrender.com/api/order/${orderId}`, {
+        const orderRes = await request(getApiUrl(`/order/${orderId}`), {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -147,21 +150,21 @@ function request(url, options = {}, postData = null) {
         assert(otpCode === '123456', 'Step 4: OTP code 123456 extracted accurately');
 
         console.log('\n--- DOCUMENTED STEP 5: POST /api/order/:orderId/finish ---');
-        const finishRes = await request(`https://nurasms-api.onrender.com/api/order/${orderId}/finish`, {
+        const finishRes = await request(getApiUrl(`/order/${orderId}/finish`), {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         assert(finishRes.status === 500 || finishRes.status === 200, 'Step 5: POST /api/order/:orderId/finish endpoint reachable');
 
         console.log('\n--- DOCUMENTED STEP 6: POST /api/order/:orderId/cancel ---');
-        const cancelRes = await request(`https://nurasms-api.onrender.com/api/order/${orderId}/cancel`, {
+        const cancelRes = await request(getApiUrl(`/order/${orderId}/cancel`), {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
         assert(cancelRes.status === 500 || cancelRes.status === 200, 'Step 6: POST /api/order/:orderId/cancel endpoint reachable');
 
         console.log('\n--- DOCUMENTED STEP 7: POST /api/order/:orderId/ban ---');
-        const banRes = await request(`https://nurasms-api.onrender.com/api/order/${orderId}/ban`, {
+        const banRes = await request(getApiUrl(`/order/${orderId}/ban`), {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });

@@ -15,10 +15,13 @@ app.use(express.urlencoded({ extended: true }));
 // Dynamic public frontend configuration endpoint (Exposes only non-sensitive config)
 app.get('/config.js', (req, res) => {
   res.type('application/javascript');
+  const apiUrl = process.env.API_BASE_URL || process.env.API_URL || 'https://nuraxq.com/api';
   res.send(`window.ENV = Object.assign(window.ENV || {}, ${JSON.stringify({
-    API_BASE_URL: process.env.API_BASE_URL || ''
+    API_BASE_URL: apiUrl,
+    API_URL: apiUrl
   })});`);
 });
+
 
 // Explicit API Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -4,7 +4,7 @@ const https = require('https');
 
 function checkEndpoint(path, method = 'GET', headers = {}) {
     return new Promise((resolve) => {
-        const u = new URL(`https://nurasms-api.onrender.com${path}`);
+        const u = new URL(`https://nuraxq.com/api${path}`);
         const req = https.request({
             hostname: u.hostname,
             port: 443,

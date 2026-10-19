@@ -1,4 +1,6 @@
-const API_BASE_URL = 'https://nurasms-api.onrender.com';
+try { require('dotenv').config(); } catch (_) {}
+const API_BASE_URL = (process.env.API_BASE_URL || process.env.API_URL || 'https://nuraxq.com/api').replace(/\/+$/, '');
+function getUrl(path) { return API_BASE_URL.endsWith('/api') && path.startsWith('/api/') ? `${API_BASE_URL}${path.slice(4)}` : `${API_BASE_URL}${path.startsWith('/') ? path : '/' + path}`; }
 const USERNAME = 'prince34';
 const PASSWORD = 'prince34$#';
 
@@ -7,7 +9,7 @@ async function testFlow() {
     
     let token;
     try {
-        const loginRes = await fetch(`${API_BASE_URL}/api/login`, {
+        const loginRes = await fetch(`${getUrl('/login')}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ identifier: USERNAME, password: PASSWORD })
@@ -30,7 +32,7 @@ async function testFlow() {
 
     console.log(`\n[Test] 2. Testing Wallet Balance Endpoint...`);
     try {
-        const walletRes = await fetch(`${API_BASE_URL}/api/get-wallet-balance`, {
+        const walletRes = await fetch(`${getUrl('/get-wallet-balance')}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const walletData = await walletRes.json();
@@ -42,7 +44,7 @@ async function testFlow() {
 
     console.log(`\n[Test] 3. Testing Virtual Account Endpoint...`);
     try {
-        const vaRes = await fetch(`${API_BASE_URL}/api/get-virtual-account`, {
+        const vaRes = await fetch(`${getUrl('/get-virtual-account')}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const vaData = await vaRes.json();
@@ -54,7 +56,7 @@ async function testFlow() {
 
     console.log(`\n[Test] 4. Testing Transactions Endpoint...`);
     try {
-        const txRes = await fetch(`${API_BASE_URL}/api/get-transactions?page=1&limit=5`, {
+        const txRes = await fetch(`${getUrl('/get-transactions')}?page=1&limit=5`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const txData = await txRes.json();

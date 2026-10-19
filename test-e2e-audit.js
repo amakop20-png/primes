@@ -69,7 +69,7 @@ assert(canPurchase(0, 10) === false, '0 balance is insufficient for 10 cost');
 console.log('\n--- TEST 3: Live Backend Direct Verification ---');
 function get(path, headers = {}) {
     return new Promise((resolve) => {
-        const u = new URL(`https://nurasms-api.onrender.com${path}`);
+        const u = new URL(`https://nuraxq.com/api${path}`);
         https.get({
             hostname: u.hostname,
             path: u.pathname + u.search,

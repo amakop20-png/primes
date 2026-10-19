@@ -5,7 +5,9 @@
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-const API_BASE_URL = 'https://nurasms-api.onrender.com';
+try { require('dotenv').config(); } catch (_) {}
+const API_BASE_URL = (process.env.API_BASE_URL || process.env.API_URL || 'https://nuraxq.com/api').replace(/\/+$/, '');
+function getUrl(path) { return API_BASE_URL.endsWith('/api') && path.startsWith('/api/') ? `${API_BASE_URL}${path.slice(4)}` : `${API_BASE_URL}${path.startsWith('/') ? path : '/' + path}`; }
 
 async function logResponse(stepName, method, endpoint, payload, response) {
     const status = response.status;
@@ -46,7 +48,7 @@ async function runDiagnostics() {
         phoneNumber: `+2348${rand}`
     };
 
-    const signupRes = await fetch(`${API_BASE_URL}/api/signup`, {
+    const signupRes = await fetch(`${getUrl('/')}signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(signupPayload)
@@ -58,7 +60,7 @@ async function runDiagnostics() {
         identifier: signupPayload.email,
         password: signupPayload.password
     };
-    const loginRes = await fetch(`${API_BASE_URL}/api/login`, {
+    const loginRes = await fetch(`${getUrl('/')}login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginPayload)
@@ -76,7 +78,7 @@ async function runDiagnostics() {
     };
 
     // ── STEP 3: Initial Wallet Balance ──
-    const wRes1 = await fetch(`${API_BASE_URL}/api/get-wallet-balance`, {
+    const wRes1 = await fetch(`${getUrl('/')}get-wallet-balance`, {
         method: 'GET',
         headers: authHeaders
     });
@@ -87,7 +89,7 @@ async function runDiagnostics() {
         country: 'albania',
         product: '99app'
     };
-    const buyRes1 = await fetch(`${API_BASE_URL}/api/buy/activation`, {
+    const buyRes1 = await fetch(`${getUrl('/')}buy/activation`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify(buyPayload1)
@@ -96,7 +98,7 @@ async function runDiagnostics() {
 
     // ── STEP 5: Create Virtual Account ──
     const vaPayload = { currency: 'NGN' };
-    const vaRes = await fetch(`${API_BASE_URL}/api/create-virtual-account`, {
+    const vaRes = await fetch(`${getUrl('/')}create-virtual-account`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify(vaPayload)
@@ -104,14 +106,14 @@ async function runDiagnostics() {
     await logResponse('STEP 5: Create Virtual Account', 'POST', '/api/create-virtual-account', vaPayload, vaRes);
 
     // ── STEP 6: Check Wallet Balance After Virtual Account ──
-    const wRes2 = await fetch(`${API_BASE_URL}/api/get-wallet-balance`, {
+    const wRes2 = await fetch(`${getUrl('/')}get-wallet-balance`, {
         method: 'GET',
         headers: authHeaders
     });
     await logResponse('STEP 6: Wallet Balance After VA', 'GET', '/api/get-wallet-balance', null, wRes2);
 
     // ── STEP 7: Buy Activation After Virtual Account (Albania / 99app) ──
-    const buyRes2 = await fetch(`${API_BASE_URL}/api/buy/activation`, {
+    const buyRes2 = await fetch(`${getUrl('/')}buy/activation`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify(buyPayload1)
@@ -128,7 +130,7 @@ async function runDiagnostics() {
     let capturedOrder = null;
 
     for (const item of testPayloads) {
-        const res = await fetch(`${API_BASE_URL}/api/buy/activation`, {
+        const res = await fetch(`${getUrl('/')}buy/activation`, {
             method: 'POST',
             headers: authHeaders,
             body: JSON.stringify(item.payload)
@@ -142,7 +144,7 @@ async function runDiagnostics() {
     // ── STEP 9: Step 4 Order Status Check (GET /api/order/:orderId) ──
     const testOrderId = (capturedOrder && (capturedOrder.id || capturedOrder._id || capturedOrder.orderId)) || '1080296451';
     console.log(`\nTesting Step 4 Order Check Endpoint with Order ID: ${testOrderId}...`);
-    const orderRes = await fetch(`${API_BASE_URL}/api/order/${encodeURIComponent(testOrderId)}`, {
+    const orderRes = await fetch(`${getUrl('/')}order/${encodeURIComponent(testOrderId)}`, {
         method: 'GET',
         headers: authHeaders
     });

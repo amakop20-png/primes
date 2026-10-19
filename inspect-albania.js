@@ -23,7 +23,7 @@ function request(url) {
 
 (async () => {
     console.log('--- Fetching GET /api/products/albania ---');
-    const res = await request('https://nurasms-api.onrender.com/api/products/albania');
+    const res = await request('https://nuraxq.com/api/products/albania');
     console.log('Status:', res.status);
     console.log('Full Response (first 10 items):');
     const raw = res.body.products || res.body;

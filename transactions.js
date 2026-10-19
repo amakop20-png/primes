@@ -231,7 +231,8 @@
         data = await getTransactions(page, pageSize, activeCurrency);
       } else {
         const token = localStorage.getItem('primes_token') || localStorage.getItem('accessToken');
-        const res = await fetch(`https://nurasms-api.onrender.com/api/get-transactions?page=${page}&limit=${pageSize}&currency=${activeCurrency}`, {
+        const txUrl = typeof buildApiUrl === 'function' ? buildApiUrl(`/get-transactions?page=${page}&limit=${pageSize}&currency=${activeCurrency}`) : `https://nuraxq.com/api/get-transactions?page=${page}&limit=${pageSize}&currency=${activeCurrency}`;
+        const res = await fetch(txUrl, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         data = await res.json();

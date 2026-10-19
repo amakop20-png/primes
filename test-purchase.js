@@ -5,7 +5,9 @@
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-const API_BASE_URL = 'https://nurasms-api.onrender.com';
+try { require('dotenv').config(); } catch (_) {}
+const API_BASE_URL = (process.env.API_BASE_URL || process.env.API_URL || 'https://nuraxq.com/api').replace(/\/+$/, '');
+function getUrl(path) { return API_BASE_URL.endsWith('/api') && path.startsWith('/api/') ? `${API_BASE_URL}${path.slice(4)}` : `${API_BASE_URL}${path.startsWith('/') ? path : '/' + path}`; }
 
 async function run() {
     const rand = Math.floor(1000000 + Math.random() * 9000000);
@@ -19,14 +21,14 @@ async function run() {
     };
 
     console.log('[1] Signing up...');
-    await fetch(`${API_BASE_URL}/api/signup`, {
+    await fetch(`${getUrl('/signup')}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(testUser)
     });
 
     console.log('[2] Logging in...');
-    const loginRes = await fetch(`${API_BASE_URL}/api/login`, {
+    const loginRes = await fetch(`${getUrl('/login')}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: testUser.email, password: testUser.password })
@@ -35,14 +37,14 @@ async function run() {
     const token = loginData.token || loginData.accessToken;
 
     console.log('[3] Checking wallet balance...');
-    const wRes = await fetch(`${API_BASE_URL}/api/get-wallet-balance`, {
+    const wRes = await fetch(`${getUrl('/get-wallet-balance')}`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     console.log('Wallet Status:', wRes.status, await wRes.text());
 
     // Test A: Albania 99app with extra fields
     console.log('\n[4A] Buying Albania 99app with { country, product, service, currency, operator, price }...');
-    const resA = await fetch(`${API_BASE_URL}/api/buy/activation`, {
+    const resA = await fetch(`${getUrl('/buy/activation')}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ country: 'albania', product: '99app', service: '99app', currency: 'NGN', operator: 'any', price: 0 })
@@ -51,7 +53,7 @@ async function run() {
 
     // Test B: Albania 99app with clean { country, product }
     console.log('\n[4B] Buying Albania 99app with clean { country, product }...');
-    const resB = await fetch(`${API_BASE_URL}/api/buy/activation`, {
+    const resB = await fetch(`${getUrl('/buy/activation')}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ country: 'albania', product: '99app' })
@@ -60,7 +62,7 @@ async function run() {
 
     // Test C: USA whatsapp with clean { country, product }
     console.log('\n[4C] Buying USA whatsapp with clean { country, product }...');
-    const resC = await fetch(`${API_BASE_URL}/api/buy/activation`, {
+    const resC = await fetch(`${getUrl('/buy/activation')}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ country: 'usa', product: 'whatsapp' })
@@ -69,7 +71,7 @@ async function run() {
 
     // Test D: Provision virtual account first, then buy
     console.log('\n[5] Provisioning Virtual Account...');
-    const vaRes = await fetch(`${API_BASE_URL}/api/create-virtual-account`, {
+    const vaRes = await fetch(`${getUrl('/create-virtual-account')}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ currency: 'NGN' })
@@ -77,13 +79,13 @@ async function run() {
     console.log('VA Status:', vaRes.status, await vaRes.text());
 
     console.log('[6] Checking wallet balance after VA:');
-    const wRes2 = await fetch(`${API_BASE_URL}/api/get-wallet-balance`, {
+    const wRes2 = await fetch(`${getUrl('/get-wallet-balance')}`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     console.log('Wallet Status 2:', wRes2.status, await wRes2.text());
 
     console.log('\n[7] Buying Albania 99app after VA:');
-    const resD = await fetch(`${API_BASE_URL}/api/buy/activation`, {
+    const resD = await fetch(`${getUrl('/buy/activation')}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ country: 'albania', product: '99app' })

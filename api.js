@@ -1,19 +1,62 @@
 /* ======================================================================
-   api.js - NuraSMS Centralized API Client & Integration Layer
-   Base URL: https://nurasms-api.onrender.com
+   api.js - NuraXQ Centralized API Client & Integration Layer
+   Base URL: https://nuraxq.com/api
    All dashboard and application API communication is centralized here.
 ====================================================================== */
 
 // CENTRALIZED & REUSABLE API BASE URL
-// Automatically detects environment setting, window.ENV, or falls back to production endpoint
-const API_BASE_URL = (typeof window !== 'undefined' && ((window.ENV && window.ENV.API_BASE_URL) || window.API_BASE_URL))
-    ? ((window.ENV && window.ENV.API_BASE_URL) || window.API_BASE_URL)
-    : 'https://nurasms-api.onrender.com';
+// Automatically detects environment setting from window.ENV, Node process.env, or falls back to production endpoint
+const API_BASE_URL = (function() {
+    if (typeof window !== 'undefined') {
+        if (window.ENV && (window.ENV.API_BASE_URL || window.ENV.API_URL)) {
+            return String(window.ENV.API_BASE_URL || window.ENV.API_URL).trim();
+        }
+        if (window.API_BASE_URL || window.API_URL) {
+            return String(window.API_BASE_URL || window.API_URL).trim();
+        }
+    }
+    if (typeof process !== 'undefined' && process.env) {
+        if (process.env.API_BASE_URL || process.env.API_URL) {
+            return String(process.env.API_BASE_URL || process.env.API_URL).trim();
+        }
+    }
+    return 'https://nuraxq.com/api';
+})();
+
+const API_URL = API_BASE_URL;
 
 if (typeof window !== 'undefined') {
     window.API_BASE_URL = API_BASE_URL;
+    window.API_URL = API_URL;
 }
 const REQUEST_TIMEOUT_MS = 25000; // 25s ceiling as specified in project requirements
+
+/**
+ * Construct a clean, fully-qualified API URL.
+ * Automatically handles base URLs with or without '/api' suffix, strips duplicate '/api'
+ * segments, and ensures slashes are correctly formatted.
+ *
+ * Examples:
+ *   buildApiUrl('/login') -> "https://nuraxq.com/api/login"
+ *   buildApiUrl('/api/login') -> "https://nuraxq.com/api/login"
+ *   buildApiUrl('/order/123') -> "https://nuraxq.com/api/order/123"
+ */
+function buildApiUrl(endpoint = '') {
+    if (!endpoint) return API_BASE_URL;
+    if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+        return endpoint;
+    }
+    const cleanBase = API_BASE_URL.replace(/\/+$/, '');
+    let path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+    // Avoid duplicate /api segments if base already ends with /api
+    if (cleanBase.endsWith('/api') && path.startsWith('/api/')) {
+        path = path.slice(4); // Remove leading /api
+    } else if (cleanBase.endsWith('/api') && path === '/api') {
+        path = '';
+    }
+    return `${cleanBase}${path}`;
+}
 
 /* ==========================================
    AUTHENTICATION & STORAGE HELPERS
@@ -158,9 +201,10 @@ async function apiRequest(endpoint, options = {}) {
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     fetchOptions.signal = controller.signal;
 
+    const requestUrl = buildApiUrl(endpoint);
     let response;
     try {
-        response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
+        response = await fetch(requestUrl, fetchOptions);
     } catch (networkErr) {
         clearTimeout(timeoutId);
 
@@ -175,12 +219,12 @@ async function apiRequest(endpoint, options = {}) {
         err.method = method;
         err.isNetworkError = true;
         err.originalError = networkErr;
-        console.error(`[API Error] 0 ${method} ${endpoint}:`, errMsg);
+        console.error(`[API Error] 0 ${method} ${typeof requestUrl !== 'undefined' ? requestUrl : endpoint}:`, errMsg);
         throw err;
     }
     clearTimeout(timeoutId);
 
-    console.log(`[API Response] ${response.status} ${method} ${endpoint}`);
+    console.log(`[API Response] ${response.status} ${method} ${typeof requestUrl !== 'undefined' ? requestUrl : endpoint}`);
 
     let data = {};
     let textResponse = '';
@@ -764,6 +808,7 @@ async function markAllNotificationsRead() {
 /* ==========================================
    EXPORT TO GLOBAL NAMESPACE
 ========================================== */
+if (typeof window !== "undefined") {
 window.API_BASE_URL = API_BASE_URL;
 window.apiRequest = apiRequest;
 window.getAuthToken = getAuthToken;
@@ -801,6 +846,9 @@ window.getUserNotificationKey = getUserNotificationKey;
 
 window.NuraAPI = {
     BASE_URL: API_BASE_URL,
+    API_URL: API_URL,
+    buildApiUrl: buildApiUrl,
+    buildAdminUrl: buildAdminUrl,
     request: apiRequest,
     apiRequest,
     getAuthToken,
@@ -836,13 +884,18 @@ window.NuraAPI = {
     resetPassword
 };
 
+}
+
 /* ======================================================================
    NURASMS ADMIN API CLIENT (Specification: NuraSMS Admin API v1)
    Base URL: /api/admin
    Centralized Admin API layer strictly adhering to the API specification.
 ====================================================================== */
 
-const ADMIN_API_BASE = `${API_BASE_URL}/api/admin`;
+const ADMIN_API_BASE = (function() {
+    const cleanBase = API_BASE_URL.replace(/\/+$/, '');
+    return cleanBase.endsWith('/api') ? `${cleanBase}/admin` : `${cleanBase}/api/admin`;
+})();
 
 function getAdminAuthToken() {
     return localStorage.getItem('primes_admin_token') || null;
@@ -864,10 +917,16 @@ function buildAdminUrl(endpoint) {
     }
     const clean = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     if (clean.startsWith('/api/admin/')) {
-        return `${API_BASE_URL}${clean}`;
+        return `${ADMIN_API_BASE}${clean.slice(10)}`;
     }
     if (clean === '/api/admin') {
-        return `${API_BASE_URL}/api/admin`;
+        return ADMIN_API_BASE;
+    }
+    if (clean.startsWith('/admin/')) {
+        return `${ADMIN_API_BASE}${clean.slice(6)}`;
+    }
+    if (clean === '/admin') {
+        return ADMIN_API_BASE;
     }
     return `${ADMIN_API_BASE}${clean}`;
 }
@@ -1282,7 +1341,9 @@ const adminApi = {
 };
 
 // Global exports
+if (typeof window !== "undefined") {
 window.ADMIN_API_BASE                 = ADMIN_API_BASE;
+window.buildAdminUrl                  = buildAdminUrl;
 window.adminApi                       = adminApi;
 window.getAdminAuthToken              = getAdminAuthToken;
 window.setAdminAuthToken              = setAdminAuthToken;
@@ -1312,3 +1373,17 @@ window.adminGetUserVirtualAccount     = adminGetUserVirtualAccount;
 window.fetchActiveAnnouncementFromApi = fetchActiveAnnouncementFromApi;
 window.publishAnnouncementToApi       = publishAnnouncementToApi;
 window.isAdmin                        = isAdmin;
+}
+
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        API_BASE_URL,
+        API_URL,
+        ADMIN_API_BASE,
+        buildApiUrl,
+        buildAdminUrl,
+        apiRequest,
+        adminApiRequest
+    };
+}

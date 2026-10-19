@@ -1472,7 +1472,7 @@ async function handleBuyClick(country, product, btnEl) {
     }
 
     console.log(`[PURCHASE DEBUG] Validation passed: balance (${sym}${walletBalance}) >= price (${sym}${productPrice})`);
-    console.log("[PURCHASE] API URL:", `${API_BASE_URL}/api/buy/activation`);
+    console.log("[PURCHASE] API URL:", typeof buildApiUrl === 'function' ? buildApiUrl('/buy/activation') : `${API_BASE_URL}/buy/activation`);
     console.log("[PURCHASE] Payload:", {
         country,
         product,
@@ -1996,7 +1996,7 @@ function extractOTP(text) {
 ══════════════════════════════════════════ */
 /* ══════════════════════════════════════════
    COUNTDOWN TIMER & ORDER POLLING (Step 4)
-   Endpoint: GET https://nurasms-api.onrender.com/api/order/:orderId
+   Endpoint: GET ${API_BASE_URL}/order/:orderId
    Uses: getOrder(orderId) from api.js with Authorization: Bearer ACCESS_TOKEN
 ══════════════════════════════════════════ */
 let isPollRequestInProgress = false;

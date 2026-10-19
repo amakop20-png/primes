@@ -5,7 +5,7 @@ const axios = require('axios');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, 'primes/buy.env') });
 
-const BASE_URL = 'https://nurasms-api.onrender.com';
+const BASE_URL = process.env.API_BASE_URL || process.env.API_URL || 'https://nuraxq.com/api';
 const TOKEN = process.env.FIVESIM_API_TOKEN || process.env.FIVESIM_API_KEY; // reads from your .env file or Render variables
 
 const client = axios.create({
