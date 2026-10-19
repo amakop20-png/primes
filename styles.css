@@ -283,7 +283,12 @@ header {
   max-width: 100%;
 }
 
-.dash-header .header-left,
+.dash-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .dash-header .header-right {
   display: flex;
   align-items: center;
@@ -410,7 +415,7 @@ header .header__logo .header__logo-link {
 .dash-header .header-left {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 4px;
     flex: 1 1 auto;
     min-width: 0;
 }
@@ -427,6 +432,7 @@ header .header__logo .header__logo-link {
     width: 210px !important;
     max-width: 230px !important;
     min-width: 160px !important;
+    margin-left: -6px !important;
 }
 
 /* Sidebar: Dedicated Logo Container */
@@ -462,6 +468,7 @@ header .header__logo .header__logo-link {
         width: 100% !important;
         max-width: 190px !important;
         min-width: 130px !important;
+        margin-left: -5px !important;
     }
     header .header__logo,
     header .header__logo .header__logo-link {
@@ -481,6 +488,7 @@ header .header__logo .header__logo-link {
     .dash-header .logo {
         max-width: 170px !important;
         min-width: 120px !important;
+        margin-left: -4px !important;
     }
     header .header__logo,
     header .header__logo .header__logo-link {
@@ -496,6 +504,7 @@ header .header__logo .header__logo-link {
     .dash-header .logo {
         max-width: 150px !important;
         min-width: 110px !important;
+        margin-left: -3px !important;
     }
     header .header__logo,
     header .header__logo .header__logo-link {
