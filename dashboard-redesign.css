@@ -105,7 +105,7 @@ body.dark-theme .dash-header {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 30px;
 }
 
 .dash-header .toggle-btn {
@@ -137,7 +137,6 @@ body.dark-theme .dash-header {
   width: 210px;
   max-width: 230px;
   min-width: 160px;
-  margin-left: -6px;
 }
 
 .dash-header .logo img,
@@ -2727,7 +2726,7 @@ body.dark-theme aside .mode-dot {
   .header-left {
     display: flex !important;
     align-items: center !important;
-    gap: 2px !important;
+    gap: 30px !important;
     min-width: 0 !important;
     flex: 1 1 auto !important;
   }
@@ -2747,7 +2746,6 @@ body.dark-theme aside .mode-dot {
     width: 100% !important;
     max-width: 190px !important;
     min-width: 130px !important;
-    margin-left: -5px !important;
   }
 
   .dash-header .header__logo-text {
@@ -3196,7 +3194,7 @@ body.dark-theme aside .mode-dot {
   }
 
   .header-left {
-    gap: 2px !important;
+    gap: 30px !important;
   }
 
   .header-right {
