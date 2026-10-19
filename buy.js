@@ -3192,6 +3192,9 @@ function updateThemeUI(isDark) {
     if (modeIcon) {
         modeIcon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
     }
+    if (window.NuraLogo && typeof window.NuraLogo.updateAllLogos === 'function') {
+        window.NuraLogo.updateAllLogos(isDark);
+    }
 }
 
 function updateSettingsThemeBtns() {

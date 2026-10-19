@@ -1749,12 +1749,12 @@ body.dark-theme .loader-wrapper {
 
 .loader-wrapper img,
 .loader-logo {
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  min-height: 40px !important;
-  max-width: 40px !important;
-  max-height: 40px !important;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
   object-fit: contain !important;
   display: block !important;
   margin: 0 auto !important;

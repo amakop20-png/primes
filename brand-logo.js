@@ -2,8 +2,9 @@
  * brand-logo.js — Official Theme-Aware NuraXQ Logo Switching Engine
  * 
  * Assets:
- *   - Dark mode logo:  nurasms.comDFC.png
- *   - Light mode logo: nurasms.comLF.png
+ *   - Dark mode logo:  nurasms.comLF.png  (Light purple text #C084FC - high contrast on dark)
+ *   - Light mode logo: nurasms.comDFC.png (Dark purple text #6B21A8 - high contrast on light)
+ *   - Logo icon only:  nuraxq-icon.png    (Used on login, signup, reset-password, and loaders)
  *
  * Automatically keeps all logo instances in sync with current theme
  * on initial page load, real-time theme toggles, and cross-tab storage updates.
@@ -12,8 +13,9 @@
 (function () {
   'use strict';
 
-  const LOGO_DARK = 'nurasms.comDFC.png';
-  const LOGO_LIGHT = 'nurasms.comLF.png';
+  const LOGO_DARK = 'nurasms.comLF.png';   // NuraXQ text is light purple (#C084FC) for dark mode
+  const LOGO_LIGHT = 'nurasms.comDFC.png';  // NuraXQ text is dark purple (#6B21A8) for light mode
+  const LOGO_ICON = 'nuraxq-icon.png';
 
   const LOGO_SELECTORS = [
     '.nuraxq-theme-logo',
@@ -23,9 +25,7 @@
     '.nuraxq-logo',
     '.nura-sq-logo',
     '.admin-sidebar-logo',
-    '.admin-gate-logo-img',
-    '.auth-banner-logo',
-    '.loader-logo'
+    '.admin-gate-logo-img'
   ];
 
   function isDarkMode() {
@@ -49,6 +49,13 @@
 
     logos.forEach(function (img) {
       if (img && img.tagName === 'IMG') {
+        // Guard: Never overwrite icon-only images on login, signup, loader screens
+        if (img.classList.contains('loader-logo') || 
+            img.classList.contains('auth-logo-icon') || 
+            img.classList.contains('auth-banner-logo') ||
+            img.hasAttribute('data-icon-only')) {
+          return;
+        }
         const currentSrc = img.getAttribute('src');
         if (currentSrc !== targetSrc) {
           img.setAttribute('src', targetSrc);
@@ -61,6 +68,7 @@
   window.NuraLogo = {
     LOGO_DARK: LOGO_DARK,
     LOGO_LIGHT: LOGO_LIGHT,
+    LOGO_ICON: LOGO_ICON,
     isDarkMode: isDarkMode,
     getLogoSrc: getLogoSrc,
     updateAllLogos: updateAllLogos

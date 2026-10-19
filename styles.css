@@ -213,14 +213,15 @@ body.dark-theme .loader-wrapper {
 
 .loader-wrapper img,
 .loader-logo {
-    width: 40px !important;
-    height: 40px !important;
-    min-width: 40px !important;
-    min-height: 40px !important;
-    max-width: 40px !important;
-    max-height: 40px !important;
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
     object-fit: contain !important;
     display: block !important;
+    margin: 0 auto !important;
     animation: pulseSignal 1.1s ease-in-out infinite;
 }
 
@@ -346,6 +347,27 @@ header .header__logo .header__logo-img,
     margin: 0 !important;
     object-fit: contain !important;
     flex-shrink: 0 !important;
+}
+
+/* Authentication Pages: Icon-Only Presentation */
+.auth-header .logo img.auth-logo-icon,
+.auth-card-logo-img.auth-logo-icon {
+    display: block !important;
+    width: auto !important;
+    max-width: 60px !important;
+    height: 40px !important;
+    max-height: 40px !important;
+    object-fit: contain !important;
+    margin: 0 auto !important;
+}
+
+@media (max-width: 768px) {
+    .auth-header .logo img.auth-logo-icon,
+    .auth-card-logo-img.auth-logo-icon {
+        height: 36px !important;
+        max-height: 36px !important;
+        max-width: 52px !important;
+    }
 }
 
 /* Landing / Info Pages: Dedicated Header Logo Container */
