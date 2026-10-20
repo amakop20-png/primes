@@ -63,7 +63,7 @@ function parseProducts(raw) {
 
     for (let c of countries) {
         try {
-            const res = await request(`https://nurasms-api.onrender.com/products/${c}`);
+            const res = await request(`https://nuraxq.com/api/products/${c}`);
             if (res.status === 200) {
                 const raw = res.body.products || res.body;
                 const parsed = parseProducts(raw);
