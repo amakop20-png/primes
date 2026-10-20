@@ -8,18 +8,19 @@
 // Automatically detects environment setting from window.ENV, Node process.env, or falls back to production endpoint
 const API_BASE_URL = (function() {
     if (typeof window !== 'undefined') {
-        if (window.ENV && (window.ENV.API_BASE_URL || window.ENV.API_URL)) {
-            return String(window.ENV.API_BASE_URL || window.ENV.API_URL).trim();
+        const injected = (window.ENV && (window.ENV.API_BASE_URL || window.ENV.API_URL)) || window.API_BASE_URL || window.API_URL;
+        if (injected) {
+            return String(injected).trim();
         }
-        if (window.API_BASE_URL || window.API_URL) {
-            return String(window.API_BASE_URL || window.API_URL).trim();
-        }
+        return 'https://nuraxq.com/api';
     }
+
     if (typeof process !== 'undefined' && process.env) {
         if (process.env.API_BASE_URL || process.env.API_URL) {
             return String(process.env.API_BASE_URL || process.env.API_URL).trim();
         }
     }
+
     return 'https://nuraxq.com/api';
 })();
 
@@ -42,11 +43,12 @@ const REQUEST_TIMEOUT_MS = 25000; // 25s ceiling as specified in project require
  *   buildApiUrl('/order/123') -> "https://nuraxq.com/api/order/123"
  */
 function buildApiUrl(endpoint = '') {
-    if (!endpoint) return API_BASE_URL;
+    const activeBase = (typeof window !== 'undefined' && (window.API_BASE_URL || (window.ENV && window.ENV.API_BASE_URL))) || API_BASE_URL;
+    if (!endpoint) return activeBase;
     if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
         return endpoint;
     }
-    const cleanBase = API_BASE_URL.replace(/\/+$/, '');
+    const cleanBase = activeBase.replace(/\/+$/, '');
     let path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
 
     // Avoid duplicate /api segments if base already ends with /api

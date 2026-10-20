@@ -16,6 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/config.js', (req, res) => {
   res.type('application/javascript');
   const apiUrl = process.env.API_BASE_URL || process.env.API_URL || 'https://nuraxq.com/api';
+
   res.send(`window.ENV = Object.assign(window.ENV || {}, ${JSON.stringify({
     API_BASE_URL: apiUrl,
     API_URL: apiUrl
