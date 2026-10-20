@@ -369,7 +369,7 @@ async function checkProviderStatus() {
   const balEl  = document.getElementById('providerBalance');
 
   try {
-    const profileUrl = typeof buildApiUrl === 'function' ? buildApiUrl('/profile') : 'https://nuraxq.com/api/profile';
+    const profileUrl = typeof buildApiUrl === 'function' ? buildApiUrl('/profile') : (window.API_BASE_URL || (window.ENV && window.ENV.API_BASE_URL) || '') + '/profile';
     const res = await fetch(profileUrl, {
       headers: { 'Accept': 'application/json' }
     });
@@ -1196,7 +1196,7 @@ async function checkLiveOrderStatus(orderId) {
       });
     } else {
       const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('primes_token');
-      const orderUrl = typeof buildApiUrl === 'function' ? buildApiUrl(`/order/${encodeURIComponent(orderId)}`) : `https://nuraxq.com/api/order/${encodeURIComponent(orderId)}`;
+      const orderUrl = typeof buildApiUrl === 'function' ? buildApiUrl(`/order/${encodeURIComponent(orderId)}`) : `${window.API_BASE_URL || (window.ENV && window.ENV.API_BASE_URL) || ''}/order/${encodeURIComponent(orderId)}`;
       const res = await fetch(orderUrl, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });

@@ -231,7 +231,7 @@
         data = await getTransactions(page, pageSize, activeCurrency);
       } else {
         const token = localStorage.getItem('primes_token') || localStorage.getItem('accessToken');
-        const txUrl = typeof buildApiUrl === 'function' ? buildApiUrl(`/get-transactions?page=${page}&limit=${pageSize}&currency=${activeCurrency}`) : `https://nuraxq.com/api/get-transactions?page=${page}&limit=${pageSize}&currency=${activeCurrency}`;
+        const txUrl = typeof buildApiUrl === 'function' ? buildApiUrl(`/get-transactions?page=${page}&limit=${pageSize}&currency=${activeCurrency}`) : `${window.API_BASE_URL || (window.ENV && window.ENV.API_BASE_URL) || ''}/get-transactions?page=${page}&limit=${pageSize}&currency=${activeCurrency}`;
         const res = await fetch(txUrl, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
