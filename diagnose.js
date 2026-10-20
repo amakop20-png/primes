@@ -6,7 +6,7 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 try { require('dotenv').config(); } catch (_) {}
-const API_BASE_URL = (process.env.API_BASE_URL || process.env.API_URL || 'https://nuraxq.com/api').replace(/\/+$/, '');
+const API_BASE_URL = (process.env.API_BASE_URL || process.env.API_URL || 'https://nurasms-api.onrender.com').replace(/\/+$/, '');
 function getUrl(path) { return API_BASE_URL.endsWith('/api') && path.startsWith('/api/') ? `${API_BASE_URL}${path.slice(4)}` : `${API_BASE_URL}${path.startsWith('/') ? path : '/' + path}`; }
 
 async function logResponse(stepName, method, endpoint, payload, response) {

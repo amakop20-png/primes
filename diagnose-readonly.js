@@ -38,7 +38,7 @@ function request(url, options = {}, postData = null) {
     try {
         // 1. Inspect Products for USA
         console.log('--- 1. Inspecting Products & Raw Prices for USA ---');
-        const prodRes = await request('https://nuraxq.com/api/products/usa');
+        const prodRes = await request('https://nurasms-api.onrender.com/products/usa');
         console.log('Products API Status:', prodRes.status);
         if (prodRes.body) {
             const raw = prodRes.body.products || prodRes.body;
@@ -53,7 +53,7 @@ function request(url, options = {}, postData = null) {
 
         // 2. Inspect Products for Nigeria
         console.log('\n--- 2. Inspecting Products & Raw Prices for Nigeria ---');
-        const ngRes = await request('https://nuraxq.com/api/products/nigeria');
+        const ngRes = await request('https://nurasms-api.onrender.com/products/nigeria');
         if (ngRes.body) {
             const raw = ngRes.body.products || ngRes.body;
             for (let k of ['whatsapp', 'telegram', 'google']) {

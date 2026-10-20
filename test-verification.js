@@ -1,5 +1,5 @@
 try { require('dotenv').config(); } catch (_) {}
-const BASE_URL = (process.env.API_BASE_URL || process.env.API_URL || 'https://nuraxq.com/api').replace(/\/+$/, '');
+const BASE_URL = (process.env.API_BASE_URL || process.env.API_URL || 'https://nurasms-api.onrender.com').replace(/\/+$/, '');
 function getApiUrl(p) { return BASE_URL.endsWith('/api') && p.startsWith('/api/') ? `${BASE_URL}${p.slice(4)}` : `${BASE_URL}${p.startsWith('/') ? p : '/' + p}`; }
 // test-verification.js
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';

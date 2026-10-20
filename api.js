@@ -1,6 +1,6 @@
 /* ======================================================================
    api.js - NuraXQ Centralized API Client & Integration Layer
-   Base URL: https://nuraxq.com/api
+   Base URL: https://nurasms-api.onrender.com
    All dashboard and application API communication is centralized here.
 ====================================================================== */
 
@@ -20,7 +20,7 @@ const API_BASE_URL = (function() {
             return String(process.env.API_BASE_URL || process.env.API_URL).trim();
         }
     }
-    return 'https://nuraxq.com/api';
+    return 'https://nurasms-api.onrender.com';
 })();
 
 const API_URL = API_BASE_URL;
@@ -37,9 +37,9 @@ const REQUEST_TIMEOUT_MS = 25000; // 25s ceiling as specified in project require
  * segments, and ensures slashes are correctly formatted.
  *
  * Examples:
- *   buildApiUrl('/login') -> "https://nuraxq.com/api/login"
- *   buildApiUrl('/api/login') -> "https://nuraxq.com/api/login"
- *   buildApiUrl('/order/123') -> "https://nuraxq.com/api/order/123"
+ *   buildApiUrl('/login') -> "https://nurasms-api.onrender.com/api/login"
+ *   buildApiUrl('/api/login') -> "https://nurasms-api.onrender.com/api/login"
+ *   buildApiUrl('/order/123') -> "https://nurasms-api.onrender.com/api/order/123"
  */
 function buildApiUrl(endpoint = '') {
     if (!endpoint) return API_BASE_URL;
@@ -54,6 +54,9 @@ function buildApiUrl(endpoint = '') {
         path = path.slice(4); // Remove leading /api
     } else if (cleanBase.endsWith('/api') && path === '/api') {
         path = '';
+    } else if (!cleanBase.endsWith('/api') && !path.startsWith('/api/') && path !== '/api') {
+        // If base does not have /api suffix, ensure /api prefix so route reaches Render backend
+        path = `/api${path}`;
     }
     return `${cleanBase}${path}`;
 }

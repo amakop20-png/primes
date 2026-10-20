@@ -13,6 +13,6 @@
 (function (global) {
     global.ENV = global.ENV || {};
     // Fallback base URL pointing to the active backend API
-    global.ENV.API_BASE_URL = global.ENV.API_BASE_URL || 'https://nuraxq.com/api';
+    global.ENV.API_BASE_URL = global.ENV.API_BASE_URL || 'https://nurasms-api.onrender.com';
     global.ENV.API_URL = global.ENV.API_URL || global.ENV.API_BASE_URL;
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

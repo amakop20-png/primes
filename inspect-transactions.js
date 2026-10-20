@@ -23,7 +23,7 @@ function request(url, token) {
 
 (async () => {
     console.log('--- Inspecting USA products around ₦55 ---');
-    const u = new URL('https://nuraxq.com/api/products/usa');
+    const u = new URL('https://nurasms-api.onrender.com/products/usa');
     const prodRes = await new Promise(resolve => {
         https.get(u, res => {
             let body = '';
