@@ -12,7 +12,7 @@ const API_BASE_URL = (function() {
         if (injected) {
             return String(injected).trim();
         }
-        return 'https://nuraxq.com/api';
+        return 'https://api.nuraxq.com/api';
     }
 
     if (typeof process !== 'undefined' && process.env) {
@@ -21,7 +21,7 @@ const API_BASE_URL = (function() {
         }
     }
 
-    return 'https://nuraxq.com/api';
+    return 'https://api.nuraxq.com/api';
 })();
 
 const API_URL = API_BASE_URL;
