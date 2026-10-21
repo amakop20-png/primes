@@ -14,7 +14,7 @@
     global.ENV = global.ENV || {};
 
     // Production base URL pointing to NuraXQ API
-    var defaultApiUrl = 'https://nuraxq.com/api';
+    var defaultApiUrl = 'https://api.nuraxq.com';
     global.ENV.API_BASE_URL = global.ENV.API_BASE_URL || defaultApiUrl;
     global.ENV.API_URL = global.ENV.API_URL || global.ENV.API_BASE_URL;
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
