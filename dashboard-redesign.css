@@ -2660,10 +2660,13 @@ body.dark-theme aside .mode-dot {
     transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1), width 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
-  /* When desktop sidebar is expanded, hide redundant header toggle and logo */
-  .dash-header .toggle-btn,
-  .dash-header .logo {
+  /* When desktop sidebar is expanded, hide redundant header toggle */
+  .dash-header .toggle-btn {
     display: none !important;
+  }
+
+  .dash-header .logo {
+    display: inline-flex !important;
   }
 
   main.container,
