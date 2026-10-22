@@ -24,19 +24,33 @@
   </script>
   <script>
   (function() {
-    window.addEventListener('unhandledrejection', function(event) {
-      const reasonStr = String(event.reason || '');
-      const stackStr = String(event.reason?.stack || '');
-      const msgStr = String(event.reason?.message || '');
-      if (
+    function isIgnorableError(err) {
+      const reasonStr = String(err?.reason || err?.message || err || '');
+      const stackStr = String(err?.reason?.stack || err?.error?.stack || '');
+      return (
         reasonStr.includes('webpushr') ||
         stackStr.includes('webpushr') ||
-        msgStr.includes('Failed to fetch') ||
-        msgStr.includes('Unexpected token') ||
-        msgStr.includes('is not valid JSON') ||
-        reasonStr.includes('Error 4:')
-      ) {
-        console.warn('[Admin Network] Handled non-JSON/upstream response gracefully:', msgStr || reasonStr);
+        reasonStr.includes('cdn.webpushr.com') ||
+        stackStr.includes('cdn.webpushr.com') ||
+        reasonStr.includes('Error 2:') ||
+        reasonStr.includes('Error 4:') ||
+        reasonStr.includes('Error 0:') ||
+        reasonStr.includes('Error 1:') ||
+        (reasonStr.includes('Unexpected token') && (reasonStr.includes('Error') || stackStr.includes('webpushr'))) ||
+        (reasonStr.includes('is not valid JSON') && (reasonStr.includes('Error') || stackStr.includes('webpushr')))
+      );
+    }
+
+    window.addEventListener('unhandledrejection', function(event) {
+      if (isIgnorableError(event)) {
+        console.warn('[Admin SDK Notice] Handled third-party SDK non-JSON response gracefully:', event.reason?.message || event.reason);
+        event.preventDefault();
+      }
+    });
+
+    window.addEventListener('error', function(event) {
+      if (isIgnorableError(event)) {
+        console.warn('[Admin SDK Notice] Suppressed unhandled script error from external SDK:', event.message || event);
         event.preventDefault();
       }
     });

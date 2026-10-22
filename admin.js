@@ -376,13 +376,9 @@ async function checkProviderStatus() {
 
     const cType = res.headers.get('content-type') || '';
     if (res.ok && (cType.includes('application/json') || cType.includes('text/json'))) {
+      const text = await res.text().catch(() => '');
       let data = null;
-      try {
-        data = await res.json();
-      } catch (_) {
-        const text = await res.text().catch(() => '');
-        try { data = JSON.parse(text); } catch (_) { data = null; }
-      }
+      try { data = JSON.parse(text); } catch (_) { data = null; }
 
       if (data) {
         const profile = data.profile || data;
