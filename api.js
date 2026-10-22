@@ -1011,8 +1011,12 @@ async function adminApiRequest(endpoint, options = {}) {
     if (!response.ok) {
         let errorMsg = data?.message || data?.error || data?.msg || data?.details;
         if (!errorMsg && responseText) {
-            const cleanText = responseText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-            if (cleanText && cleanText.length < 300) {
+            const cleanText = responseText.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                                          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                                          .replace(/<[^>]+>/g, ' ')
+                                          .replace(/\s+/g, ' ')
+                                          .trim();
+            if (cleanText && cleanText.length < 200 && !cleanText.toLowerCase().includes('cannot post') && !cleanText.toLowerCase().includes('cannot get')) {
                 errorMsg = cleanText;
             }
         }
@@ -1029,7 +1033,7 @@ async function adminApiRequest(endpoint, options = {}) {
                     errorMsg = 'Access forbidden. Administrator privileges required.';
                     break;
                 case 404:
-                    errorMsg = `Admin endpoint not found on server (404: ${method} ${url.replace(API_BASE_URL, '')}).`;
+                    errorMsg = `Admin endpoint not found on server (404: ${method} ${url.replace(API_BASE_URL, '')}). The backend service needs to be updated with the latest routes.`;
                     break;
                 case 409:
                     errorMsg = 'Conflict occurred. Please refresh and try again.';
