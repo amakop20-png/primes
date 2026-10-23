@@ -35,19 +35,13 @@ body {
 }
 
 /* ══════════════════════════════════════
-   HEADER MOVED TO STYLES.CSS (.dash-header)
+   HEADER & LOGO UNIFIED WITH DASHBOARD
 ══════════════════════════════════════ */
-
-/* LEFT */
-.pride {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+.dash-header {
+  box-sizing: border-box !important;
 }
 
-/* LOGO — Standardized to Match Dashboard Reference */
-.dash-header .logo,
-.logo {
+.dash-header .logo {
   display: inline-flex !important;
   align-items: center !important;
   gap: 10px !important;
@@ -58,7 +52,8 @@ body {
 }
 
 .dash-header .logo img,
-.logo img {
+.dash-header .logo .nuraxq-logo,
+.dash-header .logo .nuraxq-theme-logo {
   display: block !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -70,8 +65,7 @@ body {
 }
 
 @media (max-width: 768px) {
-  .dash-header .logo,
-  .logo {
+  .dash-header .logo {
     width: 100% !important;
     max-width: 190px !important;
     min-width: 130px !important;
@@ -79,97 +73,18 @@ body {
 }
 
 @media (max-width: 480px) {
-  .dash-header .logo,
-  .logo {
+  .dash-header .logo {
     max-width: 170px !important;
     min-width: 120px !important;
   }
 }
 
 @media (max-width: 375px) {
-  .dash-header .logo,
-  .logo {
+  .dash-header .logo {
     max-width: 150px !important;
     min-width: 110px !important;
   }
 }
-
-/* RIGHT */
-.match {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-/* PROFILE */
-.profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.profile img {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--border);
-}
-
-.profile .username {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-/* NOTIFICATION */
-.notifications {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  cursor: pointer;
-  background: var(--border-light);
-  transition: 0.3s ease;
-}
-
-.notifications:hover {
-  background: var(--primary-light);
-}
-
-.notifications i {
-  font-size: 18px;
-  color: var(--text);
-}
-
-
-/* ══════════════════════════════════════
-   HAMBURGER BUTTON
-══════════════════════════════════════ */
-.toggle-btn {
-  width: 40px;
-  height: 40px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  cursor: pointer;
-  background: var(--border-light);
-  transition: 0.3s ease;
-}
-
-.toggle-btn:hover {
-  background: var(--primary-light);
-}
-
-.toggle-btn i {
-  font-size: 18px;
-  color: var(--text);
-}
-
 /* ══════════════════════════════════════
    SIDEBAR
 ══════════════════════════════════════ */
