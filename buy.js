@@ -989,7 +989,7 @@ async function loadProducts(country) {
         console.log('[STEP 2] Status: 200');
         console.log('[STEP 2] FULL PRODUCT RESPONSE:\n' + JSON.stringify(data, null, 2));
 
-        const raw = data?.products || data;
+        const raw = data?.prices || data?.products || data;
 
         if (!raw || typeof raw !== 'object') {
             showEmptyState(cardsGrid, 'No products returned from server.');
