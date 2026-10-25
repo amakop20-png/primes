@@ -970,8 +970,22 @@ async function loadProducts(country) {
     if (resultCount) resultCount.textContent = 'Loading products…';
 
     try {
-        console.log(`[STEP 2] Request: GET /api/products/${country}`);
-        const data = await getProducts(country);
+        let data = null;
+        // Step B (Document route): GET /api/prices?country={country}
+        if (typeof getPrices === 'function') {
+            try {
+                console.log(`[STEP B] Request: GET /api/prices?country=${country}`);
+                data = await getPrices(country);
+                console.log('[STEP B] Response:', data);
+            } catch (pricesErr) {
+                console.warn('[STEP B] GET /api/prices returned non-200, checking fallback endpoint:', pricesErr.message);
+            }
+        }
+        if (!data) {
+            console.log(`[STEP 2] Fallback Request: GET /api/products/${country}`);
+            data = await getProducts(country);
+            console.log('[STEP 2] Status: 200');
+        }
         console.log('[STEP 2] Status: 200');
         console.log('[STEP 2] FULL PRODUCT RESPONSE:\n' + JSON.stringify(data, null, 2));
 
