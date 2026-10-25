@@ -1393,19 +1393,266 @@ function renderSearchResultsDropdown(query) {
    BUY ACTIVATION
    Uses: buyActivation(country, product) from api.js
 ══════════════════════════════════════════ */
+/* ══════════════════════════════════════════
+   BUY ACTIVATION - STEP 3: OPERATOR SELECTION & STEP 4: PURCHASE
+   Uses: getPrices(country, product) and buyActivation(country, product, operator, currency)
+══════════════════════════════════════════ */
+let pendingOperatorPurchase = {
+    country: null,
+    product: null,
+    btnEl: null,
+    selectedOperator: null,
+    operators: {}
+};
+
 async function handleBuyClick(country, product, btnEl) {
-    // Direct user gesture: unlock/resume audio context for immediate OTP chime playback
     if (window.NuraSound && typeof window.NuraSound.initAudio === 'function') {
         window.NuraSound.initAudio();
     }
-
     if (isBuying) return;
-
     if (!country || !product) {
         showToast('Please select a country and service first.', 'error');
         return;
     }
+    // Step 3: Open Operator Selection Modal
+    await openOperatorSelector(country, product, btnEl);
+}
 
+async function openOperatorSelector(country, product, btnEl) {
+    pendingOperatorPurchase = {
+        country,
+        product,
+        btnEl,
+        selectedOperator: null,
+        operators: {}
+    };
+
+    const overlay = document.getElementById('operatorModalOverlay');
+    const loading = document.getElementById('operatorModalLoading');
+    const listEl = document.getElementById('operatorList');
+    const emptyEl = document.getElementById('operatorModalEmpty');
+    const confirmBtn = document.getElementById('operatorConfirmBtn');
+    const titleEl = document.getElementById('opModalTitle');
+    const subtitleEl = document.getElementById('opModalSubtitle');
+
+    if (!overlay) {
+        return executePurchase(country, product, null, btnEl);
+    }
+
+    const cObj = (typeof allCountriesData !== 'undefined' && Array.isArray(allCountriesData))
+        ? allCountriesData.find(c => c.key === country || c.key === selectedCountry)
+        : null;
+    const countryName = (cObj?.name || selectedCountryName || country || '').toUpperCase();
+    const prodObj = (typeof allProducts !== 'undefined' && Array.isArray(allProducts))
+        ? allProducts.find(p => p.key === product)
+        : null;
+    const productName = prodObj?.name || (product.charAt(0).toUpperCase() + product.slice(1));
+
+    if (titleEl) titleEl.textContent = `Select Operator - ${productName}`;
+    if (subtitleEl) subtitleEl.textContent = `${countryName} • Live availability & success rates`;
+
+    overlay.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    if (loading) loading.style.display = 'block';
+    if (listEl) {
+        listEl.innerHTML = '';
+        listEl.style.display = 'none';
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="ph ph-shopping-bag"></i> Select an Operator';
+    }
+
+    try {
+        console.log(`[STEP 3] Fetching operators for country: ${country}, product: ${product}`);
+        let pricesData = null;
+
+        if (typeof getPrices === 'function') {
+            try {
+                pricesData = await getPrices(country, product);
+                console.log('[STEP 3] getPrices response:', pricesData);
+            } catch (pErr) {
+                console.warn('[STEP 3] getPrices failed or returned non-200:', pErr.message);
+            }
+        }
+
+        let operatorMap = null;
+        if (pricesData?.prices && typeof pricesData.prices === 'object') {
+            operatorMap = pricesData.prices[product] || pricesData.prices[product.toLowerCase()];
+        } else if (pricesData && typeof pricesData === 'object' && !pricesData.prices) {
+            operatorMap = pricesData[product] || pricesData;
+        }
+
+        if (!operatorMap || typeof operatorMap !== 'object' || Object.keys(operatorMap).length === 0) {
+            if (prodObj && typeof prodObj === 'object') {
+                operatorMap = {
+                    'any': {
+                        cost: prodObj.priceNGN || prodObj.price || 0,
+                        count: prodObj.qty || 1,
+                        rate: null,
+                        isDefault: true
+                    }
+                };
+            }
+        }
+
+        pendingOperatorPurchase.operators = operatorMap || {};
+        renderOperatorList(operatorMap);
+    } catch (err) {
+        console.error('[STEP 3] Error loading operator list:', err);
+        if (loading) loading.style.display = 'none';
+        if (emptyEl) {
+            emptyEl.style.display = 'block';
+            const msgEl = document.getElementById('operatorModalEmptyMsg');
+            if (msgEl) msgEl.textContent = 'Could not load operators: ' + (err.message || 'Server error');
+        }
+    }
+}
+
+function renderOperatorList(operatorMap) {
+    const loading = document.getElementById('operatorModalLoading');
+    const listEl = document.getElementById('operatorList');
+    const emptyEl = document.getElementById('operatorModalEmpty');
+    const confirmBtn = document.getElementById('operatorConfirmBtn');
+
+    if (loading) loading.style.display = 'none';
+
+    if (!operatorMap || typeof operatorMap !== 'object' || Object.keys(operatorMap).length === 0) {
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="ph ph-shopping-bag"></i> Continue Purchase';
+            confirmBtn.onclick = () => {
+                closeOperatorModal();
+                executePurchase(pendingOperatorPurchase.country, pendingOperatorPurchase.product, null, pendingOperatorPurchase.btnEl);
+            };
+        }
+        return;
+    }
+
+    const entries = Object.entries(operatorMap);
+    if (entries.length === 0) {
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+    }
+
+    if (listEl) {
+        listEl.style.display = 'flex';
+        listEl.innerHTML = entries.map(([opKey, opData]) => {
+            const count = parseInt(opData?.count ?? opData?.qty ?? 0, 10);
+            const isOutOfStock = count === 0;
+            const cost = parseFloat(opData?.cost ?? opData?.price ?? 0);
+            
+            let rateText = 'No data';
+            let rateColor = 'var(--muted, #94a3b8)';
+            if (opData?.rate !== null && opData?.rate !== undefined && opData?.rate !== '') {
+                const numericRate = parseFloat(opData.rate);
+                if (!isNaN(numericRate) && numericRate > 0) {
+                    rateText = numericRate.toFixed(1) + '% Success';
+                    rateColor = numericRate >= 30 ? '#10b981' : (numericRate >= 15 ? '#f59e0b' : '#ef4444');
+                } else if (numericRate === 0) {
+                    rateText = '0% Success';
+                    rateColor = '#ef4444';
+                }
+            }
+
+            const formattedCost = '₦' + (cost > 0 ? Number(cost).toLocaleString('en-NG') : '0');
+            const displayName = opData?.isDefault ? 'Default / Any Operator' : opKey.toUpperCase();
+            const disabledAttr = isOutOfStock ? 'disabled style="opacity: 0.45; cursor: not-allowed; filter: grayscale(0.8);"' : '';
+
+            return `
+                <div class="operator-card ${isOutOfStock ? 'operator-card-disabled' : ''}"
+                     data-op-key="${escapeHTML(opKey)}"
+                     ${disabledAttr}
+                     onclick="!this.hasAttribute('disabled') && selectOperatorItem('${escapeHTML(opKey)}')"
+                     style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border:2px solid var(--border, rgba(255,255,255,0.08)); border-radius:12px; background:var(--card-sub-bg, rgba(255,255,255,0.03)); cursor:${isOutOfStock ? 'not-allowed' : 'pointer'}; transition:all 0.15s ease;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <div class="op-radio-indicator" id="op-radio-${escapeHTML(opKey)}" style="width:18px; height:18px; border-radius:50%; border:2px solid var(--border, rgba(255,255,255,0.25)); display:flex; align-items:center; justify-content:center;">
+                            <div class="op-radio-dot" style="width:8px; height:8px; border-radius:50%; background:var(--primary, #7c3aed); display:none;"></div>
+                        </div>
+                        <div>
+                            <div style="font-size:14px; font-weight:700; color:var(--text, #fff); display:flex; align-items:center; gap:8px;">
+                                <span>${escapeHTML(displayName)}</span>
+                                ${isOutOfStock ? '<span style="font-size:10px; padding:2px 6px; border-radius:4px; background:rgba(239,68,68,0.2); color:#ef4444; font-weight:600;">Out of Stock</span>' : ''}
+                            </div>
+                            <div style="font-size:12px; color:var(--muted, #94a3b8); margin-top:2px; display:flex; align-items:center; gap:10px;">
+                                <span><i class="ph ph-stack" style="vertical-align:middle;"></i> ${count > 0 ? count.toLocaleString() + ' available' : '0 available'}</span>
+                                <span>•</span>
+                                <span style="color:${rateColor}; font-weight:600;"><i class="ph ph-chart-line-up" style="vertical-align:middle;"></i> ${rateText}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:16px; font-weight:800; color:var(--primary, #7c3aed);">${formattedCost}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    const firstInStock = entries.find(([, op]) => parseInt(op?.count ?? op?.qty ?? 0, 10) > 0);
+    if (firstInStock) {
+        selectOperatorItem(firstInStock[0]);
+    }
+}
+
+function selectOperatorItem(opKey) {
+    pendingOperatorPurchase.selectedOperator = opKey;
+
+    document.querySelectorAll('.operator-card').forEach(card => {
+        if (card.dataset.opKey === opKey) {
+            card.style.borderColor = 'var(--primary, #7c3aed)';
+            card.style.background = 'rgba(124, 58, 237, 0.08)';
+            const dot = card.querySelector('.op-radio-dot');
+            if (dot) dot.style.display = 'block';
+            const radio = card.querySelector('.op-radio-indicator');
+            if (radio) radio.style.borderColor = 'var(--primary, #7c3aed)';
+        } else {
+            card.style.borderColor = 'var(--border, rgba(255,255,255,0.08))';
+            card.style.background = 'var(--card-sub-bg, rgba(255,255,255,0.03))';
+            const dot = card.querySelector('.op-radio-dot');
+            if (dot) dot.style.display = 'none';
+            const radio = card.querySelector('.op-radio-indicator');
+            if (radio) radio.style.borderColor = 'var(--border, rgba(255,255,255,0.25))';
+        }
+    });
+
+    const confirmBtn = document.getElementById('operatorConfirmBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="ph ph-shopping-bag"></i> Confirm & Buy with ' + opKey.toUpperCase();
+    }
+}
+
+function closeOperatorModal() {
+    const overlay = document.getElementById('operatorModalOverlay');
+    if (overlay) overlay.style.display = 'none';
+    document.body.classList.remove('modal-open');
+}
+window.closeOperatorModal = closeOperatorModal;
+
+function confirmOperatorPurchase() {
+    const opKey = pendingOperatorPurchase.selectedOperator;
+    if (!opKey) {
+        showToast('Please pick an operator first.', 'warning');
+        return;
+    }
+    const { country, product, btnEl } = pendingOperatorPurchase;
+    closeOperatorModal();
+    executePurchase(country, product, opKey, btnEl);
+}
+window.confirmOperatorPurchase = confirmOperatorPurchase;
+
+async function executePurchase(country, product, operator = null, btnEl = null) {
+    if (window.NuraSound && typeof window.NuraSound.initAudio === 'function') {
+        window.NuraSound.initAudio();
+    }
+    if (isBuying) return;
+    if (!country || !product) {
+        showToast('Please select a country and service first.', 'error');
+        return;
+    }
     isBuying = true;
     if (btnEl) {
         btnEl.disabled = true;
@@ -1490,7 +1737,7 @@ async function handleBuyClick(country, product, btnEl) {
         // Reset modal UI immediately so old order data is never shown
         setModalLoading(null);
 
-        const response = await buyActivation(country, product, activeCurrency);
+        const response = await buyActivation(country, product, operator, activeCurrency);
         console.log("[PURCHASE] Backend response:", response);
 
         // Requirement 1: Get the exact NEW order ID from the backend response

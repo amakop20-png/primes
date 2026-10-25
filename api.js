@@ -506,7 +506,18 @@ async function getProducts(country) {
     });
 }
 
-async function buyActivation(country, product, currency = null) {
+async function getPrices(country, product = null) {
+    if (!country) throw new Error('Country parameter is required.');
+    let url = `/api/prices?country=${encodeURIComponent(country)}`;
+    if (product) {
+        url += `&product=${encodeURIComponent(product)}`;
+    }
+    return await apiRequest(url, {
+        method: 'GET'
+    });
+}
+
+async function buyActivation(country, product, operator = null, currency = null) {
     if (!country || !product) {
         throw new Error('Both country and product are required to purchase a number.');
     }
@@ -514,6 +525,17 @@ async function buyActivation(country, product, currency = null) {
         country: String(country).toLowerCase().trim(),
         product: String(product).toLowerCase().trim()
     };
+    // Support either buyActivation(country, product, operator, currency)
+    // or buyActivation(country, product, currency) if 3rd arg is currency string like 'NGN' / 'USD'
+    if (operator && typeof operator === 'string') {
+        const opUpper = operator.toUpperCase().trim();
+        if ((opUpper === 'NGN' || opUpper === 'USD') && !currency) {
+            currency = opUpper;
+            operator = null;
+        } else {
+            payload.operator = String(operator).trim();
+        }
+    }
     if (currency) {
         payload.currency = String(currency).toUpperCase().trim();
     }
@@ -833,6 +855,7 @@ window.getWalletBalance = getWalletBalance;
 window.getTransactions = getTransactions;
 window.getCountries = getCountries;
 window.getProducts = getProducts;
+window.getPrices = getPrices;
 window.buyActivation = buyActivation;
 window.getOrder = getOrder;
 window.finishOrder = finishOrder;
@@ -872,6 +895,7 @@ window.NuraAPI = {
     getTransactions,
     getCountries,
     getProducts,
+    getPrices,
     buyActivation,
     getOrder,
     finishOrder,
