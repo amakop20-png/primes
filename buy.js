@@ -990,7 +990,12 @@ async function loadProducts(country) {
         console.log('[STEP 2] Status: 200');
         console.log('[STEP 2] FULL PRODUCT RESPONSE:\n' + JSON.stringify(data, null, 2));
 
-        const raw = data?.prices || data?.products || data;
+        let raw = null;
+        if (data?.prices && typeof data.prices === 'object') {
+            raw = data.prices[country] || data.prices[country.toLowerCase()] || data.prices;
+        } else {
+            raw = data?.products || data;
+        }
 
         if (!raw || typeof raw !== 'object') {
             showEmptyState(cardsGrid, 'No products returned from server.');
@@ -1494,7 +1499,8 @@ async function openOperatorSelector(country, product, btnEl) {
 
         let operatorMap = null;
         if (pricesData?.prices && typeof pricesData.prices === 'object') {
-            operatorMap = pricesData.prices[product] || pricesData.prices[product.toLowerCase()];
+            const countryPrices = pricesData.prices[country] || pricesData.prices[country.toLowerCase()] || pricesData.prices;
+            operatorMap = countryPrices[product] || countryPrices[product.toLowerCase()] || countryPrices;
         } else if (pricesData && typeof pricesData === 'object' && !pricesData.prices) {
             operatorMap = pricesData[product] || pricesData;
         }
