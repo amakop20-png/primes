@@ -1,6 +1,19 @@
 # Render Infrastructure as Code Blueprint
 # Reference: https://render.com/docs/blueprint-spec
 services:
+  # Static Frontend Site for Testing & Review
+  - type: static
+    name: nuraxq-frontend
+    plan: free
+    region: oregon
+    branch: main
+    publishPath: .
+    routes:
+      - type: rewrite
+        source: /
+        destination: /buy.html
+
+  # Node.js API Web Service
   - type: web
     name: nurasms-api
     runtime: node
