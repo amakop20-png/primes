@@ -1514,19 +1514,20 @@ async function openOperatorSelector(country, product, btnEl) {
                 });
             }
             if (Object.keys(operatorMap).length === 0 && prodObj) {
+                const baseCost = prodObj.priceNGN || prodObj.price || 1300;
                 operatorMap = {
                     'virtual34': {
-                        cost: prodObj.priceNGN || prodObj.price || 1300,
+                        cost: baseCost,
                         count: prodObj.qty || 336673,
                         rate: 15.75
                     },
                     'virtual4': {
-                        cost: (prodObj.priceNGN || prodObj.price || 1300) + 100,
+                        cost: baseCost,
                         count: prodObj.qty || 25000,
                         rate: 19.59
                     },
                     'virtual2': {
-                        cost: prodObj.priceNGN || prodObj.price || 1300,
+                        cost: baseCost,
                         count: 0,
                         rate: 0
                     }
@@ -1705,7 +1706,11 @@ async function executePurchase(country, product, operator = null, btnEl = null) 
     let productPrice = 0;
     let convertedProductPrice = null;
 
-    if (activeCurrency === 'USD') {
+    // Use selected operator's specific cost if present in pendingOperatorPurchase
+    const selectedOpData = operator && pendingOperatorPurchase?.operators?.[operator];
+    if (selectedOpData && selectedOpData.cost !== undefined) {
+        productPrice = parseFloat(selectedOpData.cost) || 0;
+    } else if (activeCurrency === 'USD') {
         productPrice = prodObj?.priceUSD || 0;
         if (isNativeNGN) {
             convertedProductPrice = productPrice;
