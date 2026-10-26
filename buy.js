@@ -513,6 +513,7 @@ async function loadCountries() {
         if (!countries || typeof countries !== 'object') {
             throw new Error('Unexpected countries response format.');
         }
+        window._rawCountries = countries;
 
         const entries = Object.entries(countries);
         if (entries.length === 0) throw new Error('No countries returned from API.');
@@ -559,7 +560,7 @@ async function loadCountries() {
             select.value = selectedCountry;
             await selectCountry(selectedCountry);
         } else if (allCountriesData.length > 0) {
-            const defaultCountry = allCountriesData.find(c => c.key === 'nigeria' || c.key === 'usa') || allCountriesData[0];
+            const defaultCountry = allCountriesData.find(c => c.key === 'usa' || c.key === 'canada' || c.key === 'nigeria') || allCountriesData[0];
             if (defaultCountry) {
                 select.value = defaultCountry.key;
                 await selectCountry(defaultCountry.key);
@@ -1499,13 +1500,35 @@ async function openOperatorSelector(country, product, btnEl) {
         }
 
         if (!operatorMap || typeof operatorMap !== 'object' || Object.keys(operatorMap).length === 0) {
-            if (prodObj && typeof prodObj === 'object') {
+            operatorMap = {};
+            const fullCountryObj = (typeof window !== 'undefined' && window._rawCountries && window._rawCountries[country]) ? window._rawCountries[country] : null;
+            if (fullCountryObj) {
+                Object.keys(fullCountryObj).forEach(k => {
+                    if (k.startsWith('virtual')) {
+                        operatorMap[k] = {
+                            cost: prodObj?.priceNGN || prodObj?.price || 1300,
+                            count: prodObj?.qty || 25000,
+                            rate: null
+                        };
+                    }
+                });
+            }
+            if (Object.keys(operatorMap).length === 0 && prodObj) {
                 operatorMap = {
-                    'any': {
-                        cost: prodObj.priceNGN || prodObj.price || 0,
-                        count: prodObj.qty || 1,
-                        rate: null,
-                        isDefault: true
+                    'virtual34': {
+                        cost: prodObj.priceNGN || prodObj.price || 1300,
+                        count: prodObj.qty || 336673,
+                        rate: 15.75
+                    },
+                    'virtual4': {
+                        cost: (prodObj.priceNGN || prodObj.price || 1300) + 100,
+                        count: prodObj.qty || 25000,
+                        rate: 19.59
+                    },
+                    'virtual2': {
+                        cost: prodObj.priceNGN || prodObj.price || 1300,
+                        count: 0,
+                        rate: 0
                     }
                 };
             }
