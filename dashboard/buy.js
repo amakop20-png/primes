@@ -1520,20 +1520,19 @@ async function openOperatorSelector(country, product, btnEl) {
                 });
             }
             if (Object.keys(operatorMap).length === 0 && prodObj) {
-                const baseCost = prodObj.priceNGN || prodObj.price || 1300;
                 operatorMap = {
                     'virtual34': {
-                        cost: baseCost,
-                        count: prodObj.qty || 336673,
+                        cost: 1300,
+                        count: 336673,
                         rate: 15.75
                     },
                     'virtual4': {
-                        cost: baseCost,
-                        count: prodObj.qty || 25000,
+                        cost: 1400,
+                        count: 25000,
                         rate: 19.59
                     },
                     'virtual2': {
-                        cost: baseCost,
+                        cost: 1300,
                         count: 0,
                         rate: 0
                     }
@@ -1665,7 +1664,9 @@ function selectOperatorItem(opKey) {
     const confirmBtn = document.getElementById('operatorConfirmBtn');
     if (confirmBtn) {
         confirmBtn.disabled = false;
-        confirmBtn.innerHTML = '<i class="ph ph-shopping-bag"></i> Confirm & Buy with ' + opKey.toUpperCase();
+        const opData = pendingOperatorPurchase.operators[opKey];
+        const costStr = (opData && opData.cost !== undefined) ? ' (₦' + Number(opData.cost).toLocaleString('en-NG') + ')' : '';
+        confirmBtn.innerHTML = '<i class="ph ph-shopping-bag"></i> Confirm & Buy with ' + opKey.toUpperCase() + costStr;
     }
 }
 

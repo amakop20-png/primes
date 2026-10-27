@@ -14,7 +14,10 @@
     global.ENV = global.ENV || {};
 
     // Production base URL pointing to NuraXQ API
-    var defaultApiUrl = 'https://api.nuraxq.com';
+    // Auto-detect Render testing environment or local testing vs production
+    var defaultApiUrl = (typeof window !== 'undefined' && (window.location.hostname.includes('onrender.com') || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+        ? 'https://nurasms-api.onrender.com'
+        : 'https://api.nuraxq.com';
     global.ENV.API_BASE_URL = global.ENV.API_BASE_URL || defaultApiUrl;
     global.ENV.API_URL = global.ENV.API_URL || global.ENV.API_BASE_URL;
 })(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));
