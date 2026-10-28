@@ -1580,6 +1580,15 @@ function renderOperatorList(operatorMap) {
         return;
     }
 
+    // Sort operators in descending order of success rate (highest success rate at top)
+    entries.sort(([, a], [, b]) => {
+        const rateA = (a?.rate !== null && a?.rate !== undefined && a?.rate !== '') ? parseFloat(a.rate) : -1;
+        const rateB = (b?.rate !== null && b?.rate !== undefined && b?.rate !== '') ? parseFloat(b.rate) : -1;
+        const validA = !isNaN(rateA) ? rateA : -1;
+        const validB = !isNaN(rateB) ? rateB : -1;
+        return validB - validA;
+    });
+
     if (listEl) {
         listEl.style.display = 'flex';
         listEl.innerHTML = entries.map(([opKey, opData]) => {
