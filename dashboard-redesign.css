@@ -80,53 +80,46 @@ main.container {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   1. DASHBOARD HEADER (Professionally Arranged & Balanced)
+   1. DASHBOARD HEADER
 ══════════════════════════════════════════════════════════════════ */
 .dash-header {
   position: sticky;
   top: 0;
   z-index: 100;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  min-height: 70px;
-  height: 70px;
-  padding: 0 28px;
-  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 10px 28px;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
-  transition: background-color 0.2s ease, border-color 0.2s ease, margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1), width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 body.dark-theme .dash-header {
   background: rgba(19, 27, 46, 0.92);
 }
 
-.dash-header .header-left,
 .header-left {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px;
-  min-width: 0;
-  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .dash-header .toggle-btn {
   width: 38px;
   height: 38px;
-  min-width: 38px;
   border-radius: 10px;
   background: var(--border-light);
   border: 1px solid var(--border);
   color: var(--text);
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   cursor: pointer;
-  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
@@ -137,12 +130,13 @@ body.dark-theme .dash-header {
 }
 
 .dash-header .logo {
-  display: inline-flex !important;
-  align-items: center !important;
-  text-decoration: none !important;
-  height: 40px;
-  max-width: 190px;
-  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  width: 210px;
+  max-width: 230px;
+  min-width: 160px;
 }
 
 .dash-header .logo img,
@@ -151,12 +145,12 @@ body.dark-theme .dash-header {
 .dash-header .nura-sq-logo,
 .dash-header .nuraxq-theme-logo {
   display: block !important;
-  height: 38px !important;
-  max-height: 38px !important;
-  width: auto !important;
+  width: 100% !important;
   max-width: 100% !important;
-  object-fit: contain !important;
+  height: auto !important;
+  max-height: none !important;
   margin: 0 !important;
+  object-fit: contain !important;
   flex-shrink: 0 !important;
 }
 
@@ -181,12 +175,10 @@ body.dark-theme .header__logo-text {
   color: #C084FC !important;
 }
 
-.dash-header .header-right,
 .header-right {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 /* Currency Switcher Pill */
@@ -2726,8 +2718,8 @@ body.dark-theme aside .mode-dot {
     width: 100% !important;
     margin-left: 0 !important;
     min-height: 60px !important;
-    height: 60px !important;
-    padding: 0 16px !important;
+    height: auto !important;
+    padding: 10px 16px !important;
     box-sizing: border-box !important;
     display: flex !important;
     align-items: center !important;
@@ -2739,15 +2731,14 @@ body.dark-theme aside .mode-dot {
     align-items: center !important;
     gap: 10px !important;
     min-width: 0 !important;
-    flex: 0 1 auto !important;
+    flex: 1 1 auto !important;
   }
 
   .dash-header .toggle-btn {
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
     border-radius: 10px !important;
-    font-size: 17px !important;
     flex-shrink: 0 !important;
   }
 
@@ -2755,20 +2746,9 @@ body.dark-theme aside .mode-dot {
     display: inline-flex !important;
     align-items: center !important;
     gap: 8px !important;
-    width: auto !important;
-    max-width: 150px !important;
-    height: 34px !important;
-    flex-shrink: 0 !important;
-  }
-
-  .dash-header .logo img,
-  .dash-header .logo-container img,
-  .dash-header .nuraxq-logo,
-  .dash-header .nura-sq-logo,
-  .dash-header .nuraxq-theme-logo {
-    height: 32px !important;
-    max-height: 32px !important;
-    width: auto !important;
+    width: 100% !important;
+    max-width: 190px !important;
+    min-width: 130px !important;
   }
 
   .dash-header .header__logo-text {
@@ -2786,9 +2766,9 @@ body.dark-theme aside .mode-dot {
 
   .sound-toggle-btn,
   #soundToggleBtn {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
     border-radius: 10px !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -3208,23 +3188,8 @@ body.dark-theme aside .mode-dot {
 /* ── Standard Phones (376px–480px) ── */
 @media (max-width: 480px) {
   .dash-header {
-    padding: 0 10px !important;
+    padding: 8px 12px !important;
     min-height: 56px !important;
-    height: 56px !important;
-  }
-
-  .dash-header .logo {
-    max-width: 125px !important;
-    height: 30px !important;
-  }
-
-  .dash-header .logo img,
-  .dash-header .logo-container img,
-  .dash-header .nuraxq-logo,
-  .dash-header .nura-sq-logo,
-  .dash-header .nuraxq-theme-logo {
-    height: 28px !important;
-    max-height: 28px !important;
   }
 
   .dash-header .header__logo-text {
@@ -3232,7 +3197,7 @@ body.dark-theme aside .mode-dot {
   }
 
   .header-left {
-    gap: 8px !important;
+    gap: 10px !important;
   }
 
   .header-right {
@@ -3240,18 +3205,18 @@ body.dark-theme aside .mode-dot {
   }
 
   #toggle-btn {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
-    font-size: 16px !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    font-size: 17px !important;
   }
 
   .sound-toggle-btn,
   #soundToggleBtn {
-    width: 30px !important;
-    height: 30px !important;
-    min-width: 30px !important;
-    font-size: 14px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    font-size: 15px !important;
   }
 
   .currency-switch {
@@ -3260,13 +3225,13 @@ body.dark-theme aside .mode-dot {
 
   .cswitch-item {
     padding: 3px 6px !important;
-    font-size: 10px !important;
+    font-size: 10.5px !important;
   }
 
   .profile-dropdown button.profile-toggle {
-    width: 30px !important;
-    height: 30px !important;
-    min-width: 30px !important;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
   }
 
   main.container,
@@ -3303,61 +3268,7 @@ body.dark-theme aside .mode-dot {
 /* ── Small Phones (320px–375px) ── */
 @media (max-width: 375px) {
   .dash-header {
-    padding: 0 8px !important;
-    min-height: 52px !important;
-    height: 52px !important;
-  }
-
-  .dash-header .logo {
-    max-width: 105px !important;
-    height: 26px !important;
-  }
-
-  .dash-header .logo img,
-  .dash-header .logo-container img,
-  .dash-header .nuraxq-logo,
-  .dash-header .nura-sq-logo,
-  .dash-header .nuraxq-theme-logo {
-    height: 24px !important;
-    max-height: 24px !important;
-  }
-
-  .header-left {
-    gap: 6px !important;
-  }
-
-  .header-right {
-    gap: 5px !important;
-  }
-
-  #toggle-btn {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
-    font-size: 15px !important;
-  }
-
-  .sound-toggle-btn,
-  #soundToggleBtn {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
-    font-size: 13px !important;
-  }
-
-  .currency-switch {
-    padding: 2px 3px !important;
-  }
-
-  .cswitch-item {
-    padding: 2px 4px !important;
-    font-size: 9.5px !important;
-  }
-
-  .profile-dropdown button.profile-toggle {
-    width: 28px !important;
-    height: 28px !important;
-    min-width: 28px !important;
+    padding: 8px 10px !important;
   }
 
   .dash-header .header__logo-text {
