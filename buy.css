@@ -39,34 +39,35 @@ body {
 ══════════════════════════════════════ */
 .dash-header {
   box-sizing: border-box !important;
-  min-height: 72px !important;
-  padding: 10px 28px !important;
+  min-height: 70px !important;
+  height: 70px !important;
+  padding: 0 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
 }
 
 .dash-header .header-left {
   display: flex !important;
   align-items: center !important;
-  gap: 10px !important;
-  flex: 1 1 auto !important;
+  gap: 12px !important;
+  flex: 0 1 auto !important;
   min-width: 0 !important;
 }
 
 .dash-header .header-right {
   display: flex !important;
   align-items: center !important;
-  gap: 14px !important;
+  gap: 12px !important;
   flex-shrink: 0 !important;
 }
 
 .dash-header .logo {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 10px !important;
   text-decoration: none !important;
-  width: 210px !important;
-  max-width: 230px !important;
-  min-width: 160px !important;
-  height: 48px !important;
+  height: 40px !important;
+  max-width: 190px !important;
   flex-shrink: 0 !important;
 }
 
@@ -74,10 +75,10 @@ body {
 .dash-header .logo .nuraxq-logo,
 .dash-header .logo .nuraxq-theme-logo {
   display: block !important;
-  width: 100% !important;
+  height: 38px !important;
+  max-height: 38px !important;
+  width: auto !important;
   max-width: 100% !important;
-  height: auto !important;
-  max-height: 46px !important;
   margin: 0 !important;
   object-fit: contain !important;
   flex-shrink: 0 !important;
@@ -88,8 +89,8 @@ body {
     width: 100% !important;
     margin-left: 0 !important;
     min-height: 60px !important;
-    height: auto !important;
-    padding: 10px 16px !important;
+    height: 60px !important;
+    padding: 0 16px !important;
     box-sizing: border-box !important;
     display: flex !important;
     align-items: center !important;
@@ -101,14 +102,15 @@ body {
     align-items: center !important;
     gap: 10px !important;
     min-width: 0 !important;
-    flex: 1 1 auto !important;
+    flex: 0 1 auto !important;
   }
 
   .dash-header .toggle-btn {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
     border-radius: 10px !important;
+    font-size: 17px !important;
     flex-shrink: 0 !important;
   }
 
@@ -116,10 +118,18 @@ body {
     display: inline-flex !important;
     align-items: center !important;
     gap: 8px !important;
-    width: 100% !important;
-    max-width: 190px !important;
-    min-width: 130px !important;
-    height: 38px !important;
+    width: auto !important;
+    max-width: 150px !important;
+    height: 34px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .dash-header .logo img,
+  .dash-header .logo .nuraxq-logo,
+  .dash-header .logo .nuraxq-theme-logo {
+    height: 32px !important;
+    max-height: 32px !important;
+    width: auto !important;
   }
 
   .dash-header .header-right {
@@ -131,18 +141,58 @@ body {
 }
 
 @media (max-width: 480px) {
+  .dash-header {
+    padding: 0 10px !important;
+    min-height: 56px !important;
+    height: 56px !important;
+  }
+
+  .dash-header .header-left {
+    gap: 8px !important;
+  }
+
+  .dash-header .header-right {
+    gap: 6px !important;
+  }
+
   .dash-header .logo {
-    max-width: 170px !important;
-    min-width: 120px !important;
-    height: 36px !important;
+    max-width: 125px !important;
+    height: 30px !important;
+  }
+
+  .dash-header .logo img,
+  .dash-header .logo .nuraxq-logo,
+  .dash-header .logo .nuraxq-theme-logo {
+    height: 28px !important;
+    max-height: 28px !important;
   }
 }
 
 @media (max-width: 375px) {
+  .dash-header {
+    padding: 0 8px !important;
+    min-height: 52px !important;
+    height: 52px !important;
+  }
+
+  .dash-header .header-left {
+    gap: 6px !important;
+  }
+
+  .dash-header .header-right {
+    gap: 5px !important;
+  }
+
   .dash-header .logo {
-    max-width: 150px !important;
-    min-width: 110px !important;
-    height: 32px !important;
+    max-width: 105px !important;
+    height: 26px !important;
+  }
+
+  .dash-header .logo img,
+  .dash-header .logo .nuraxq-logo,
+  .dash-header .logo .nuraxq-theme-logo {
+    height: 24px !important;
+    max-height: 24px !important;
   }
 }
 /* ══════════════════════════════════════
