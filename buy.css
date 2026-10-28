@@ -62,12 +62,18 @@ body {
   flex-shrink: 0 !important;
 }
 
+/* Logo container & image sizing in buy.html:
+   Allows logo sizing (width/height) to be cleanly controlled through CSS
+   while preserving the native aspect ratio without distortion or clipping */
 .dash-header .logo {
   display: inline-flex !important;
   align-items: center !important;
   text-decoration: none !important;
-  height: 40px !important;
-  max-width: 190px !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: auto !important;
+  max-height: 100% !important;
   flex-shrink: 0 !important;
 }
 
@@ -75,10 +81,10 @@ body {
 .dash-header .logo .nuraxq-logo,
 .dash-header .logo .nuraxq-theme-logo {
   display: block !important;
-  height: 38px !important;
-  max-height: 38px !important;
   width: auto !important;
   max-width: 100% !important;
+  height: 38px !important;
+  max-height: 48px !important;
   margin: 0 !important;
   object-fit: contain !important;
   flex-shrink: 0 !important;
@@ -119,17 +125,18 @@ body {
     align-items: center !important;
     gap: 8px !important;
     width: auto !important;
-    max-width: 150px !important;
-    height: 34px !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    height: auto !important;
     flex-shrink: 0 !important;
   }
 
   .dash-header .logo img,
   .dash-header .logo .nuraxq-logo,
   .dash-header .logo .nuraxq-theme-logo {
-    height: 32px !important;
-    max-height: 32px !important;
     width: auto !important;
+    height: 32px !important;
+    max-height: 34px !important;
   }
 
   .dash-header .header-right {
@@ -155,16 +162,12 @@ body {
     gap: 6px !important;
   }
 
-  .dash-header .logo {
-    max-width: 125px !important;
-    height: 30px !important;
-  }
-
   .dash-header .logo img,
   .dash-header .logo .nuraxq-logo,
   .dash-header .logo .nuraxq-theme-logo {
+    width: auto !important;
     height: 28px !important;
-    max-height: 28px !important;
+    max-height: 30px !important;
   }
 }
 
@@ -183,16 +186,12 @@ body {
     gap: 5px !important;
   }
 
-  .dash-header .logo {
-    max-width: 105px !important;
-    height: 26px !important;
-  }
-
   .dash-header .logo img,
   .dash-header .logo .nuraxq-logo,
   .dash-header .logo .nuraxq-theme-logo {
+    width: auto !important;
     height: 24px !important;
-    max-height: 24px !important;
+    max-height: 26px !important;
   }
 }
 /* ══════════════════════════════════════
