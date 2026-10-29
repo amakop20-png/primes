@@ -89,13 +89,14 @@ main.container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 72px;
+  min-height: 70px;
   padding: 10px 28px;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
   transition: background-color 0.2s ease, border-color 0.2s ease;
+  gap: 16px;
 }
 
 body.dark-theme .dash-header {
@@ -106,6 +107,20 @@ body.dark-theme .dash-header {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* When sidebar is open on desktop, header-left toggle is hidden. Keep controls neatly positioned with full header balance */
+@media (min-width: 769px) {
+  .dash-header:has(.header-left:empty),
+  .dash-header:not(:has(#toggle-btn:not([style*="display: none"]))) {
+    justify-content: flex-end;
+  }
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .dash-header .toggle-btn {
@@ -178,7 +193,7 @@ body.dark-theme .header__logo-text {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
 
 /* Currency Switcher Pill */

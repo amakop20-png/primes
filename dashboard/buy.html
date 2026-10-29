@@ -1413,26 +1413,6 @@
       .stab { padding: 8px 10px; font-size: 12px; }
     }
 
-    /* ── Header Spacing & Layout Alignment ── */
-    .dash-header {
-      justify-content: flex-end !important;
-      gap: 16px !important;
-    }
-    .dash-header .header-left {
-      margin-right: auto !important;
-      gap: 0 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-    /* When desktop toggle is hidden, eliminate the empty middle gap */
-    @media (min-width: 769px) {
-      .dash-header {
-        justify-content: flex-end !important;
-      }
-      .dash-header .header-left:has(#toggle-btn:not([style*="display: block"])) {
-        display: none !important;
-      }
-    }
   </style>
 </head>
 

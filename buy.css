@@ -45,6 +45,7 @@ body {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
+  gap: 16px !important;
 }
 
 .dash-header .header-left {
@@ -55,10 +56,17 @@ body {
   min-width: 0 !important;
 }
 
+@media (min-width: 769px) {
+  .dash-header:has(.header-left:empty),
+  .dash-header:not(:has(#toggle-btn:not([style*="display: none"]))) {
+    justify-content: flex-end !important;
+  }
+}
+
 .dash-header .header-right {
   display: flex !important;
   align-items: center !important;
-  gap: 12px !important;
+  gap: 14px !important;
   flex-shrink: 0 !important;
 }
 
