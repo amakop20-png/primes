@@ -768,9 +768,9 @@
 
     <!-- Quick Navigation Action Pills -->
     <div class="dash-quick-nav-pills">
-      <button type="button" class="quick-nav-pill active" onclick="openDepositModal()">
-        <i class="ph ph-plus-circle-fill"></i>
-        <span>+ Fund Account</span>
+      <button type="button" class="quick-nav-pill active" onclick="openPopup()">
+        <i class="ph ph-bank"></i>
+        <span>Fund Account</span>
       </button>
       <button type="button" class="quick-nav-pill" onclick="window.location.href='buy.html?tab=products'">
         <i class="ph ph-sim-card"></i>
@@ -818,7 +818,7 @@
             </div>
           </div>
           <div class="nura-wallet-actions-col">
-            <button type="button" id="addFundsBtn" class="nura-wallet-btn-add btn-wallet-fund" onclick="openDepositModal()" title="Add Funds via Paystack">
+            <button type="button" id="addFundsBtn" class="nura-wallet-btn-add btn-wallet-fund" onclick="openPopup()" title="Fund Wallet via Virtual Account">
               <span class="btn-plus-sym">+</span>
               <span>Add Funds</span>
             </button>
@@ -1024,8 +1024,8 @@
               </div>
             </div>
           </div>
-          <button class="btn-add" id="popupAddFundsBtn" onclick="openDepositModal()" title="Add Funds">
-            <i class="ph ph-plus"></i>
+          <button class="btn-add" id="popupAddFundsBtn" onclick="copyVirtualAccount()" title="Copy Virtual Account">
+            <i class="ph ph-copy"></i>
           </button>
         </div>
 
@@ -1081,76 +1081,7 @@
   </button>
 
   <!-- Deposit Modal (Redesigned Modern Fintech UI) -->
-  <div id="depositModal" class="dep-modal-backdrop" style="display:none;">
-    <div class="dep-modal-card">
-      <!-- Modal Header -->
-      <div class="dep-modal-header">
-        <div class="dep-header-left">
-          <div class="dep-header-icon">
-            <i class="ph ph-wallet-fill"></i>
-          </div>
-          <div>
-            <h2 class="dep-modal-title">Add Funds to Wallet</h2>
-            <p class="dep-modal-subtitle">Instant automated credit via card, bank transfer, or USSD.</p>
-          </div>
-        </div>
-        <button type="button" id="depositModalClose" class="dep-modal-close-btn" aria-label="Close modal">&times;</button>
-      </div>
-
-      <!-- Currency & Min Notice Banner -->
-      <div class="dep-currency-banner">
-        <div class="dep-banner-left">
-          <span class="dep-banner-badge" id="depositCurrBadge">Currency: NGN (₦)</span>
-        </div>
-        <div class="dep-banner-right">
-          <span>Minimum: <strong id="depositMinLabel">₦100</strong></span>
-        </div>
-      </div>
-
-      <!-- Preset Amount Chips -->
-      <div class="dep-presets-section">
-        <label class="dep-section-label">Quick Select Amount</label>
-        <div class="dep-presets-grid" id="depositPresets">
-          <!-- Dynamically populated based on NGN / USD -->
-        </div>
-      </div>
-
-      <!-- Custom Amount Input Group -->
-      <div class="dep-input-section">
-        <label for="depositAmountInput" class="dep-section-label">Or Enter Custom Amount</label>
-        <div class="dep-input-wrapper">
-          <span id="depositSymbol" class="dep-input-symbol">₦</span>
-          <input
-            id="depositAmountInput"
-            type="number"
-            min="100"
-            step="any"
-            placeholder="e.g. 2500"
-            class="dep-amount-input"
-            autocomplete="off"
-          />
-        </div>
-      </div>
-
-      <!-- Error Message Box -->
-      <div id="depositError" class="dep-error-box" style="display:none;"></div>
-
-      <!-- Submit Payment Button -->
-      <button type="button" id="depositConfirmBtn" class="dep-btn-confirm">
-        <i class="ph ph-lock-key-fill"></i>
-        <span>Pay with Paystack</span>
-      </button>
-
-      <!-- Trust & Channels Footer -->
-      <div class="dep-modal-footer-trust">
-        <div class="dep-trust-channels">
-          <i class="ph ph-credit-card"></i> Cards &bull; <i class="ph ph-bank"></i> Transfer &bull; <i class="ph ph-device-mobile"></i> USSD
-        </div>
-        <div class="dep-trust-badge">
-          <i class="ph ph-shield-check"></i> Secured by Paystack &bull; 256-Bit SSL
-        </div>
-      </div>
-    </div>
+  <!-- Obsolete SDK Payment Modal Removed -->
   </div>
 
 
@@ -1271,7 +1202,6 @@
   </div>
 
   <!-- Application Scripts -->
-  <script src="https://js.paystack.co/v1/inline.js" defer></script>
   <script src="config.js"></script>
   <script src="api.js?v=3.1"></script>
   <script src="ui-shared.js?v=3.1"></script>

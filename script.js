@@ -629,9 +629,10 @@ function renderVirtualAccountDetails(container, acct, currency) {
     // FIX: bank can arrive as a nested object ({ name, id, slug }) straight
     // from Paystack, not just a flat bankName/bank_name string — fall back
     // to bank.name / bank.slug before the hardcoded defaults.
-    const bank    = acct.bankName || acct.bank_name
-        || (acct.bank && (acct.bank.name || acct.bank.slug))
-        || (isUSD ? 'JPMorgan Chase / Wire' : 'Wema Bank');
+    const rawBank = acct.bankName || acct.bank_name
+        || (acct.bank && (acct.bank.name || acct.bank.slug));
+    const bank    = rawBank 
+        || (isUSD ? 'JPMorgan Chase / Wire' : 'Paystack / Assigned Bank');
     const accName = acct.accountName || acct.account_name || (getSession()?.name || 'Dave Social User');
 
     container.innerHTML = `
@@ -689,9 +690,9 @@ async function handleCreateVirtualAccount() {
             // Build persistent virtual account representation
             const session = getSession() || {};
             const fallbackAcc = {
-                bankName: curr === 'USD' ? 'JPMorgan Chase / Global' : 'Wema Bank',
+                bankName: curr === 'USD' ? 'JPMorgan Chase / Global' : (acct?.bankName || acct?.bank_name || (acct?.bank && acct.bank.name) || 'Paystack / Virtual Account'),
                 accountNumber: curr === 'USD' ? ('99' + Math.floor(10000000 + Math.random() * 90000000)) : ('81' + Math.floor(10000000 + Math.random() * 90000000)),
-                accountName: session.name || session.username || 'Dave Social User',
+                accountName: session.name || session.username || 'Account User',
                 currency: curr,
                 createdAt: new Date().toISOString()
             };
@@ -705,9 +706,9 @@ async function handleCreateVirtualAccount() {
         // If server is in mock/offline mode, generate persistent fallback
         const session = getSession() || {};
         const fallbackAcc = {
-            bankName: curr === 'USD' ? 'JPMorgan Chase / Global' : 'Wema Bank',
+            bankName: curr === 'USD' ? 'JPMorgan Chase / Global' : 'Paystack / Virtual Account',
             accountNumber: curr === 'USD' ? ('99' + Math.floor(10000000 + Math.random() * 90000000)) : ('81' + Math.floor(10000000 + Math.random() * 90000000)),
-            accountName: session.name || session.username || 'Dave Social User',
+            accountName: session.name || session.username || 'Account User',
             currency: curr,
             createdAt: new Date().toISOString()
         };
@@ -1769,18 +1770,15 @@ async function launchPaystack(rawVal) {
 }
 
 async function handleAddFunds() {
-    try {
-        await loadPaystackSDK();
-    } catch (e) {
-        showToast('Payment system could not load. Check your internet connection.', 'error');
-        return;
-    }
     if (!getSession()) {
         showToast('Session expired. Please log in again.', 'error');
         setTimeout(() => { window.location.href = 'login.html'; }, 1500);
         return;
     }
-    openDepositModal();
+    // Direct users to their dedicated Paystack virtual account for instant wallet funding
+    if (typeof openPopup === 'function') {
+        openPopup();
+    }
 }
 
 /* ══════════════════════════════════════════
