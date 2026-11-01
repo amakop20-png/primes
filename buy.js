@@ -3578,6 +3578,23 @@ window.addEventListener('pagehide',    () => stopPolling('Page hidden (pagehide)
 ══════════════════════════════════════════ */
 let unreadCount = 0;
 
+
+/* ══════════════════════════════════════════
+   HEADER USER PROFILE & DROPDOWN CONTROLS
+══════════════════════════════════════════ */
+function toggleDropdown() {
+    const dropdown      = document.getElementById('dropdown');
+    const arrow         = document.getElementById('dropdownArrow');
+    const profileToggle = document.getElementById('profileToggle');
+    if (!dropdown || !profileToggle) return;
+    const isOpen = dropdown.classList.toggle('show');
+    if (arrow) arrow.classList.toggle('open');
+    profileToggle.setAttribute('aria-expanded', isOpen.toString());
+    const notifDrop = document.getElementById('notifDropdown');
+    if (notifDrop && notifDrop.classList.contains('show')) toggleNotifDropdown();
+}
+window.toggleDropdown = toggleDropdown;
+
 function toggleNotifDropdown() {
     const dropdown    = document.getElementById('notifDropdown');
     const notifToggle = document.getElementById('notifToggle');
@@ -3592,6 +3609,17 @@ function toggleNotifDropdown() {
 }
 
 document.addEventListener('click', function(e) {
+    const profileToggle = document.getElementById('profileToggle');
+    const dropdown      = document.getElementById('dropdown');
+    const arrow         = document.getElementById('dropdownArrow');
+    if (profileToggle && dropdown) {
+        if (!profileToggle.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.remove('show');
+            if (arrow) arrow.classList.remove('open');
+            profileToggle.setAttribute('aria-expanded', 'false');
+        }
+    }
+
     const notifToggle   = document.getElementById('notifToggle');
     const notifDropdown = document.getElementById('notifDropdown');
     if (notifToggle && notifDropdown) {

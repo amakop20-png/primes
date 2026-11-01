@@ -52,7 +52,7 @@ body {
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
-  flex: 0 1 auto !important;
+  flex: 0 0 auto !important;
   min-width: 0 !important;
 }
 
@@ -70,19 +70,7 @@ body {
   flex-shrink: 0 !important;
 }
 
-/* Logo container & image sizing in buy.html:
-   Matched exactly to the dashboard.html header reference dimensions */
-.dash-header .logo {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-  text-decoration: none !important;
-  width: 210px !important;
-  max-width: 230px !important;
-  min-width: 160px !important;
-  height: auto !important;
-  flex-shrink: 0 !important;
-}
+/* Logo removed from header */
 
 .dash-header .logo img,
 .dash-header .logo .nuraxq-logo,
@@ -113,9 +101,9 @@ body {
   .dash-header .header-left {
     display: flex !important;
     align-items: center !important;
-    gap: 10px !important;
+    gap: 8px !important;
     min-width: 0 !important;
-    flex: 1 1 auto !important;
+    flex: 0 0 auto !important;
   }
 
   .dash-header .toggle-btn {
@@ -126,14 +114,7 @@ body {
     flex-shrink: 0 !important;
   }
 
-  .dash-header .logo {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    width: 100% !important;
-    max-width: 190px !important;
-    min-width: 130px !important;
-  }
+  
 
   .dash-header .header-right {
     display: flex !important;
@@ -143,21 +124,9 @@ body {
   }
 }
 
-@media (max-width: 480px) {
-  .dash-header .logo {
-    max-width: 170px !important;
-    min-width: 120px !important;
-    height: auto !important;
-  }
-}
 
-@media (max-width: 375px) {
-  .dash-header .logo {
-    max-width: 150px !important;
-    min-width: 110px !important;
-    height: auto !important;
-  }
-}
+
+
 /* ══════════════════════════════════════
    SIDEBAR
 ══════════════════════════════════════ */

@@ -106,7 +106,8 @@ body.dark-theme .dash-header {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 /* When sidebar is open on desktop, header-left toggle is hidden. Keep controls neatly positioned with full header balance */
@@ -201,39 +202,47 @@ body.dark-theme .header__logo-text {
   background: var(--border-light);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 3px;
+  padding: 3px 4px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .currency-switch-toggle:hover {
-  border-color: rgba(124, 58, 237, 0.4);
+  border-color: rgba(124, 58, 237, 0.45);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.08);
 }
 
 .cswitch-track {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 2px;
+  height: 100%;
 }
 
 .cswitch-item {
-  padding: 4px 10px;
+  padding: 0 11px;
+  height: 30px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  line-height: 1;
   transition: all 0.15s ease;
 }
 
 .cswitch-item.active {
   background: var(--surface);
   color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 body.dark-theme .cswitch-item.active {
@@ -245,7 +254,9 @@ body.dark-theme .cswitch-item.active {
 .btn-sound-toggle {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  min-width: 38px;
+  box-sizing: border-box;
+  border-radius: 999px;
   background: var(--border-light);
   border: 1px solid var(--border);
   color: var(--primary);
@@ -260,7 +271,8 @@ body.dark-theme .cswitch-item.active {
 .btn-sound-toggle:hover {
   background: var(--primary-light);
   border-color: var(--primary);
-  transform: scale(1.04);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
 }
 
 .btn-sound-toggle.muted {
@@ -273,12 +285,74 @@ body.dark-theme .cswitch-item.active {
   border-color: var(--text-muted);
 }
 
-/* Notification & Profile Buttons */
+/* Notification Toggle Button */
+.notif-btn-toggle {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  border-radius: 999px !important;
+  background: var(--border-light) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.notif-btn-toggle i {
+  font-size: 18px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.notif-btn-toggle:hover {
+  background: var(--primary-light) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
+}
+
+.notif-btn-toggle:hover i {
+  color: var(--primary) !important;
+}
+
+.notif-btn-toggle .badge {
+  position: absolute !important;
+  top: -3px !important;
+  right: -3px !important;
+  background: var(--primary) !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  min-width: 17px !important;
+  height: 17px !important;
+  padding: 0 4px !important;
+  border-radius: 999px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 2px solid var(--surface, #ffffff) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* User Profile Toggle Button */
 .profile-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
+  justify-content: center;
+  height: 38px;
+  min-width: 38px;
+  padding: 0 10px;
+  box-sizing: border-box;
   border-radius: 999px;
   background: var(--border-light);
   border: 1px solid var(--border);
@@ -287,12 +361,21 @@ body.dark-theme .cswitch-item.active {
   font-family: inherit;
   font-size: 13.5px;
   font-weight: 700;
+  gap: 6px;
   transition: all 0.15s ease;
 }
 
+.profile-toggle i.ph-user-circle {
+  font-size: 22px;
+  line-height: 1;
+}
+
 .profile-toggle:hover {
-  background: var(--surface);
+  background: var(--primary-light);
   border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.12);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2744,9 +2827,9 @@ body.dark-theme aside .mode-dot {
   .header-left {
     display: flex !important;
     align-items: center !important;
-    gap: 10px !important;
+    gap: 8px !important;
     min-width: 0 !important;
-    flex: 1 1 auto !important;
+    flex: 0 0 auto !important;
   }
 
   .dash-header .toggle-btn {
@@ -2757,14 +2840,7 @@ body.dark-theme aside .mode-dot {
     flex-shrink: 0 !important;
   }
 
-  .dash-header .logo {
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    width: 100% !important;
-    max-width: 190px !important;
-    min-width: 130px !important;
-  }
+  /* Header logo removed */
 
   .dash-header .header__logo-text {
     font-size: 19px !important;
@@ -2772,10 +2848,10 @@ body.dark-theme aside .mode-dot {
     white-space: nowrap !important;
   }
 
-  .header-right {
+    .header-right {
     display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 7px !important;
     flex-shrink: 0 !important;
   }
 
@@ -2784,7 +2860,7 @@ body.dark-theme aside .mode-dot {
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
-    border-radius: 10px !important;
+    border-radius: 999px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -2793,32 +2869,48 @@ body.dark-theme aside .mode-dot {
     flex-shrink: 0 !important;
   }
 
+  .notif-btn-toggle {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
   .currency-switch {
-    padding: 3px 5px !important;
+    padding: 2px 4px !important;
+    height: 34px !important;
     border-radius: 999px !important;
     flex-shrink: 0 !important;
   }
 
   .cswitch-track {
     gap: 2px !important;
+    height: 100% !important;
   }
 
   .cswitch-item {
-    padding: 3px 7px !important;
+    padding: 0 7px !important;
+    height: 28px !important;
     font-size: 11px !important;
     font-weight: 700 !important;
     border-radius: 999px !important;
   }
 
   .profile-dropdown button.profile-toggle {
-    width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
-    padding: 0 !important;
+    padding: 0 8px !important;
+    border-radius: 999px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     flex-shrink: 0 !important;
+    gap: 4px !important;
   }
 
   /* Dropdown Menus Containment */
@@ -3202,51 +3294,66 @@ body.dark-theme aside .mode-dot {
 
 /* ── Standard Phones (376px–480px) ── */
 @media (max-width: 480px) {
-  .dash-header {
+    .dash-header {
     padding: 8px 12px !important;
     min-height: 56px !important;
   }
 
-  .dash-header .header__logo-text {
-    font-size: 17.5px !important;
-  }
-
   .header-left {
-    gap: 10px !important;
+    gap: 6px !important;
+    flex: 0 0 auto !important;
   }
 
   .header-right {
-    gap: 6px !important;
+    gap: 5px !important;
+    flex-shrink: 0 !important;
   }
 
   #toggle-btn {
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    font-size: 17px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    font-size: 16px !important;
   }
 
   .sound-toggle-btn,
   #soundToggleBtn {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
     font-size: 15px !important;
   }
 
+  .notif-btn-toggle {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+  }
+
+  .notif-btn-toggle i {
+    font-size: 16px !important;
+  }
+
   .currency-switch {
-    padding: 2px 4px !important;
+    padding: 2px 3px !important;
+    height: 32px !important;
   }
 
   .cswitch-item {
-    padding: 3px 6px !important;
-    font-size: 10.5px !important;
+    padding: 0 6px !important;
+    height: 26px !important;
+    font-size: 10px !important;
   }
 
   .profile-dropdown button.profile-toggle {
-    width: 32px !important;
-    height: 32px !important;
-    min-width: 32px !important;
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    padding: 0 !important;
+  }
+
+  .profile-toggle .dropdown-arrow {
+    display: none !important;
   }
 
   main.container,
@@ -3283,10 +3390,35 @@ body.dark-theme aside .mode-dot {
 /* ── Small Phones (320px–375px) ── */
 @media (max-width: 375px) {
   .dash-header {
-    padding: 8px 10px !important;
+    padding: 6px 8px !important;
   }
 
-  .dash-header .header__logo-text {
+  .header-right {
+    gap: 4px !important;
+  }
+
+  #toggle-btn,
+  .sound-toggle-btn,
+  #soundToggleBtn,
+  .notif-btn-toggle,
+  .profile-dropdown button.profile-toggle {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+  }
+
+  .currency-switch {
+    height: 30px !important;
+    padding: 2px !important;
+  }
+
+  .cswitch-item {
+    padding: 0 4px !important;
+    height: 24px !important;
+    font-size: 9.5px !important;
+  }
+
+  .cswitch-code {
     display: none !important;
   }
 

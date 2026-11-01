@@ -1451,9 +1451,9 @@
         <span id="currencyName" style="display:none;" aria-hidden="true">USD</span>
       </button>
       <div class="notifications profile-dropdown">
-        <button class="profile-toggle" onclick="toggleNotifDropdown()" id="notifToggle" type="button" aria-expanded="false" style="background:transparent; border:none; position:relative; padding: 4px; cursor: pointer;">
-            <i class="ph ph-bell" style="font-size: 18px; color: var(--text);"></i>
-            <span class="badge" id="notifBadge" style="display:none; position:absolute; top:-2px; right:-2px; background:var(--primary); color:#fff; font-size:10px; font-weight:bold; width:16px; height:16px; border-radius:50%; align-items:center; justify-content:center;">0</span>
+        <button class="profile-toggle notif-btn-toggle" onclick="toggleNotifDropdown()" id="notifToggle" type="button" aria-expanded="false" aria-label="Notifications" title="Notifications">
+            <i class="ph ph-bell"></i>
+            <span class="badge" id="notifBadge" style="display:none;">0</span>
         </button>
         <div id="notifDropdown" class="dropdown-content" aria-label="Notifications" style="width: 300px; padding: 0;">
             <div class="dropdown-header" style="border-bottom: 1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
