@@ -57,9 +57,8 @@ body {
 }
 
 @media (min-width: 769px) {
-  .dash-header:has(.header-left:empty),
-  .dash-header:not(:has(#toggle-btn:not([style*="display: none"]))) {
-    justify-content: flex-end !important;
+  .dash-header {
+    justify-content: space-between !important;
   }
 }
 
@@ -70,7 +69,26 @@ body {
   flex-shrink: 0 !important;
 }
 
-/* Logo removed from header */
+/* Header Logo */
+.dash-header .logo {
+  display: inline-flex !important;
+  align-items: center !important;
+  text-decoration: none !important;
+  height: 44px !important;
+  max-height: 44px !important;
+  flex-shrink: 0 !important;
+}
+
+.dash-header .logo img,
+.dash-header .logo .nuraxq-logo,
+.dash-header .logo .nuraxq-theme-logo {
+  display: block !important;
+  height: 40px !important;
+  width: auto !important;
+  max-width: 175px !important;
+  object-fit: contain !important;
+  flex-shrink: 0 !important;
+}
 
 .dash-header .logo img,
 .dash-header .logo .nuraxq-logo,
@@ -101,9 +119,25 @@ body {
   .dash-header .header-left {
     display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 10px !important;
     min-width: 0 !important;
-    flex: 0 0 auto !important;
+    flex: 0 1 auto !important;
+  }
+
+  .dash-header .logo {
+    display: inline-flex !important;
+    align-items: center !important;
+    height: 36px !important;
+    max-height: 36px !important;
+  }
+
+  .dash-header .logo img,
+  .dash-header .logo .nuraxq-logo,
+  .dash-header .logo .nuraxq-theme-logo {
+    height: 32px !important;
+    max-height: 32px !important;
+    width: auto !important;
+    max-width: 140px !important;
   }
 
   .dash-header .toggle-btn {
