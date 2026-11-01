@@ -1470,23 +1470,24 @@
       <div class="profile-dropdown">
         <button class="profile-toggle" onclick="toggleDropdown()" id="profileToggle" type="button" aria-expanded="false">
           <i class="ph ph-user-circle" style="font-size: 1.5em; vertical-align: middle;"></i>
-          <i class="ph ph-caret-down dropdown-arrow" id="dropdownArrow" aria-hidden="true"></i>
+          <i class="ph ph-caret-down dropdown-arrow" id="dropdownArrow" style="color:var(--text); font-size:10px;"></i>
         </button>
 
         <div id="dropdown" class="dropdown-content" aria-label="User menu">
           <div class="dropdown-header">
             <i class="ph ph-user-circle" style="font-size: 40px; vertical-align: middle;"></i>
             <div>
-              <p class="dropdown-name">username</p>
-              <p class="dropdown-email">precious@example.com</p>
+              <p class="dropdown-name" id="dropdownUsername">User</p>
+              <p class="dropdown-email" id="dropdownEmail">user@nuraxq.com</p>
             </div>
           </div>
           <a href="dashboard.html"><i class="ph ph-squares-four"></i> Dashboard</a>
-          <a href="buy.html"><i class="ph ph-sim-card"></i> Buy Number</a>
+          <a href="buy.html"><i class="ph ph-sim-card"></i> Buy Numbers</a>
           <a href="numbers.html"><i class="ph ph-device-mobile"></i> My Numbers</a>
           <a href="transactions.html"><i class="ph ph-receipt"></i> Transactions</a>
           <a href="#" onclick="openSettings(); switchSettingsTab('profile'); return false;"><i class="ph ph-gear"></i> Settings / Profile</a>
           <a href="#contact"><i class="ph ph-headset"></i> Contact</a>
+          <a href="#" onclick="toggleDark(); return false;" class="dropdown-theme-link" title="Toggle Light/Dark Mode"><i class="ph ph-moon" id="headerDropdownThemeIcon"></i> <span id="headerDropdownThemeText">Theme Mode</span></a>
           <a href="login.html" class="logout" onclick="logout()"><i class="ph ph-sign-out"></i> Logout</a>
         </div>
       </div>
