@@ -358,7 +358,7 @@ async function saveProfileSettings() {
             if (!matched && (userEmail || displayName)) {
                 users.unshift({
                     name: displayName,
-                    email: userEmail || `${session.username || 'user'}@davessocial.com`,
+                    email: userEmail || `${session.username || 'user'}@nuraxq.com`,
                     phone: phone || '—',
                     balance: String(session.balance || 0),
                     createdAt: new Date().toISOString()

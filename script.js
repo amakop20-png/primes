@@ -633,7 +633,7 @@ function renderVirtualAccountDetails(container, acct, currency) {
         || (acct.bank && (acct.bank.name || acct.bank.slug));
     const bank    = rawBank 
         || (isUSD ? 'JPMorgan Chase / Wire' : 'Paystack / Assigned Bank');
-    const accName = acct.accountName || acct.account_name || (getSession()?.name || 'Dave Social User');
+    const accName = acct.accountName || acct.account_name || (getSession()?.name || 'NuraXQ User');
 
     container.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
@@ -1691,12 +1691,12 @@ async function launchPaystack(rawVal) {
         ? Math.round(rawVal * 100)
         : Math.round(rawVal * rate * 100);
 
-    const transactionRef = 'DAVE-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    const transactionRef = 'NURAXQ-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
 
     try {
         const handler = PaystackPop.setup({
             key:      PAYSTACK_CONFIG.publicKey,
-            email:    session.email || (session.username + '@davessocial.com'),
+            email:    session.email || (session.username + '@nuraxq.com'),
             amount:   amountInKobo,
             currency: 'NGN',
             ref:      transactionRef,
