@@ -459,25 +459,25 @@ function normalizeVirtualAccount(data) {
    REUSABLE API ENDPOINT METHODS
 ========================================== */
 
-async function createVirtualAccount(currency = 'NGN') {
+async function createVirtualAccount() {
+    // PDF Spec (Page 1): POST /api/create-virtual-account, no request body required
     const data = await apiRequest('/api/create-virtual-account', {
-        method: 'POST',
-        body: JSON.stringify({ currency: currency || 'NGN' })
+        method: 'POST'
     });
     return normalizeVirtualAccount(data);
 }
 
-async function getVirtualAccount(currency = 'NGN') {
-    const curr = currency || 'NGN';
-    const data = await apiRequest(`/api/get-virtual-account?currency=${encodeURIComponent(curr)}`, {
+async function getVirtualAccount() {
+    // PDF Spec (Page 1): GET /api/get-virtual-account with Bearer token
+    const data = await apiRequest('/api/get-virtual-account', {
         method: 'GET'
     });
     return normalizeVirtualAccount(data);
 }
 
-async function getWalletBalance(currency = 'NGN') {
-    const curr = currency || 'NGN';
-    return await apiRequest(`/api/get-wallet-balance?currency=${encodeURIComponent(curr)}`, {
+async function getWalletBalance() {
+    // PDF Spec (Page 2): GET /api/get-wallet-balance with Bearer token
+    return await apiRequest('/api/get-wallet-balance', {
         method: 'GET'
     });
 }
