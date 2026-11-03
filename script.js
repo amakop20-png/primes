@@ -34,6 +34,9 @@ function openPopup() {
     if (popupBalance) {
         popupBalance.style.display = 'block';
         document.body.style.overflow = 'hidden';
+        if (typeof loadVirtualAccount === 'function') {
+            loadVirtualAccount().catch(e => console.warn('VA refresh error:', e));
+        }
     }
 }
 
@@ -522,7 +525,7 @@ async function loadWalletBalance(currency) {
 
     console.log(`[Wallet] Requesting authoritative wallet balance...`);
     try {
-        const data = await getWalletBalance('NGN');
+        const data = await getWalletBalance();
         console.log(`[Wallet] Response received:`, data);
 
         // Extract authoritative NGN balance
@@ -580,7 +583,7 @@ async function loadVirtualAccount(currency) {
     container.innerHTML = `<p style="color:var(--muted,#888);font-size:13px;">Loading ${curr} virtual account…</p>`;
 
     try {
-        const data = await getVirtualAccount(curr);
+        const data = await getVirtualAccount();
 
         // FIX: Paystack's actual response nests everything inside
         // "dedicatedAccount" (see api.js normalizeVirtualAccount for the
@@ -679,7 +682,7 @@ async function handleCreateVirtualAccount() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Creating…'; }
 
     try {
-        const res = await createVirtualAccount(curr);
+        const res = await createVirtualAccount();
         // FIX: same dedicatedAccount-first shape as loadVirtualAccount above.
         const acct = res?.dedicatedAccount || res?.virtualAccount || res?.account || res?.data || res;
 
