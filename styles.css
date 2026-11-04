@@ -252,14 +252,18 @@ header {
     position: sticky;
     top: 0;
     z-index: 500;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
-    padding: 16px 6vw;
+    gap: 20px;
+    padding: 10px 4vw;
     background: color-mix(in srgb, var(--surface) 92%, transparent);
     backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border);
+    box-sizing: border-box;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
 }
 
 /* ══════════════════════════════════════════
@@ -380,16 +384,33 @@ header .header__logo {
     display: flex;
     align-items: center;
     flex: 0 0 auto;
-    width: 210px;
-    max-width: 240px;
+    height: 46px;
+    width: 205px;
+    max-width: 210px;
     min-width: 160px;
 }
 
 header .header__logo .header__logo-link {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     width: 100%;
+    height: 46px;
+    overflow: hidden;
+    position: relative;
     text-decoration: none;
+}
+
+header .header__logo .header__logo-img {
+    display: block !important;
+    width: auto !important;
+    height: 172px !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    object-fit: contain !important;
+    flex-shrink: 0 !important;
+    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 /* Auth Pages: Dedicated Header Logo Container */
@@ -449,11 +470,21 @@ header .header__logo .header__logo-link {
 /* Tablet & Mobile Responsive Container Sizing */
 @media (max-width: 860px) {
     header .header__logo {
-        width: 180px;
-        max-width: 200px;
+        height: 42px;
+        width: 185px;
+        max-width: 190px;
+        min-width: 140px;
     }
     header .header__logo .header__logo-link {
+        height: 42px;
         width: 100%;
+        overflow: hidden;
+        justify-content: center;
+    }
+    header .header__logo .header__logo-img {
+        height: 156px !important;
+        width: auto !important;
+        max-width: none !important;
     }
     .auth-header .logo,
     .auth-header .logo .header__logo-link {
@@ -468,11 +499,22 @@ header .header__logo .header__logo-link {
         max-width: 190px !important;
         min-width: 130px !important;
     }
-    header .header__logo,
-    header .header__logo .header__logo-link {
-        width: 100% !important;
-        max-width: 185px !important;
+    header .header__logo {
+        height: 40px;
+        width: 175px !important;
+        max-width: 180px !important;
         min-width: 130px !important;
+    }
+    header .header__logo .header__logo-link {
+        height: 40px;
+        width: 100% !important;
+        overflow: hidden;
+        justify-content: center;
+    }
+    header .header__logo .header__logo-img {
+        height: 150px !important;
+        width: auto !important;
+        max-width: none !important;
     }
     .auth-header .logo,
     .auth-header .logo .header__logo-link {
@@ -487,9 +529,21 @@ header .header__logo .header__logo-link {
         max-width: 170px !important;
         min-width: 120px !important;
     }
-    header .header__logo,
-    header .header__logo .header__logo-link {
+    header .header__logo {
+        height: 36px;
+        width: 160px !important;
         max-width: 165px !important;
+    }
+    header .header__logo .header__logo-link {
+        height: 36px;
+        width: 100% !important;
+        overflow: hidden;
+        justify-content: center;
+    }
+    header .header__logo .header__logo-img {
+        height: 136px !important;
+        width: auto !important;
+        max-width: none !important;
     }
     .auth-header .logo,
     .auth-header .logo .header__logo-link {
@@ -502,9 +556,21 @@ header .header__logo .header__logo-link {
         max-width: 150px !important;
         min-width: 110px !important;
     }
-    header .header__logo,
-    header .header__logo .header__logo-link {
+    header .header__logo {
+        height: 32px;
+        width: 140px !important;
         max-width: 145px !important;
+    }
+    header .header__logo .header__logo-link {
+        height: 32px;
+        width: 100% !important;
+        overflow: hidden;
+        justify-content: center;
+    }
+    header .header__logo .header__logo-img {
+        height: 122px !important;
+        width: auto !important;
+        max-width: none !important;
     }
     .auth-header .logo,
     .auth-header .logo .header__logo-link {
@@ -547,15 +613,15 @@ body.dark-theme .header__logo-text {
 .header__nav {
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: 22px;
 }
 
 .nav-link {
     position: relative;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 600;
     color: var(--muted);
-    padding: 4px 0;
+    padding: 6px 0;
     transition: color 0.2s ease;
 }
 
@@ -1578,7 +1644,7 @@ body.dark-theme .hero-main-img {
 
 @media (max-width: 860px) {
     header {
-        padding: 12px 18px;
+        padding: 8px 16px;
         gap: 12px;
         justify-content: space-between;
     }
@@ -1639,7 +1705,7 @@ body.dark-theme .hero-main-img {
 
     .header__nav {
         position: fixed;
-        top: 61px;
+        top: 57px;
         left: 0;
         right: 0;
         flex-direction: column;
@@ -1763,9 +1829,13 @@ body.dark-theme .hero-main-img {
 
 @media (max-width: 560px) {
     header {
-        padding: 10px 14px;
+        padding: 7px 12px;
         gap: 8px;
         justify-content: space-between;
+    }
+
+    .header__nav {
+        top: 51px;
     }
 
     .header__logo {
@@ -1883,9 +1953,13 @@ body.dark-theme .hero-main-img {
 
 @media (max-width: 380px) {
     header {
-        padding: 8px 10px;
+        padding: 6px 10px;
         gap: 6px;
         justify-content: space-between;
+    }
+
+    .header__nav {
+        top: 45px;
     }
 
     .header__logo {
@@ -2004,21 +2078,8 @@ body.dark-theme .hero-main-img {
 }
 
 /* ══════════════════════════════════════
-   HEADER
+   LEGACY HEADER HELPERS (See LANDING HEADER at line 251 for primary header)
 ══════════════════════════════════════ */
-header {
-  width: 100%;
-  padding: 14px 24px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
-}
 
 .pride {
   display: flex;
@@ -3825,7 +3886,7 @@ main > p {
     padding: 20px 16px;
   }
 
-  header { padding: 12px 16px; }
+  header { padding: 8px 16px; }
   
   .dash-header {
     width: 100%;
@@ -3860,7 +3921,7 @@ main > p {
    RESPONSIVE — MOBILE 480px
 ══════════════════════════════════════ */
 @media (max-width: 480px) {
-  header { padding: 10px 14px; }
+  header { padding: 7px 12px; }
   .dash-header { padding: 0 14px; }
 
   .profile-toggle .username { display: none; }
@@ -3950,7 +4011,7 @@ main > p {
    RESPONSIVE — SMALL PHONES 360px
 ══════════════════════════════════════ */
 @media (max-width: 360px) {
-  header { padding: 10px 12px; }
+  header { padding: 6px 10px; }
 
   .activities-card p { font-size: 26px; }
 
