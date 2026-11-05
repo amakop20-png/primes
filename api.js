@@ -8,11 +8,14 @@
 // Automatically detects environment setting from window.ENV, Node process.env, or falls back to production endpoint
 const API_BASE_URL = (function() {
     if (typeof window !== 'undefined') {
+        if (window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+            return '';
+        }
         const injected = (window.ENV && (window.ENV.API_BASE_URL || window.ENV.API_URL)) || window.API_BASE_URL || window.API_URL;
         if (injected) {
             return String(injected).trim();
         }
-        return 'https://api.nuraxq.com/api';
+        return '';
     }
 
     if (typeof process !== 'undefined' && process.env) {
@@ -100,6 +103,24 @@ function clearAuth() {
     localStorage.removeItem('_actual_usd_balance');
     localStorage.removeItem('_actual_ngn_balance');
     localStorage.removeItem('primes_notifications');
+    localStorage.removeItem('primes_va_NGN');
+    localStorage.removeItem('primes_va_USD');
+    localStorage.removeItem('primes_orders');
+    localStorage.removeItem('primes_active_orders');
+    localStorage.removeItem('primes_active_count');
+    localStorage.removeItem('primes_total_numbers');
+    localStorage.removeItem('primes_referral_code');
+
+    try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && (k.startsWith('primes_notifications_') || k.startsWith('primes_va_') || k.startsWith('_walletBalance'))) {
+                keysToRemove.push(k);
+            }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch (_) {}
 }
 
 function requireAuth() {
@@ -473,6 +494,24 @@ async function getVirtualAccount() {
         method: 'GET'
     });
     return normalizeVirtualAccount(data);
+}
+
+
+async function rechargeWallet(amount, reference, currency = 'NGN') {
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        throw new Error('Valid recharge amount is required.');
+    }
+    if (!reference) {
+        throw new Error('Transaction reference is required.');
+    }
+    return await apiRequest('/api/wallet/recharge', {
+        method: 'POST',
+        body: JSON.stringify({
+            amount: parseFloat(amount),
+            reference: String(reference).trim(),
+            currency: String(currency || 'NGN').toUpperCase().trim()
+        })
+    });
 }
 
 async function getWalletBalance() {
@@ -1419,4 +1458,8 @@ if (typeof module !== 'undefined' && module.exports) {
         apiRequest,
         adminApiRequest
     };
+}
+
+if (typeof window !== 'undefined') {
+    window.rechargeWallet = typeof rechargeWallet === 'function' ? rechargeWallet : undefined;
 }

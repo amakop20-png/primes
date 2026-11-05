@@ -211,7 +211,8 @@ function updateCurrencyDisplay(currency) {
 }
 
 // In-memory cache for authoritative NGN balance to enable instantaneous switching
-let cachedNgnBalance = parseFloat(localStorage.getItem('_walletBalance_NGN') || localStorage.getItem('_walletBalance') || '0') || 0;
+// Authoritative balance originates strictly from the backend
+let cachedNgnBalance = 0;
 
 function setDashboardCurrency(target) {
     if (!target) return;
@@ -515,13 +516,8 @@ async function loadWalletBalance(currency) {
     // Show loading placeholder if no cached balance exists yet
     const balPrimaryEl = document.getElementById('displayBalanceNGN');
     const popBalEl     = document.getElementById('popupBalanceAmount');
-    if (!cachedNgnBalance && cachedNgnBalance !== 0) {
-        if (balPrimaryEl) balPrimaryEl.textContent = 'Loading...';
-        if (popBalEl)     popBalEl.textContent     = 'Loading...';
-    } else {
-        // Render immediately from cache while fetching
-        renderBalanceCards(cachedNgnBalance, curr);
-    }
+    if (balPrimaryEl) balPrimaryEl.textContent = 'Loading...';
+    if (popBalEl)     popBalEl.textContent     = 'Loading...';
 
     console.log(`[Wallet] Requesting authoritative wallet balance...`);
     try {
@@ -541,10 +537,8 @@ async function loadWalletBalance(currency) {
         console.error(`[Wallet] API error (${err.status || 0}): ${err.message}`);
 
         // If we have a cached balance, maintain it
-        if (cachedNgnBalance > 0) {
-            renderBalanceCards(cachedNgnBalance, curr);
-            return;
-        }
+        // No fallback to previous balance on error
+cachedNgnBalance = 0;
 
         const setErrorDisplay = (msg) => {
             if (balPrimaryEl) balPrimaryEl.innerHTML = `<span style="font-size: 20px; font-weight: 600; line-height: 1.2; display: block; white-space: normal;">${msg}</span>`;

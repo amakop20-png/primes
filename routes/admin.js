@@ -433,22 +433,19 @@ router.post('/wallets/:userId/credit', adminAuth, async (req, res) => {
   }
 
   try {
-    const pool = db.getPool();
-    if (pool) {
-      const userRes = await pool.query(`UPDATE users SET balance = balance + $1 WHERE id = $2 RETURNING id, email, balance`, [amount, req.params.userId]);
-      const user = userRes.rows[0];
-      if (!user) return res.status(404).json({ success: false, error: 'User wallet not found' });
+    const user = await db.findUserById(req.params.userId);
+    if (!user) return res.status(404).json({ success: false, error: 'User wallet not found' });
 
-      await pool.query(`
-        INSERT INTO transactions (reference, user_id, user_email, amount, type, status, reason)
-        VALUES ($1, $2, $3, $4, 'credit', 'success', $5)
-      `, ['ADM-CR-' + Date.now().toString(36).toUpperCase(), user.id, user.email, amount, reason]);
+    const ref = 'ADM-CR-' + Date.now().toString(36).toUpperCase();
+    const result = await db.creditUserWallet(req.params.userId, amount, ref, reason, 'credit');
 
-      return res.status(200).json({ success: true, message: `Successfully credited ₦${amount.toLocaleString()}`, data: user });
-    }
-    return res.status(200).json({ success: true, message: 'Wallet credited' });
+    return res.status(200).json({
+      success: true,
+      message: `Successfully credited ₦${amount.toLocaleString()}`,
+      data: { id: req.params.userId, balance: result.balance }
+    });
   } catch (err) {
-    return res.status(500).json({ success: false, error: 'Failed to credit wallet' });
+    return res.status(500).json({ success: false, error: err.message || 'Failed to credit wallet' });
   }
 });
 
@@ -462,22 +459,19 @@ router.post('/wallets/:userId/debit', adminAuth, async (req, res) => {
   }
 
   try {
-    const pool = db.getPool();
-    if (pool) {
-      const userRes = await pool.query(`UPDATE users SET balance = GREATEST(0, balance - $1) WHERE id = $2 RETURNING id, email, balance`, [amount, req.params.userId]);
-      const user = userRes.rows[0];
-      if (!user) return res.status(404).json({ success: false, error: 'User wallet not found' });
+    const user = await db.findUserById(req.params.userId);
+    if (!user) return res.status(404).json({ success: false, error: 'User wallet not found' });
 
-      await pool.query(`
-        INSERT INTO transactions (reference, user_id, user_email, amount, type, status, reason)
-        VALUES ($1, $2, $3, $4, 'debit', 'success', $5)
-      `, ['ADM-DR-' + Date.now().toString(36).toUpperCase(), user.id, user.email, amount, reason]);
+    const ref = 'ADM-DR-' + Date.now().toString(36).toUpperCase();
+    const result = await db.debitUserWallet(req.params.userId, amount, ref, reason, 'debit');
 
-      return res.status(200).json({ success: true, message: `Successfully debited ₦${amount.toLocaleString()}`, data: user });
-    }
-    return res.status(200).json({ success: true, message: 'Wallet debited' });
+    return res.status(200).json({
+      success: true,
+      message: `Successfully debited ₦${amount.toLocaleString()}`,
+      data: { id: req.params.userId, balance: result.balance }
+    });
   } catch (err) {
-    return res.status(500).json({ success: false, error: 'Failed to debit wallet' });
+    return res.status(500).json({ success: false, error: err.message || 'Failed to debit wallet' });
   }
 });
 

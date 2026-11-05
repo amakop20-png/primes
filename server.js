@@ -47,6 +47,7 @@ const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 const notificationRoutes = require('./routes/notifications');
 const referralRoutes = require('./routes/referrals');
+const walletRoutes = require('./routes/wallet');
 
 // Mount Customer Notifications Router at /api/notifications & /api/user/notifications
 app.use('/api/notifications', notificationRoutes);
@@ -56,6 +57,10 @@ app.use('/api/user/notifications', notificationRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/referral', referralRoutes);
 app.use('/api/user/referral', referralRoutes);
+
+// ✅ Mount Dedicated Wallet & Transactions Router at /api & /api/wallet
+app.use('/api', walletRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // ✅ Mount Official Admin Router at /api/admin
 // This exposes:

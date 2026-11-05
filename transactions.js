@@ -64,10 +64,8 @@
         localStorage.setItem('_walletBalance_' + activeCurrency, String(rawBal));
       }
     } catch (err) {
-      // Fallback to cached balance
-      const cached = localStorage.getItem('_walletBalance_' + activeCurrency) || '0';
-      const sym = activeCurrency === 'USD' ? '$' : '₦';
-      balEl.textContent = sym + ' ' + Number(cached).toLocaleString(undefined, { minimumFractionDigits: 2 });
+      // Reset to unavailable state
+      balEl.textContent = sym + ' 0.00';
     }
   }
 

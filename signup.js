@@ -291,6 +291,9 @@ function initForm() {
             sessionStorage.removeItem(`nuraxq_login_ann_dismissed_${userKey}`);
             sessionStorage.removeItem('nuraxq_login_ann_dismissed_user');
 
+            // Clear any lingering session or wallet data from another user
+            if (typeof clearAuth === 'function') clearAuth();
+
             if (token) {
                 setAuthToken(token);
                 const userObj = result.user || result.data?.user || result.data || { firstName, lastName, username, email, phoneNumber };

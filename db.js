@@ -479,6 +479,354 @@ async function createNotification({ userId, userEmail, title, message, type = 's
   }
 }
 
+// ── Wallet & Transaction Operations ──
+
+async function getUserWallet(userId) {
+  const user = await findUserById(userId);
+  if (!user) return null;
+  return {
+    userId: String(user.id || user._id),
+    balance: parseFloat(user.balance || 0),
+    referralBalance: parseFloat(user.referral_balance || user.referralBalance || 0),
+    isSuspended: Boolean(user.is_suspended || user.isSuspended)
+  };
+}
+
+async function findTransactionByReference(reference) {
+  const ref = String(reference || '').trim();
+  if (!ref) return null;
+  if (pool) {
+    try {
+      const res = await pool.query('SELECT * FROM transactions WHERE reference = $1 LIMIT 1', [ref]);
+      return res.rows[0] || null;
+    } catch (_) {}
+  }
+  return inMemory.transactions.find(t => String(t.reference) === ref) || null;
+}
+
+async function creditUserWallet(userId, amount, reference, reason, type = 'deposit') {
+  const numAmount = parseFloat(amount);
+  if (isNaN(numAmount) || numAmount <= 0) {
+    throw new Error('Credit amount must be greater than zero');
+  }
+  const ref = String(reference || ('DEP-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase()));
+
+  // 1. Check idempotency: if reference already exists with success/completed, do not credit again!
+  const existingTx = await findTransactionByReference(ref);
+  if (existingTx && (existingTx.status === 'completed' || existingTx.status === 'success')) {
+    const currentWallet = await getUserWallet(userId);
+    return {
+      alreadyProcessed: true,
+      balance: currentWallet.balance,
+      transaction: existingTx
+    };
+  }
+
+  let updatedUser = null;
+  let txRecord = null;
+
+  if (pool) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const userRes = await client.query(
+        'SELECT id, email, balance, referral_balance, referred_by FROM users WHERE id = $1 FOR UPDATE',
+        [userId]
+      );
+      if (!userRes.rows.length) {
+        throw new Error('User not found');
+      }
+      const u = userRes.rows[0];
+
+      const updateRes = await client.query(
+        'UPDATE users SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, balance, referral_balance, referred_by',
+        [numAmount, userId]
+      );
+      updatedUser = updateRes.rows[0];
+
+      const txRes = await client.query(
+        `INSERT INTO transactions (reference, user_id, user_email, amount, type, status, reason)
+         VALUES ($1, $2, $3, $4, $5, 'completed', $6)
+         ON CONFLICT (reference) DO UPDATE SET status = 'completed'
+         RETURNING *`,
+        [ref, userId, u.email, numAmount, type, reason || 'Wallet deposit']
+      );
+      txRecord = txRes.rows[0];
+
+      // If user has a referrer and this is a deposit, award 10% referral commission!
+      if (type === 'deposit' && u.referred_by) {
+        const bonusAmount = parseFloat((numAmount * 0.10).toFixed(2));
+        if (bonusAmount > 0) {
+          await client.query(
+            'UPDATE users SET balance = balance + $1, referral_balance = referral_balance + $1 WHERE id = $2',
+            [bonusAmount, u.referred_by]
+          );
+          const refBonusTx = 'REF-DEP-' + Date.now().toString(36).toUpperCase();
+          const refUser = (await client.query('SELECT email FROM users WHERE id = $1', [u.referred_by])).rows[0];
+          await client.query(
+            `INSERT INTO transactions (reference, user_id, user_email, amount, type, status, reason)
+             VALUES ($1, $2, $3, $4, 'credit', 'completed', $5)`,
+            [refBonusTx, u.referred_by, refUser?.email || '', bonusAmount, `10% referral commission from ${u.email}`]
+          );
+        }
+      }
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } else {
+    // In-memory fallback
+    const memUser = inMemory.users.find(u => String(u.id || u._id) === String(userId));
+    if (!memUser) throw new Error('User not found');
+
+    memUser.balance = (parseFloat(memUser.balance) || 0) + numAmount;
+    updatedUser = memUser;
+
+    txRecord = {
+      id: inMemory.transactions.length + 1,
+      reference: ref,
+      user_id: String(userId),
+      user_email: memUser.email,
+      amount: numAmount,
+      type: type,
+      status: 'completed',
+      reason: reason || 'Wallet deposit',
+      created_at: new Date().toISOString()
+    };
+    inMemory.transactions.push(txRecord);
+
+    // 10% referral reward in-memory
+    if (type === 'deposit' && memUser.referred_by) {
+      const bonusAmount = parseFloat((numAmount * 0.10).toFixed(2));
+      const referrer = inMemory.users.find(u => String(u.id || u._id) === String(memUser.referred_by));
+      if (referrer && bonusAmount > 0) {
+        referrer.balance = (parseFloat(referrer.balance) || 0) + bonusAmount;
+        referrer.referral_balance = (parseFloat(referrer.referral_balance) || 0) + bonusAmount;
+        inMemory.transactions.push({
+          id: inMemory.transactions.length + 1,
+          reference: 'REF-DEP-' + Date.now().toString(36).toUpperCase(),
+          user_id: String(referrer.id || referrer._id),
+          user_email: referrer.email,
+          amount: bonusAmount,
+          type: 'credit',
+          status: 'completed',
+          reason: `10% referral commission from ${memUser.email}`,
+          created_at: new Date().toISOString()
+        });
+      }
+    }
+  }
+
+  return {
+    success: true,
+    balance: parseFloat(updatedUser.balance || 0),
+    transaction: txRecord
+  };
+}
+
+async function debitUserWallet(userId, amount, reference, reason, type = 'purchase') {
+  const numAmount = parseFloat(amount);
+  if (isNaN(numAmount) || numAmount <= 0) {
+    throw new Error('Debit amount must be greater than zero');
+  }
+  const ref = String(reference || ('PUR-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase()));
+
+  let updatedUser = null;
+  let txRecord = null;
+
+  if (pool) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const userRes = await client.query(
+        'SELECT id, email, balance, is_suspended FROM users WHERE id = $1 FOR UPDATE',
+        [userId]
+      );
+      if (!userRes.rows.length) {
+        throw new Error('User not found');
+      }
+      const u = userRes.rows[0];
+      if (u.is_suspended) {
+        throw new Error('Account wallet is frozen or suspended');
+      }
+      const currentBal = parseFloat(u.balance || 0);
+      if (currentBal < numAmount) {
+        throw new Error(`Insufficient wallet balance. Required: ₦${numAmount.toLocaleString()}, Available: ₦${currentBal.toLocaleString()}`);
+      }
+
+      const updateRes = await client.query(
+        'UPDATE users SET balance = balance - $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, balance',
+        [numAmount, userId]
+      );
+      updatedUser = updateRes.rows[0];
+
+      const txRes = await client.query(
+        `INSERT INTO transactions (reference, user_id, user_email, amount, type, status, reason)
+         VALUES ($1, $2, $3, $4, $5, 'completed', $6)
+         RETURNING *`,
+        [ref, userId, u.email, -numAmount, type, reason || 'Virtual number purchase']
+      );
+      txRecord = txRes.rows[0];
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } else {
+    // In-memory fallback
+    const memUser = inMemory.users.find(u => String(u.id || u._id) === String(userId));
+    if (!memUser) throw new Error('User not found');
+    if (memUser.is_suspended) throw new Error('Account wallet is frozen or suspended');
+    const currentBal = parseFloat(memUser.balance || 0);
+    if (currentBal < numAmount) {
+      throw new Error(`Insufficient wallet balance. Required: ₦${numAmount.toLocaleString()}, Available: ₦${currentBal.toLocaleString()}`);
+    }
+
+    memUser.balance = currentBal - numAmount;
+    updatedUser = memUser;
+
+    txRecord = {
+      id: inMemory.transactions.length + 1,
+      reference: ref,
+      user_id: String(userId),
+      user_email: memUser.email,
+      amount: -numAmount,
+      type: type,
+      status: 'completed',
+      reason: reason || 'Virtual number purchase',
+      created_at: new Date().toISOString()
+    };
+    inMemory.transactions.push(txRecord);
+  }
+
+  return {
+    success: true,
+    balance: parseFloat(updatedUser.balance || 0),
+    transaction: txRecord
+  };
+}
+
+async function refundUserWallet(userId, amount, reference, reason) {
+  const numAmount = parseFloat(amount);
+  if (isNaN(numAmount) || numAmount <= 0) return null;
+  const refundRef = 'REFUND-' + String(reference || Date.now().toString(36).toUpperCase());
+
+  // Prevent duplicate refunds
+  const existingRefund = await findTransactionByReference(refundRef);
+  if (existingRefund) {
+    const currentWallet = await getUserWallet(userId);
+    return { alreadyRefunded: true, balance: currentWallet.balance };
+  }
+
+  return await creditUserWallet(userId, numAmount, refundRef, reason || 'Order cancellation refund', 'refund');
+}
+
+async function getUserTransactions(userId, { page = 1, limit = 20, type = null } = {}) {
+  const p = Math.max(1, parseInt(page, 10) || 1);
+  const l = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+  const offset = (p - 1) * l;
+
+  if (pool) {
+    try {
+      let q = 'SELECT * FROM transactions WHERE user_id = $1';
+      const params = [userId];
+      if (type && type !== 'all') {
+        params.push(type);
+        q += ` AND type = $${params.length}`;
+      }
+      const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM (${q}) AS sub`, params);
+      const total = countRes.rows[0]?.total || 0;
+
+      q += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+      params.push(l, offset);
+
+      const rows = (await pool.query(q, params)).rows;
+      return {
+        transactions: rows,
+        pagination: {
+          page: p,
+          limit: l,
+          total,
+          totalPages: Math.ceil(total / l)
+        }
+      };
+    } catch (err) {
+      console.error('Error fetching user transactions SQL:', err.message);
+    }
+  }
+
+  // In-memory fallback
+  let list = inMemory.transactions.filter(t => String(t.user_id) === String(userId));
+  if (type && type !== 'all') {
+    list = list.filter(t => String(t.type || '').toLowerCase() === String(type).toLowerCase());
+  }
+  list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  const total = list.length;
+  const paged = list.slice(offset, offset + l);
+  return {
+    transactions: paged,
+    pagination: {
+      page: p,
+      limit: l,
+      total,
+      totalPages: Math.ceil(total / l)
+    }
+  };
+}
+
+async function getUserVirtualAccount(userId) {
+  if (pool) {
+    try {
+      const res = await pool.query(
+        'SELECT account_number AS "accountNumber", bank_name AS "bankName", account_name AS "accountName", created_at AS "createdAt" FROM virtual_accounts WHERE user_id = $1 LIMIT 1',
+        [userId]
+      );
+      if (res.rows.length) return res.rows[0];
+    } catch (_) {}
+  }
+  return inMemory.virtual_accounts.find(v => String(v.user_id) === String(userId)) || null;
+}
+
+async function saveUserVirtualAccount(userId, accountData) {
+  const { accountNumber, bankName, accountName } = accountData;
+  if (!accountNumber) return null;
+
+  if (pool) {
+    try {
+      await pool.query(
+        `INSERT INTO virtual_accounts (user_id, account_number, bank_name, account_name)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (id) DO NOTHING`,
+        [userId, accountNumber, bankName, accountName]
+      );
+    } catch (_) {}
+  } else {
+    const existing = inMemory.virtual_accounts.find(v => String(v.user_id) === String(userId));
+    if (existing) {
+      existing.account_number = accountNumber;
+      existing.bank_name = bankName;
+      existing.account_name = accountName;
+    } else {
+      inMemory.virtual_accounts.push({
+        id: inMemory.virtual_accounts.length + 1,
+        user_id: String(userId),
+        account_number: accountNumber,
+        bank_name: bankName,
+        account_name: accountName,
+        created_at: new Date().toISOString()
+      });
+    }
+  }
+  return { accountNumber, bankName, accountName };
+}
+
 module.exports = {
   get dbType() { return dbType; },
   findUserByEmailOrUsername,
@@ -490,6 +838,14 @@ module.exports = {
   recordReferral,
   getReferralStats,
   createNotification,
+  getUserWallet,
+  findTransactionByReference,
+  creditUserWallet,
+  debitUserWallet,
+  refundUserWallet,
+  getUserTransactions,
+  getUserVirtualAccount,
+  saveUserVirtualAccount,
   inMemory,
   getPool: () => pool,
   getMongoose: () => mongoose
