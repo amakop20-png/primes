@@ -208,11 +208,16 @@ router.post('/auth/register', async (req, res) => {
 router.get('/dashboard/stats', adminAuth, async (req, res) => {
   try {
     const pool = db.getPool();
+    const orderStats = await db.getOrderStats();
+
     let stats = {
       users: { total: 0, newToday: 0, suspended: 0 },
       wallets: { totalBalance: 0, totalWallets: 0, frozen: 0 },
       transactions: { total: 0, success: 0, totalAmount: 0 },
       virtualAccounts: { total: 0, active: 0 },
+      orders: orderStats || { total: 0, active: 0, completed: 0, cancelled: 0, banned: 0, failed: 0, today: 0, totalRevenue: 0, todayRevenue: 0 },
+      totalOrders: orderStats?.total || 0,
+      activeOrders: orderStats?.active || 0,
       recentUsers: [],
       recentTransactions: []
     };
@@ -220,16 +225,20 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
     if (pool) {
       const [{ count: userCount }] = (await pool.query(`SELECT COUNT(*)::int AS count FROM users`)).rows;
       const [{ count: newToday }] = (await pool.query(`SELECT COUNT(*)::int AS count FROM users WHERE created_at >= CURRENT_DATE`)).rows;
+      const [{ count: suspendedCount }] = (await pool.query(`SELECT COUNT(*)::int AS count FROM users WHERE is_suspended = TRUE`)).rows;
       const [{ sum: totalBal }] = (await pool.query(`SELECT COALESCE(SUM(balance), 0)::numeric AS sum FROM users`)).rows;
       const [{ count: txCount }] = (await pool.query(`SELECT COUNT(*)::int AS count FROM transactions`)).rows;
+      const [{ count: txSuccess }] = (await pool.query(`SELECT COUNT(*)::int AS count FROM transactions WHERE LOWER(status) = 'success'`)).rows;
 
       const recentUsers = (await pool.query(`SELECT id, email, username, role, balance, created_at FROM users ORDER BY created_at DESC LIMIT 5`)).rows;
       const recentTx = (await pool.query(`SELECT * FROM transactions ORDER BY created_at DESC LIMIT 5`)).rows;
 
       stats.users.total = userCount || 0;
       stats.users.newToday = newToday || 0;
+      stats.users.suspended = suspendedCount || 0;
       stats.wallets.totalBalance = parseFloat(totalBal || 0);
       stats.transactions.total = txCount || 0;
+      stats.transactions.success = txSuccess || 0;
       stats.recentUsers = recentUsers;
       stats.recentTransactions = recentTx;
     }
@@ -607,6 +616,61 @@ router.patch('/transactions/:id/status', adminAuth, async (req, res) => {
     return res.status(404).json({ success: false, error: 'Transaction not found' });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to update transaction status' });
+  }
+});
+
+/* ======================================================================
+   ORDERS & VIRTUAL NUMBERS (Base: /api/admin/orders)
+====================================================================== */
+
+// GET /api/admin/orders
+router.get('/orders', adminAuth, async (req, res) => {
+  const page = parseInt(req.query.page || 1, 10);
+  const limit = parseInt(req.query.limit || 50, 10);
+  const status = req.query.status;
+  const search = req.query.search;
+
+  try {
+    const result = await db.getAdminOrders({ page, limit, status, search });
+    return res.status(200).json({
+      success: true,
+      data: result.orders,
+      orders: result.orders,
+      pagination: result.pagination
+    });
+  } catch (err) {
+    console.error('Admin orders retrieval error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to retrieve order records' });
+  }
+});
+
+// GET /api/admin/orders/:id
+router.get('/orders/:id', adminAuth, async (req, res) => {
+  const orderId = req.params.id;
+  try {
+    const pool = db.getPool();
+    if (pool) {
+      const q = `
+        SELECT 
+          o.*,
+          COALESCE(u.username, o.user_email) AS "userName"
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE o.order_id = $1 OR o.id::text = $1
+        LIMIT 1
+      `;
+      const rows = (await pool.query(q, [orderId])).rows;
+      if (rows.length) {
+        return res.status(200).json({ success: true, data: rows[0], order: rows[0] });
+      }
+    }
+    const memOrder = db.inMemory.orders.find(o => String(o.order_id) === String(orderId) || String(o.id) === String(orderId));
+    if (memOrder) {
+      return res.status(200).json({ success: true, data: memOrder, order: memOrder });
+    }
+    return res.status(404).json({ success: false, error: 'Order not found' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to retrieve order' });
   }
 });
 

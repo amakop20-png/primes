@@ -143,6 +143,27 @@ async function initPgTables() {
         read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        order_id TEXT UNIQUE NOT NULL,
+        user_id INTEGER REFERENCES users(id),
+        user_email TEXT,
+        phone TEXT,
+        country TEXT NOT NULL,
+        service TEXT NOT NULL,
+        operator TEXT DEFAULT 'any',
+        amount NUMERIC DEFAULT 0,
+        status TEXT DEFAULT 'PENDING',
+        sms_code TEXT,
+        provider TEXT DEFAULT '5sim',
+        provider_data JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+      CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+      CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
     `);
   } catch (err) {
     console.error('Error creating PostgreSQL tables:', err.message);
@@ -156,7 +177,8 @@ const inMemory = {
   transactions: [],
   login_logs: [],
   virtual_accounts: [],
-  notifications: []
+  notifications: [],
+  orders: []
 };
 
 // Masking helpers for privacy
@@ -827,6 +849,303 @@ async function saveUserVirtualAccount(userId, accountData) {
   return { accountNumber, bankName, accountName };
 }
 
+/* ======================================================================
+   ORDERS & ACTIVATIONS REPOSITORY
+====================================================================== */
+
+async function saveOrder(orderData) {
+  const {
+    orderId,
+    userId,
+    userEmail,
+    phone,
+    country,
+    service,
+    operator = 'any',
+    amount = 0,
+    status = 'PENDING',
+    smsCode = null,
+    provider = '5sim',
+    providerData = null
+  } = orderData;
+
+  if (!orderId) throw new Error('Order ID is required to save an order.');
+
+  if (pool) {
+    try {
+      const q = `
+        INSERT INTO orders (
+          order_id, user_id, user_email, phone, country, service, operator, amount, status, sms_code, provider, provider_data, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW()
+        )
+        ON CONFLICT (order_id) DO UPDATE SET
+          status = EXCLUDED.status,
+          phone = COALESCE(EXCLUDED.phone, orders.phone),
+          sms_code = COALESCE(EXCLUDED.sms_code, orders.sms_code),
+          provider_data = COALESCE(EXCLUDED.provider_data, orders.provider_data),
+          updated_at = NOW()
+        RETURNING *
+      `;
+      const res = await pool.query(q, [
+        String(orderId),
+        userId ? parseInt(userId, 10) : null,
+        userEmail || null,
+        phone || null,
+        String(country).toLowerCase(),
+        String(service).toLowerCase(),
+        operator || 'any',
+        parseFloat(amount || 0),
+        String(status).toUpperCase(),
+        smsCode || null,
+        provider,
+        providerData ? JSON.stringify(providerData) : null
+      ]);
+      return res.rows[0];
+    } catch (err) {
+      console.error('[DB] Error saving order to PostgreSQL:', err.message);
+    }
+  }
+
+  // Fallback to in-memory store
+  const existingIdx = inMemory.orders.findIndex(o => String(o.order_id || o.id) === String(orderId));
+  const record = {
+    id: existingIdx !== -1 ? inMemory.orders[existingIdx].id : inMemory.orders.length + 1,
+    order_id: String(orderId),
+    user_id: userId ? String(userId) : null,
+    user_email: userEmail || null,
+    phone: phone || null,
+    country: String(country || '').toLowerCase(),
+    service: String(service || '').toLowerCase(),
+    operator: operator || 'any',
+    amount: parseFloat(amount || 0),
+    status: String(status).toUpperCase(),
+    sms_code: smsCode || null,
+    provider: provider || '5sim',
+    created_at: existingIdx !== -1 ? inMemory.orders[existingIdx].created_at : new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  if (existingIdx !== -1) {
+    inMemory.orders[existingIdx] = { ...inMemory.orders[existingIdx], ...record };
+  } else {
+    inMemory.orders.unshift(record);
+  }
+  return record;
+}
+
+async function updateOrderStatus(orderId, status, smsCode = null, extraData = null) {
+  if (!orderId) return null;
+  const cleanStatus = String(status).toUpperCase();
+
+  if (pool) {
+    try {
+      const updates = ['status = $2', 'updated_at = NOW()'];
+      const params = [String(orderId), cleanStatus];
+
+      if (smsCode) {
+        params.push(String(smsCode));
+        updates.push(`sms_code = $${params.length}`);
+      }
+      if (extraData) {
+        params.push(JSON.stringify(extraData));
+        updates.push(`provider_data = $${params.length}`);
+      }
+
+      const q = `UPDATE orders SET ${updates.join(', ')} WHERE order_id = $1 RETURNING *`;
+      const res = await pool.query(q, params);
+      if (res.rows.length) return res.rows[0];
+    } catch (err) {
+      console.error('[DB] Error updating order in PostgreSQL:', err.message);
+    }
+  }
+
+  const existing = inMemory.orders.find(o => String(o.order_id || o.id) === String(orderId));
+  if (existing) {
+    existing.status = cleanStatus;
+    if (smsCode) existing.sms_code = String(smsCode);
+    existing.updated_at = new Date().toISOString();
+    return existing;
+  }
+  return null;
+}
+
+async function getAdminOrders(params = {}) {
+  const page = parseInt(params.page || 1, 10);
+  const limit = parseInt(params.limit || 50, 10);
+  const status = params.status ? String(params.status).toUpperCase().trim() : null;
+  const search = params.search ? String(params.search).toLowerCase().trim() : null;
+
+  if (pool) {
+    try {
+      let query = `
+        SELECT 
+          o.id,
+          o.order_id AS "orderId",
+          o.user_id AS "userId",
+          o.user_email AS "userEmail",
+          COALESCE(u.username, o.user_email) AS "userName",
+          o.phone,
+          o.country,
+          o.service,
+          o.operator,
+          o.amount AS "amountNGN",
+          o.status,
+          o.sms_code AS "smsCode",
+          o.provider,
+          o.created_at AS "createdAt",
+          o.updated_at AS "updatedAt"
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE 1=1
+      `;
+      const qParams = [];
+
+      if (status) {
+        qParams.push(status);
+        query += ` AND UPPER(o.status) = $${qParams.length}`;
+      }
+
+      if (search) {
+        qParams.push(`%${search}%`);
+        query += ` AND (
+          LOWER(o.order_id) LIKE $${qParams.length} OR
+          LOWER(COALESCE(o.user_email, '')) LIKE $${qParams.length} OR
+          LOWER(COALESCE(u.username, '')) LIKE $${qParams.length} OR
+          LOWER(o.service) LIKE $${qParams.length} OR
+          LOWER(o.country) LIKE $${qParams.length} OR
+          LOWER(COALESCE(o.phone, '')) LIKE $${qParams.length}
+        )`;
+      }
+
+      const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM (${query}) AS filtered`, qParams);
+      const total = countRes.rows[0]?.total || 0;
+
+      query += ` ORDER BY o.created_at DESC LIMIT $${qParams.length + 1} OFFSET $${qParams.length + 2}`;
+      qParams.push(limit, (page - 1) * limit);
+
+      const rows = (await pool.query(query, qParams)).rows;
+
+      return {
+        orders: rows,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (err) {
+      console.error('[DB] Error fetching admin orders from PostgreSQL:', err.message);
+    }
+  }
+
+  // Fallback to in-memory
+  let filtered = [...inMemory.orders];
+  if (status) {
+    filtered = filtered.filter(o => String(o.status).toUpperCase() === status);
+  }
+  if (search) {
+    filtered = filtered.filter(o =>
+      String(o.order_id || '').toLowerCase().includes(search) ||
+      String(o.user_email || '').toLowerCase().includes(search) ||
+      String(o.service || '').toLowerCase().includes(search) ||
+      String(o.country || '').toLowerCase().includes(search) ||
+      String(o.phone || '').toLowerCase().includes(search)
+    );
+  }
+
+  const total = filtered.length;
+  const start = (page - 1) * limit;
+  const paginated = filtered.slice(start, start + limit).map(o => ({
+    id: o.id,
+    orderId: o.order_id,
+    userId: o.user_id,
+    userEmail: o.user_email,
+    userName: o.user_email || 'User',
+    phone: o.phone,
+    country: o.country,
+    service: o.service,
+    operator: o.operator,
+    amountNGN: o.amount,
+    status: o.status,
+    smsCode: o.sms_code,
+    provider: o.provider,
+    createdAt: o.created_at,
+    updatedAt: o.updated_at
+  }));
+
+  return {
+    orders: paginated,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+}
+
+async function getOrderStats() {
+  if (pool) {
+    try {
+      const q = `
+        SELECT 
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE UPPER(status) IN ('RECEIVED', 'PENDING', 'ACTIVE'))::int AS active,
+          COUNT(*) FILTER (WHERE UPPER(status) IN ('FINISHED', 'COMPLETED', 'SUCCESS'))::int AS completed,
+          COUNT(*) FILTER (WHERE UPPER(status) IN ('CANCELED', 'CANCELLED'))::int AS cancelled,
+          COUNT(*) FILTER (WHERE UPPER(status) = 'BANNED')::int AS banned,
+          COUNT(*) FILTER (WHERE UPPER(status) IN ('FAILED', 'TIMEOUT'))::int AS failed,
+          COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE)::int AS today,
+          COALESCE(SUM(amount), 0)::numeric AS total_revenue,
+          COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE), 0)::numeric AS today_revenue
+        FROM orders
+      `;
+      const res = await pool.query(q);
+      const row = res.rows[0] || {};
+      return {
+        total: row.total || 0,
+        active: row.active || 0,
+        completed: row.completed || 0,
+        cancelled: row.cancelled || 0,
+        banned: row.banned || 0,
+        failed: row.failed || 0,
+        today: row.today || 0,
+        totalRevenue: parseFloat(row.total_revenue || 0),
+        todayRevenue: parseFloat(row.today_revenue || 0)
+      };
+    } catch (err) {
+      console.error('[DB] Error querying order stats from PostgreSQL:', err.message);
+    }
+  }
+
+  // In-memory stats
+  const total = inMemory.orders.length;
+  const active = inMemory.orders.filter(o => ['RECEIVED', 'PENDING', 'ACTIVE'].includes(String(o.status).toUpperCase())).length;
+  const completed = inMemory.orders.filter(o => ['FINISHED', 'COMPLETED', 'SUCCESS'].includes(String(o.status).toUpperCase())).length;
+  const cancelled = inMemory.orders.filter(o => ['CANCELED', 'CANCELLED'].includes(String(o.status).toUpperCase())).length;
+  const banned = inMemory.orders.filter(o => String(o.status).toUpperCase() === 'BANNED').length;
+  const failed = inMemory.orders.filter(o => ['FAILED', 'TIMEOUT'].includes(String(o.status).toUpperCase())).length;
+  const today = inMemory.orders.filter(o => String(o.created_at || '').slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
+  const totalRevenue = inMemory.orders.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
+  const todayRevenue = inMemory.orders
+    .filter(o => String(o.created_at || '').slice(0, 10) === new Date().toISOString().slice(0, 10))
+    .reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
+
+  return {
+    total,
+    active,
+    completed,
+    cancelled,
+    banned,
+    failed,
+    today,
+    totalRevenue,
+    todayRevenue
+  };
+}
+
 module.exports = {
   get dbType() { return dbType; },
   findUserByEmailOrUsername,
@@ -846,6 +1165,10 @@ module.exports = {
   getUserTransactions,
   getUserVirtualAccount,
   saveUserVirtualAccount,
+  saveOrder,
+  updateOrderStatus,
+  getAdminOrders,
+  getOrderStats,
   inMemory,
   getPool: () => pool,
   getMongoose: () => mongoose

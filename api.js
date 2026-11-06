@@ -1317,7 +1317,23 @@ async function adminGetVirtualAccounts(params = {}) {
 
 async function adminGetUserVirtualAccount(userId) {
     if (!userId) throw new Error('User ID is required');
-    return await adminApiRequest(`/virtual-accounts/${encodeURIComponent(userId)}`);
+    return await adminApiRequest(`/virtual-accounts/${encodeURIComponent(userId)}
+
+// ── Admin Orders & Virtual Numbers Auditing ──
+async function adminGetOrders(params = {}) {
+    const q = new URLSearchParams();
+    if (params.page !== undefined && params.page !== null) q.set('page', params.page);
+    if (params.limit !== undefined && params.limit !== null) q.set('limit', params.limit);
+    if (params.status) q.set('status', params.status);
+    if (params.search) q.set('search', params.search);
+    const qs = q.toString() ? ('?' + q.toString()) : '';
+    return await adminApiRequest('/orders' + qs);
+}
+
+async function adminGetOrder(orderId) {
+    if (!orderId) throw new Error('Order ID is required');
+    return await adminApiRequest('/orders/' + encodeURIComponent(orderId));
+}`);
 }
 
 // ── Announcement Storage System (Application State) ──

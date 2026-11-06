@@ -303,6 +303,26 @@ router.post('/buy/activation', authenticate, async (req, res) => {
 
     const currentBal = debitResult ? debitResult.balance : wallet.balance;
 
+    // Permanently record order in database for admin auditing & statistics
+    try {
+      await db.saveOrder({
+        orderId: String(upstreamOrder.id),
+        userId: userId,
+        userEmail: req.user.email || null,
+        phone: upstreamOrder.phone,
+        country: country,
+        service: product,
+        operator: operator || upstreamOrder.operator || 'any',
+        amount: orderCost,
+        status: String(upstreamOrder.status || 'RECEIVED').toUpperCase(),
+        smsCode: upstreamOrder.sms?.[0]?.code || upstreamOrder.code || null,
+        provider: '5sim',
+        providerData: upstreamOrder
+      });
+    } catch (saveErr) {
+      console.warn('[Buy Activation] Non-fatal order save notice:', saveErr.message);
+    }
+
     return res.status(200).json({
       success: true,
       order: upstreamOrder,
@@ -334,6 +354,16 @@ router.get('/order/:id', authenticate, async (req, res) => {
       return res.status(503).json({ success: false, error: 'SMS service unavailable.' });
     }
     const data = await fivesim.checkOrder(orderId);
+
+    // Sync live order status & SMS code to database
+    try {
+      const liveStatus = data?.status || data?.order?.status;
+      const smsCode = data?.sms?.[0]?.code || data?.code || null;
+      if (liveStatus) {
+        await db.updateOrderStatus(orderId, liveStatus, smsCode, data);
+      }
+    } catch (_) {}
+
     return res.status(200).json(data);
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to check order status.' });
@@ -345,6 +375,11 @@ router.post('/order/:id/finish', authenticate, async (req, res) => {
   try {
     if (!fivesim) return res.status(503).json({ success: false, error: 'SMS service unavailable.' });
     const data = await fivesim.finishOrder(orderId);
+
+    try {
+      await db.updateOrderStatus(orderId, 'FINISHED', null, data);
+    } catch (_) {}
+
     return res.status(200).json({ success: true, data });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to finish order.' });
@@ -358,6 +393,11 @@ router.post('/order/:id/cancel', authenticate, async (req, res) => {
   try {
     if (!fivesim) return res.status(503).json({ success: false, error: 'SMS service unavailable.' });
     const data = await fivesim.cancelOrder(orderId);
+
+    // Sync cancelled status to database
+    try {
+      await db.updateOrderStatus(orderId, 'CANCELED', null, data);
+    } catch (_) {}
 
     // If order was debited, issue refund
     const existingTx = await db.findTransactionByReference(`BUY-${orderId}`);
@@ -379,6 +419,11 @@ router.post('/order/:id/ban', authenticate, async (req, res) => {
   try {
     if (!fivesim) return res.status(503).json({ success: false, error: 'SMS service unavailable.' });
     const data = await fivesim.banOrder(orderId);
+
+    // Sync banned status to database
+    try {
+      await db.updateOrderStatus(orderId, 'BANNED', null, data);
+    } catch (_) {}
 
     const existingTx = await db.findTransactionByReference(`BUY-${orderId}`);
     if (existingTx && existingTx.amount < 0) {

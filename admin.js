@@ -515,6 +515,22 @@ async function loadAllData() {
       } catch (_) {}
     }
 
+    // 5.1 Fetch live orders & virtual numbers from Admin API (GET /api/admin/orders)
+    if (typeof adminGetOrders === 'function') {
+      try {
+        const ordersRes = await adminGetOrders({ limit: 100 });
+        const oList = ordersRes?.orders || ordersRes?.data || (Array.isArray(ordersRes) ? ordersRes : null);
+        if (Array.isArray(oList)) {
+          allOrders = oList;
+          setText('navOrdersBadge', allOrders.length);
+        }
+      } catch (ordErr) {
+        if (!ordErr?.suppressed) {
+          console.warn('[Admin] Live orders API notice:', ordErr.message);
+        }
+      }
+    }
+
     // 6. Load announcements from stored state
     loadAdminAnnouncements();
 
@@ -568,20 +584,36 @@ function renderOverview() {
     return s === 'RECEIVED' || s === 'PENDING' || s === 'ACTIVE';
   });
 
+  // Calculate authoritative order metrics
+  const dbOrders = latestDashboardStats?.orders || {};
+  const totalOrdersCount = latestDashboardStats?.totalOrders ?? dbOrders.total ?? ordersFiltered.length;
+  const activeOrdersCount = latestDashboardStats?.activeOrders ?? dbOrders.active ?? activeOrders.length;
+  const completedOrdersCount = dbOrders.completed ?? allOrders.filter(o => ['FINISHED', 'COMPLETED', 'SUCCESS'].includes(String(o.status || '').toUpperCase())).length;
+  const cancelledOrdersCount = dbOrders.cancelled ?? allOrders.filter(o => ['CANCELED', 'CANCELLED'].includes(String(o.status || '').toUpperCase())).length;
+  const bannedOrdersCount = dbOrders.banned ?? allOrders.filter(o => String(o.status || '').toUpperCase() === 'BANNED').length;
+  const failedOrdersCount = dbOrders.failed ?? allOrders.filter(o => ['FAILED', 'TIMEOUT'].includes(String(o.status || '').toUpperCase())).length;
+  const ordersTodayCount = dbOrders.today ?? ordersToday;
+  const displayRevenue = dbOrders.totalRevenue ? ('₦' + Math.round(dbOrders.totalRevenue).toLocaleString()) : ('₦' + Math.round(totalRev).toLocaleString());
+  const displayTodayRev = dbOrders.todayRevenue ? ('+₦' + Math.round(dbOrders.todayRevenue).toLocaleString() + ' today') : ('+₦' + Math.round(todayRev).toLocaleString() + ' today');
+
   setText('totalUsers',          displayUserCount.toLocaleString());
   setText('activeUsers',         (latestDashboardStats?.activeUsersCount ?? activeSet.size).toLocaleString());
-  setText('totalOrders',         ordersFiltered.length.toLocaleString());
+  setText('totalOrders',         totalOrdersCount.toLocaleString());
   setText('totalUserWallets',    '₦' + Math.round(displayWalletTotal).toLocaleString());
   setText('signupsToday',        signupsToday.toLocaleString());
   setText('newUsersThisWeek',    '+' + newThisWeek + ' this week');
   setText('signupsWeek',         '+' + newThisWeek + ' this week');
-  setText('ordersToday',         '+' + ordersToday + ' today');
-  setText('totalRevenue',        '₦' + Math.round(totalRev).toLocaleString());
-  setText('revenueToday',        '+₦' + Math.round(todayRev).toLocaleString() + ' today');
+  setText('ordersToday',         '+' + ordersTodayCount + ' today');
+  setText('totalRevenue',        displayRevenue);
+  setText('revenueToday',        displayTodayRev);
   setText('blockedUsersCount',   blockedCount.toLocaleString());
   setText('txSuccessRate',       successRatePct);
   setText('txSuccessRatio',      successRatioStr);
-  setText('activeOrdersCount',   activeOrders.length.toLocaleString());
+  setText('activeOrdersCount',   activeOrdersCount.toLocaleString());
+  setText('completedOrdersCount', completedOrdersCount.toLocaleString());
+  setText('cancelledOrdersCount', cancelledOrdersCount.toLocaleString());
+  setText('bannedOrdersCount',    bannedOrdersCount.toLocaleString());
+  setText('failedOrdersCount',    failedOrdersCount.toLocaleString());
 
   setText('navUsersBadge',      allUsers.length);
   setText('navWalletsBadge',    allWallets.length);
@@ -1151,30 +1183,49 @@ function renderOrdersTable(orders = allOrders) {
   const tbody = document.getElementById('ordersTbody');
   if (!tbody) return;
 
+  // Update Orders KPI cards
+  const total = allOrders.length;
+  const active = allOrders.filter(o => ['RECEIVED', 'PENDING', 'ACTIVE'].includes(String(o.status || '').toUpperCase())).length;
+  const completed = allOrders.filter(o => ['FINISHED', 'COMPLETED', 'SUCCESS'].includes(String(o.status || '').toUpperCase())).length;
+  const cancelled = allOrders.filter(o => ['CANCELED', 'CANCELLED', 'BANNED', 'FAILED'].includes(String(o.status || '').toUpperCase())).length;
+
+  setText('orderKpiTotal', total.toLocaleString());
+  setText('orderKpiActive', active.toLocaleString());
+  setText('orderKpiCompleted', completed.toLocaleString());
+  setText('orderKpiCancelled', cancelled.toLocaleString());
+
   if (!orders.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="empty-cell">No matching orders found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-cell">No matching virtual number orders found.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = orders.map((o, i) => `
-    <tr>
-      <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
-      <td>
-        <span style="font-family:monospace;font-size:12px;color:var(--text);">${escapeHTML(String(o.orderId || o.id || '—'))}</span>
-        <button class="copy-btn" onclick="copyToClipboard('${escapeHTML(String(o.orderId || o.id || ''))}', 'Order ID')" title="Copy ID"><i class="ph ph-copy"></i></button>
-      </td>
-      <td style="font-size:12px;color:var(--muted);">${escapeHTML(o.userName || o.userEmail || o.userId || 'User')}</td>
-      <td><strong style="text-transform:capitalize;">${escapeHTML(o.service || o.product || '—')}</strong></td>
-      <td style="font-size:12px;text-transform:capitalize;color:var(--muted);">${escapeHTML(o.country || '—')}</td>
-      <td style="font-family:monospace;font-size:12px;color:var(--text);">${escapeHTML(o.phone || '—')}</td>
-      <td style="color:var(--amber);font-weight:700;">₦${parseFloat(o.amountNGN || 0).toLocaleString()}</td>
-      <td>${statusBadge(o.status)}</td>
-      <td style="font-size:11px;color:var(--muted);">${fmt(o.createdAt)}</td>
-      <td>
-        <button class="tbl-btn tbl-btn-view" onclick="checkLiveOrderStatus('${escapeHTML(String(o.orderId || o.id || ''))}')" title="Check live 5sim status"><i class="ph ph-arrow-clockwise"></i> Check</button>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = orders.map((o, i) => {
+    const sms = o.smsCode || (o.sms && o.sms[0] && o.sms[0].code) || '—';
+    const hasSms = sms && sms !== '—';
+
+    return `
+      <tr>
+        <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
+        <td>
+          <span style="font-family:monospace;font-size:12px;color:var(--text);">${escapeHTML(String(o.orderId || o.id || '—'))}</span>
+          <button class="copy-btn" onclick="copyToClipboard('${escapeHTML(String(o.orderId || o.id || ''))}', 'Order ID')" title="Copy ID"><i class="ph ph-copy"></i></button>
+        </td>
+        <td style="font-size:12px;color:var(--muted);">${escapeHTML(o.userName || o.userEmail || o.userId || 'User')}</td>
+        <td><strong style="text-transform:capitalize;">${escapeHTML(o.service || o.product || '—')}</strong></td>
+        <td style="font-size:12px;text-transform:capitalize;color:var(--muted);">${escapeHTML(o.country || '—')}</td>
+        <td style="font-family:monospace;font-size:12px;color:var(--text);">${escapeHTML(o.phone || '—')}</td>
+        <td style="color:var(--amber);font-weight:700;">₦${parseFloat(o.amountNGN || o.amount || 0).toLocaleString()}</td>
+        <td>${statusBadge(o.status)}</td>
+        <td>
+          ${hasSms ? `<span style="font-family:monospace;font-weight:800;color:var(--green);font-size:13px;background:var(--surface-2);padding:2px 6px;border-radius:4px;">${escapeHTML(sms)}</span>` : '<span style="color:var(--muted);font-size:12px;">Waiting...</span>'}
+        </td>
+        <td style="font-size:11px;color:var(--muted);">${fmt(o.createdAt)}</td>
+        <td>
+          <button class="tbl-btn tbl-btn-view" onclick="checkLiveOrderStatus('${escapeHTML(String(o.orderId || o.id || ''))}')" title="Check live 5sim status"><i class="ph ph-arrow-clockwise"></i> Check</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 function filterOrders() {

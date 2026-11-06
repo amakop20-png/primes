@@ -430,10 +430,13 @@
       </div>
     </section>
 
-    <!-- ═══ 3. ORDERS ═══ -->
+    <!-- ═══ 3. VIRTUAL NUMBERS & ORDERS ═══ -->
     <section id="section-orders" class="section">
       <div class="page-header">
-        <h1>Order Auditing</h1>
+        <div>
+          <h1>Virtual Number Management &amp; Orders</h1>
+          <p class="section-sub" style="font-size:13px;color:var(--muted);margin-top:4px;">Monitor live 5sim activations, OTP verification codes, country allocations, and refund states.</p>
+        </div>
         <div class="header-actions">
           <div class="search-wrap">
             <i class="ph ph-magnifying-glass"></i>
@@ -442,12 +445,48 @@
           <select id="orderStatusFilter" onchange="filterOrders()" class="filter-select">
             <option value="">All Statuses</option>
             <option value="RECEIVED">Received</option>
-            <option value="FINISHED">Finished</option>
+            <option value="FINISHED">Finished / Completed</option>
             <option value="CANCELED">Canceled</option>
             <option value="BANNED">Banned</option>
             <option value="PENDING">Pending</option>
           </select>
           <button class="btn-outline" onclick="refreshOrdersData()"><i class="ph ph-arrows-clockwise"></i> Refresh</button>
+        </div>
+      </div>
+
+      <!-- Virtual Number Summary KPI Cards -->
+      <div class="stat-grid" style="margin-bottom:20px;">
+        <div class="stat-card purple">
+          <div class="stat-icon"><i class="ph ph-sim-card"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Total Numbers Ordered</div>
+            <div class="stat-value" id="orderKpiTotal">0</div>
+            <div class="stat-sub">Lifetime orders</div>
+          </div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon"><i class="ph ph-hourglass-medium"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Active / Pending OTP</div>
+            <div class="stat-value" id="orderKpiActive">0</div>
+            <div class="stat-sub">Waiting for SMS</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><i class="ph ph-check-circle"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Finished / Completed</div>
+            <div class="stat-value" id="orderKpiCompleted">0</div>
+            <div class="stat-sub">SMS successfully delivered</div>
+          </div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon"><i class="ph ph-x-circle"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Cancelled / Banned</div>
+            <div class="stat-value" id="orderKpiCancelled">0</div>
+            <div class="stat-sub">Refunded automatically</div>
+          </div>
         </div>
       </div>
 
@@ -465,12 +504,13 @@
                   <th>Assigned Phone</th>
                   <th>Amount (₦)</th>
                   <th>Status</th>
+                  <th>SMS OTP</th>
                   <th>Created Date</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="ordersTbody">
-                <tr><td colspan="10" class="empty-cell">Loading orders...</td></tr>
+                <tr><td colspan="11" class="empty-cell">Loading orders...</td></tr>
               </tbody>
             </table>
           </div>
