@@ -728,6 +728,112 @@ router.post('/announcements', adminAuth, (req, res) => {
   });
 });
 
+/* ======================================================================
+   REFERRALS MANAGEMENT (Base: /api/admin/referrals)
+====================================================================== */
+
+// GET /api/admin/referrals
+router.get('/referrals', adminAuth, async (req, res) => {
+  try {
+    const pool = db.getPool();
+    if (pool) {
+      const statsQuery = `
+        SELECT 
+          u.id AS referrer_id,
+          u.email,
+          u.username,
+          u.referral_code,
+          u.referral_balance,
+          u.created_at,
+          COUNT(r.id)::int AS referred_count,
+          COALESCE(SUM(r.reward_amount), 0)::numeric AS total_rewards
+        FROM users u
+        LEFT JOIN referrals r ON u.id = r.referrer_id
+        WHERE u.referral_code IS NOT NULL
+        GROUP BY u.id, u.email, u.username, u.referral_code, u.referral_balance, u.created_at
+        ORDER BY referred_count DESC, u.created_at DESC
+        LIMIT 100
+      `;
+      const rows = (await pool.query(statsQuery)).rows;
+
+      const summaryQuery = `
+        SELECT 
+          COUNT(*)::int AS total_referrals,
+          COALESCE(SUM(reward_amount), 0)::numeric AS total_rewards_paid
+        FROM referrals
+      `;
+      const summary = (await pool.query(summaryQuery)).rows[0] || { total_referrals: 0, total_rewards_paid: 0 };
+
+      return res.status(200).json({
+        success: true,
+        data: rows,
+        referrals: rows,
+        summary: {
+          totalReferrals: summary.total_referrals || 0,
+          totalRewards: parseFloat(summary.total_rewards_paid || 0),
+          activeCodes: rows.length
+        }
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: [],
+      referrals: [],
+      summary: { totalReferrals: 0, totalRewards: 0, activeCodes: 0 }
+    });
+  } catch (err) {
+    console.error('Admin referrals error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to retrieve referral records' });
+  }
+});
+
+/* ======================================================================
+   ADMIN PASSWORD / CREDENTIAL UPDATE (Base: /api/admin/auth/update-credentials)
+====================================================================== */
+
+// POST /api/admin/auth/update-credentials
+router.post('/auth/update-credentials', adminAuth, async (req, res) => {
+  const { currentPassword, newPassword, username } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, error: 'Current password and new password are required.' });
+  }
+
+  try {
+    const user = await db.findUserById(req.admin.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Administrator user not found.' });
+    }
+
+    const passwordHash = user.password || user.password_hash;
+    const isMatch = await bcrypt.compare(currentPassword, passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, error: 'Current password does not match.' });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    const pool = db.getPool();
+    if (pool) {
+      const updates = ['password_hash = $1', 'updated_at = NOW()'];
+      const params = [newHash];
+      if (username) {
+        params.push(username);
+        updates.push(`username = $${params.length}`);
+      }
+      params.push(req.admin.id);
+      await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${params.length}`, params);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Administrator credentials updated successfully.'
+    });
+  } catch (err) {
+    console.error('Update credentials error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to update credentials.' });
+  }
+});
+
 module.exports = router;
 
 

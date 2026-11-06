@@ -325,11 +325,14 @@ function showSection(id, btn) {
     overview:      'Dashboard Overview',
     users:         'User Management',
     wallets:       'Wallets & Virtual Accounts',
-    orders:        'Order Auditing',
+    orders:        'Virtual Number Management',
     transactions:  'Platform Transactions',
+    payments:      'Payment & Paystack Management',
+    referrals:     'Referral & Affiliate Management',
     activity:      'Platform Activity Log',
     announcements: 'Announcement System Manager',
-    settings:      'Platform Administration Settings'
+    settings:      'Platform Administration Settings',
+    profile:       'Admin Profile & Security'
   };
   const tb = document.getElementById('topbarTitle');
   if (tb) tb.textContent = titles[id] || 'Admin Console';
@@ -352,6 +355,15 @@ function showSection(id, btn) {
     } else {
       filterBackendTransactions();
     }
+  }
+  if (id === 'payments') {
+    loadPaymentsData();
+  }
+  if (id === 'referrals') {
+    loadReferralsData();
+  }
+  if (id === 'profile') {
+    loadAdminProfileSection();
   }
 }
 
@@ -546,21 +558,36 @@ function renderOverview() {
   const displayUserCount = latestDashboardStats?.usersCount ?? latestDashboardStats?.totalUsers ?? usersFiltered.length;
   const displayWalletTotal = latestDashboardStats?.walletsTotal ?? latestDashboardStats?.totalWalletsBalance ?? totalUserWallets;
 
-  setText('totalUsers',        displayUserCount.toLocaleString());
-  setText('activeUsers',       (latestDashboardStats?.activeUsersCount ?? activeSet.size).toLocaleString());
-  setText('totalOrders',       ordersFiltered.length.toLocaleString());
-  setText('totalUserWallets',  '₦' + Math.round(displayWalletTotal).toLocaleString());
-  setText('signupsToday',      signupsToday.toLocaleString());
-  setText('newUsersThisWeek',  '+' + newThisWeek + ' this week');
-  setText('signupsWeek',       '+' + newThisWeek + ' this week');
-  setText('ordersToday',       '+' + ordersToday + ' today');
-  setText('totalRevenue',      '₦' + Math.round(totalRev).toLocaleString());
-  setText('revenueToday',      '+₦' + Math.round(todayRev).toLocaleString() + ' today');
+  // Calculate blocked/suspended users, transaction success rate, and active virtual numbers
+  const blockedCount = allUsers.filter(u => u.isSuspended || u.is_suspended).length;
+  const successfulTx = allTransactions.filter(t => String(t.status).toLowerCase() === 'success');
+  const successRatioStr = allTransactions.length ? `${successfulTx.length}/${allTransactions.length} successful` : '0 completed';
+  const successRatePct = allTransactions.length ? Math.round((successfulTx.length / allTransactions.length) * 100) + '%' : '100%';
+  const activeOrders = allOrders.filter(o => {
+    const s = String(o.status || '').toUpperCase();
+    return s === 'RECEIVED' || s === 'PENDING' || s === 'ACTIVE';
+  });
 
-  setText('navUsersBadge',    allUsers.length);
-  setText('navWalletsBadge',  allWallets.length);
-  setText('navOrdersBadge',   allOrders.length);
-  setText('navTxBadge',       allTransactions.length);
+  setText('totalUsers',          displayUserCount.toLocaleString());
+  setText('activeUsers',         (latestDashboardStats?.activeUsersCount ?? activeSet.size).toLocaleString());
+  setText('totalOrders',         ordersFiltered.length.toLocaleString());
+  setText('totalUserWallets',    '₦' + Math.round(displayWalletTotal).toLocaleString());
+  setText('signupsToday',        signupsToday.toLocaleString());
+  setText('newUsersThisWeek',    '+' + newThisWeek + ' this week');
+  setText('signupsWeek',         '+' + newThisWeek + ' this week');
+  setText('ordersToday',         '+' + ordersToday + ' today');
+  setText('totalRevenue',        '₦' + Math.round(totalRev).toLocaleString());
+  setText('revenueToday',        '+₦' + Math.round(todayRev).toLocaleString() + ' today');
+  setText('blockedUsersCount',   blockedCount.toLocaleString());
+  setText('txSuccessRate',       successRatePct);
+  setText('txSuccessRatio',      successRatioStr);
+  setText('activeOrdersCount',   activeOrders.length.toLocaleString());
+
+  setText('navUsersBadge',      allUsers.length);
+  setText('navWalletsBadge',    allWallets.length);
+  setText('navOrdersBadge',     allOrders.length);
+  setText('navTxBadge',         allTransactions.length);
+  setText('navPaymentsBadge',   allTransactions.filter(t => String(t.type).toLowerCase() === 'credit' || String(t.reference || '').startsWith('PAY-') || String(t.reference || '').startsWith('VDA-')).length);
 
   renderRecentUsers(latestDashboardStats?.recentUsers || usersFiltered);
   renderRecentOrders(ordersFiltered);
@@ -2206,3 +2233,217 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (sess && sess.loggedIn) checkProviderStatus();
   }, 45000);
 });
+
+/* ════════════════════════════════════
+   PAYMENTS / PAYSTACK AUDIT RENDERERS
+════════════════════════════════════ */
+let allPayments = [];
+
+async function loadPaymentsData() {
+  const tbody = document.getElementById('paymentsTbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">Syncing Paystack deposits...</td></tr>';
+
+  try {
+    // Collect credits, Paystack references, and VDA deposits from transactions
+    if (!allTransactions.length && typeof adminGetTransactions === 'function') {
+      const res = await adminGetTransactions({ limit: 100 });
+      const txs = res?.transactions || res?.data || (Array.isArray(res) ? res : []);
+      if (Array.isArray(txs)) allTransactions = txs;
+    }
+
+    allPayments = allTransactions.filter(t => {
+      const type = String(t.type || '').toLowerCase();
+      const ref = String(t.reference || '').toUpperCase();
+      return type === 'credit' || type === 'deposit' || ref.startsWith('VDA-') || ref.startsWith('PAY-') || ref.startsWith('PAYSTACK-');
+    });
+
+    renderPaymentsTable(allPayments);
+    setText('navPaymentsBadge', allPayments.length);
+  } catch (err) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">Failed to load payment records.</td></tr>';
+  }
+}
+
+function filterPaymentsData() {
+  const statusFilter = document.getElementById('paymentStatusFilter')?.value || '';
+  const filtered = statusFilter 
+    ? allPayments.filter(p => String(p.status || '').toLowerCase() === statusFilter.toLowerCase())
+    : allPayments;
+  renderPaymentsTable(filtered);
+}
+
+function renderPaymentsTable(list = allPayments) {
+  const tbody = document.getElementById('paymentsTbody');
+  if (!tbody) return;
+
+  const totalAmount = list.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  const successCount = list.filter(p => String(p.status || '').toLowerCase() === 'success').length;
+  const pendingCount = list.filter(p => String(p.status || '').toLowerCase() === 'pending').length;
+
+  setText('payTotalAmount', '₦' + Math.round(totalAmount).toLocaleString());
+  setText('payTotalCount', list.length + ' Deposits');
+  setText('paySuccessCount', successCount.toLocaleString());
+  setText('payPendingCount', pendingCount.toLocaleString());
+  setText('payVdaCount', allVirtualAccounts.length.toLocaleString());
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No payment records found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map((p, idx) => {
+    const isVda = String(p.reference || '').toUpperCase().startsWith('VDA-');
+    const channel = isVda ? 'Paystack Dedicated VDA' : 'Paystack Checkout';
+    const amountStr = '₦' + (parseFloat(p.amount) || 0).toLocaleString();
+    const ref = p.reference || p.id || '—';
+
+    return `
+      <tr>
+        <td style="color:var(--muted);">${idx + 1}</td>
+        <td>
+          <code style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:12px;color:var(--text);">${escapeHTML(ref)}</code>
+          <button type="button" onclick="copyToClipboard('${escapeHTML(ref)}', 'Reference')" style="background:none;border:none;color:var(--muted);cursor:pointer;margin-left:4px;" title="Copy reference"><i class="ph ph-copy"></i></button>
+        </td>
+        <td>
+          <strong style="color:var(--text);">${escapeHTML(p.user_email || p.userEmail || p.username || 'User')}</strong>
+        </td>
+        <td>
+          <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;">
+            <i class="ph ph-bank" style="color:var(--primary);"></i> ${channel}
+          </span>
+        </td>
+        <td style="font-weight:700;color:var(--green);">${amountStr}</td>
+        <td>${statusBadge(p.status || 'success')}</td>
+        <td style="font-size:12px;color:var(--muted);">${fmt(p.created_at || p.createdAt)}</td>
+        <td style="text-align:right;">
+          <button class="btn-outline" style="padding:4px 8px;font-size:11px;" onclick="viewTxDetail('${escapeHTML(p.id || p.reference)}')">Audit</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/* ════════════════════════════════════
+   REFERRALS MANAGEMENT RENDERERS
+════════════════════════════════════ */
+let allReferrals = [];
+
+async function loadReferralsData() {
+  const tbody = document.getElementById('referralsTbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">Loading referral network...</td></tr>';
+
+  try {
+    const token = typeof getAdminAuthToken === 'function' ? getAdminAuthToken() : localStorage.getItem('primes_admin_token');
+    const res = await fetch('/api/admin/referrals', {
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      allReferrals = data.referrals || data.data || [];
+      const summary = data.summary || {};
+
+      setText('refTotalCount', (summary.totalReferrals || 0).toLocaleString());
+      setText('refTotalRewards', '₦' + Math.round(summary.totalRewards || 0).toLocaleString());
+      setText('refActiveCodes', (summary.activeCodes || allReferrals.length).toLocaleString());
+      setText('navReferralsBadge', allReferrals.length);
+
+      renderReferralsTable(allReferrals);
+      return;
+    }
+    throw new Error('API request failed');
+  } catch (err) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">Failed to retrieve referral data.</td></tr>';
+  }
+}
+
+function renderReferralsTable(list = allReferrals) {
+  const tbody = document.getElementById('referralsTbody');
+  if (!tbody) return;
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">No affiliate records registered yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map((r, idx) => {
+    const refCode = r.referral_code || r.referralCode || '—';
+    const rewardStr = '₦' + (parseFloat(r.referral_balance || r.total_rewards || 0)).toLocaleString();
+
+    return `
+      <tr>
+        <td style="color:var(--muted);">${idx + 1}</td>
+        <td>
+          <strong style="color:var(--text);">${escapeHTML(r.username || r.email || 'Referrer')}</strong><br>
+          <span style="font-size:11px;color:var(--muted);">${escapeHTML(r.email || '')}</span>
+        </td>
+        <td>
+          <code style="font-weight:700;color:var(--primary);letter-spacing:0.5px;">${escapeHTML(refCode)}</code>
+          <button type="button" onclick="copyToClipboard('${escapeHTML(refCode)}', 'Referral Code')" style="background:none;border:none;color:var(--muted);cursor:pointer;margin-left:4px;" title="Copy code"><i class="ph ph-copy"></i></button>
+        </td>
+        <td style="font-weight:700;">${(r.referred_count || 0).toLocaleString()} users</td>
+        <td style="color:var(--green);font-weight:700;">${rewardStr}</td>
+        <td style="font-size:12px;color:var(--muted);">${fmtDate(r.created_at || r.createdAt)}</td>
+        <td style="text-align:right;">
+          <button class="btn-outline" style="padding:4px 8px;font-size:11px;" onclick="viewUserDetail('${escapeHTML(r.referrer_id || r.id)}')">View Referrer</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/* ════════════════════════════════════
+   ADMIN PROFILE HANDLERS
+════════════════════════════════════ */
+function loadAdminProfileSection() {
+  const sess = getAdminSession();
+  if (sess) {
+    setText('profileCardName', sess.name || sess.username || 'Super Administrator');
+    setText('profileCardEmail', sess.email || 'admin@nuraxq.com');
+    setText('profileAdminId', sess.id || sess._id || 'ADM-01');
+    setText('profileAdminRole', (sess.role || 'Super Admin').toUpperCase());
+    const usernameInput = document.getElementById('profileAdminUsername');
+    if (usernameInput) usernameInput.value = sess.username || '';
+  }
+}
+
+async function handleAdminProfileUpdate(e) {
+  e.preventDefault();
+  const currentPassword = document.getElementById('profileCurrentPass')?.value;
+  const newPassword = document.getElementById('profileNewPass')?.value;
+  const confirmPassword = document.getElementById('profileConfirmPass')?.value;
+  const username = document.getElementById('profileAdminUsername')?.value;
+
+  if (newPassword !== confirmPassword) {
+    adminToast('New password and confirmation do not match.', 'error');
+    return;
+  }
+
+  const token = typeof getAdminAuthToken === 'function' ? getAdminAuthToken() : localStorage.getItem('primes_admin_token');
+
+  try {
+    const res = await fetch('/api/admin/auth/update-credentials', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ currentPassword, newPassword, username })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      adminToast('Administrator credentials updated successfully!', 'success');
+      document.getElementById('profileCurrentPass').value = '';
+      document.getElementById('profileNewPass').value = '';
+      document.getElementById('profileConfirmPass').value = '';
+    } else {
+      adminToast(data.error || 'Failed to update credentials.', 'error');
+    }
+  } catch (err) {
+    adminToast('Network error while updating credentials.', 'error');
+  }
+}

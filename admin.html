@@ -153,23 +153,34 @@
         <i class="ph ph-wallet"></i> Wallets
         <span class="nav-badge" id="navWalletsBadge">0</span>
       </a>
-      <a href="#" class="nav-link" data-section="orders" onclick="showSection('orders',this)">
-        <i class="ph ph-receipt"></i> Orders
-        <span class="nav-badge" id="navOrdersBadge">0</span>
-      </a>
       <a href="#" class="nav-link" data-section="transactions" onclick="showSection('transactions',this)">
         <i class="ph ph-arrows-left-right"></i> Transactions
         <span class="nav-badge" id="navTxBadge">0</span>
       </a>
-      <a href="#" class="nav-link" data-section="activity" onclick="showSection('activity',this)">
-        <i class="ph ph-clock-counter-clockwise"></i> Activity Log
+      <a href="#" class="nav-link" data-section="orders" onclick="showSection('orders',this)">
+        <i class="ph ph-sim-card"></i> Virtual Numbers
+        <span class="nav-badge" id="navOrdersBadge">0</span>
+      </a>
+      <a href="#" class="nav-link" data-section="payments" onclick="showSection('payments',this)">
+        <i class="ph ph-credit-card"></i> Payments / Paystack
+        <span class="nav-badge" id="navPaymentsBadge">0</span>
+      </a>
+      <a href="#" class="nav-link" data-section="referrals" onclick="showSection('referrals',this)">
+        <i class="ph ph-share-network"></i> Referrals
+        <span class="nav-badge" id="navReferralsBadge">0</span>
       </a>
       <a href="#" class="nav-link" data-section="announcements" onclick="showSection('announcements',this)">
         <i class="ph ph-megaphone"></i> Announcements
         <span class="nav-badge" id="navAnnounceBadge">Active</span>
       </a>
+      <a href="#" class="nav-link" data-section="activity" onclick="showSection('activity',this)">
+        <i class="ph ph-clock-counter-clockwise"></i> Activity Log
+      </a>
       <a href="#" class="nav-link" data-section="settings" onclick="showSection('settings',this)">
         <i class="ph ph-gear"></i> Settings
+      </a>
+      <a href="#" class="nav-link" data-section="profile" onclick="showSection('profile',this)">
+        <i class="ph ph-user-circle-gear"></i> Admin Profile
       </a>
     </nav>
 
@@ -269,6 +280,30 @@
             <div class="stat-label">New Signups Today</div>
             <div class="stat-value" id="signupsToday">—</div>
             <div class="stat-sub" id="signupsWeek">+0 this week</div>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon"><i class="ph ph-user-slash"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Blocked / Suspended</div>
+            <div class="stat-value" id="blockedUsersCount">0</div>
+            <div class="stat-sub">Restricted accounts</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><i class="ph ph-check-square-offset"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Successful Transactions</div>
+            <div class="stat-value" id="txSuccessRate">—</div>
+            <div class="stat-sub" id="txSuccessRatio">0 completed</div>
+          </div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon"><i class="ph ph-sim-card"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Active Virtual Numbers</div>
+            <div class="stat-value" id="activeOrdersCount">0</div>
+            <div class="stat-sub">Pending SMS OTP</div>
           </div>
         </div>
       </div>
@@ -480,6 +515,154 @@
               </thead>
               <tbody id="transactionsTbody">
                 <tr><td colspan="7" class="empty-cell">Loading transactions...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 5. PAYMENTS / PAYSTACK AUDIT ═══ -->
+    <section id="section-payments" class="section">
+      <div class="page-header">
+        <div>
+          <h1>Payment &amp; Deposit Management</h1>
+          <p class="section-sub" style="font-size:13px;color:var(--muted);margin-top:4px;">Audit Paystack virtual dedicated accounts, automated webhooks, and manual deposits.</p>
+        </div>
+        <div class="header-actions">
+          <select id="paymentStatusFilter" onchange="filterPaymentsData()" class="filter-select">
+            <option value="">All Payment Statuses</option>
+            <option value="success">Success</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+          </select>
+          <button class="btn-outline" onclick="loadPaymentsData()"><i class="ph ph-arrows-clockwise"></i> Refresh Payments</button>
+        </div>
+      </div>
+
+      <!-- Payment Summary KPI Cards -->
+      <div class="stat-grid" style="margin-bottom:20px;">
+        <div class="stat-card blue">
+          <div class="stat-icon"><i class="ph ph-bank"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Total Deposits (Paystack)</div>
+            <div class="stat-value" id="payTotalAmount">₦0.00</div>
+            <div class="stat-sub" id="payTotalCount">0 Transactions</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><i class="ph ph-check-circle"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Successful Deposits</div>
+            <div class="stat-value" id="paySuccessCount">0</div>
+            <div class="stat-sub">Automated credits</div>
+          </div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-icon"><i class="ph ph-clock"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Pending / Processing</div>
+            <div class="stat-value" id="payPendingCount">0</div>
+            <div class="stat-sub">Awaiting confirmation</div>
+          </div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon"><i class="ph ph-identification-card"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Virtual Accounts (VDA)</div>
+            <div class="stat-value" id="payVdaCount">0</div>
+            <div class="stat-sub">Assigned Paystack NUBANs</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span><i class="ph ph-list-numbers"></i> Paystack Deposit &amp; Funding Ledger</span>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div class="table-responsive">
+            <table class="data-table" id="paymentsTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Payment Reference</th>
+                  <th>User / Email</th>
+                  <th>Provider / Channel</th>
+                  <th>Amount (₦)</th>
+                  <th>Status</th>
+                  <th>Timestamp</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="paymentsTbody">
+                <tr><td colspan="8" class="empty-cell">Loading payment records...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 6. REFERRAL MANAGEMENT ═══ -->
+    <section id="section-referrals" class="section">
+      <div class="page-header">
+        <div>
+          <h1>Referral &amp; Affiliate Management</h1>
+          <p class="section-sub" style="font-size:13px;color:var(--muted);margin-top:4px;">Audit customer referral trees, affiliate rewards, and referral wallet balances.</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-outline" onclick="loadReferralsData()"><i class="ph ph-arrows-clockwise"></i> Refresh Referrals</button>
+        </div>
+      </div>
+
+      <div class="stat-grid" style="margin-bottom:20px;">
+        <div class="stat-card purple">
+          <div class="stat-icon"><i class="ph ph-users-three"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Total Referrals</div>
+            <div class="stat-value" id="refTotalCount">0</div>
+            <div class="stat-sub">Registered affiliates</div>
+          </div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon"><i class="ph ph-gift"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Total Rewards Paid</div>
+            <div class="stat-value" id="refTotalRewards">₦0.00</div>
+            <div class="stat-sub">Referral balance distributed</div>
+          </div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon"><i class="ph ph-ticket"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Active Referral Codes</div>
+            <div class="stat-value" id="refActiveCodes">0</div>
+            <div class="stat-sub">Issued codes</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span><i class="ph ph-share-network"></i> Referral Network Audit</span>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div class="table-responsive">
+            <table class="data-table" id="referralsTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Referrer</th>
+                  <th>Referral Code</th>
+                  <th>Referred Users Count</th>
+                  <th>Referral Balance</th>
+                  <th>Created Date</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="referralsTbody">
+                <tr><td colspan="7" class="empty-cell">Loading referral data...</td></tr>
               </tbody>
             </table>
           </div>
@@ -776,6 +959,85 @@
             <input class="sfield-input" type="password" id="adminNewPasswordSetting" placeholder="Leave blank to keep current">
           </div>
           <button class="btn-primary" style="height:42px;" onclick="updateAdminCredentials()"><i class="ph ph-floppy-disk"></i> Update Admin Credentials</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ 8. ADMIN PROFILE ═══ -->
+    <section id="section-profile" class="section">
+      <div class="page-header">
+        <div>
+          <h1>Administrator Profile &amp; Security</h1>
+          <p class="section-sub" style="font-size:13px;color:var(--muted);margin-top:4px;">Manage your administrator credentials, active session tokens, and security permissions.</p>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Profile Details Card -->
+        <div class="panel">
+          <div class="panel-header"><span><i class="ph ph-shield-check"></i> Identity &amp; Role</span></div>
+          <div class="panel-body">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+              <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;">
+                <i class="ph ph-shield-check"></i>
+              </div>
+              <div>
+                <h3 id="profileCardName" style="font-size:18px;font-weight:700;color:var(--text);">Super Admin</h3>
+                <div id="profileCardEmail" style="font-size:13px;color:var(--muted);">admin@nuraxq.com</div>
+                <div style="margin-top:6px;">
+                  <span class="status-badge badge-received" id="profileCardBadge">Administrator</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;border-top:1px solid var(--border);padding-top:16px;">
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:var(--muted);font-weight:600;">Admin User ID:</span>
+                <span id="profileAdminId" style="font-family:monospace;font-weight:700;color:var(--text);">—</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:var(--muted);font-weight:600;">Active Role:</span>
+                <span id="profileAdminRole" style="font-weight:700;color:var(--primary);">Super Admin</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:var(--muted);font-weight:600;">API Base URL:</span>
+                <span style="font-family:monospace;color:var(--green);font-weight:700;">https://api.nuraxq.com</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;">
+                <span style="color:var(--muted);font-weight:600;">Session Status:</span>
+                <span style="color:var(--green);font-weight:700;">● Active JWT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security / Password Update -->
+        <div class="panel">
+          <div class="panel-header"><span><i class="ph ph-lock-key"></i> Update Security Credentials</span></div>
+          <div class="panel-body">
+            <form onsubmit="handleAdminProfileUpdate(event)">
+              <div class="sfield-group">
+                <label class="sfield-label" for="profileAdminUsername">Admin Display Name / Username</label>
+                <input class="sfield-input" type="text" id="profileAdminUsername" placeholder="Admin username">
+              </div>
+              <div class="sfield-group">
+                <label class="sfield-label" for="profileCurrentPass">Current Password</label>
+                <input class="sfield-input" type="password" id="profileCurrentPass" placeholder="Enter current password" required>
+              </div>
+              <div class="sfield-group">
+                <label class="sfield-label" for="profileNewPass">New Secure Password</label>
+                <input class="sfield-input" type="password" id="profileNewPass" placeholder="Minimum 8 characters" minlength="8" required>
+              </div>
+              <div class="sfield-group">
+                <label class="sfield-label" for="profileConfirmPass">Confirm New Password</label>
+                <input class="sfield-input" type="password" id="profileConfirmPass" placeholder="Re-enter new password" minlength="8" required>
+              </div>
+              <div style="display:flex;gap:12px;margin-top:18px;">
+                <button type="submit" class="btn-primary" style="flex:1;"><i class="ph ph-shield-check"></i> Save New Password</button>
+                <button type="button" class="btn-outline btn-danger" onclick="adminLogout()"><i class="ph ph-sign-out"></i> Logout Now</button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </section>
