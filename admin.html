@@ -430,66 +430,88 @@
       </div>
     </section>
 
-    <!-- ═══ 3. VIRTUAL NUMBERS & ORDERS ═══ -->
+    <!-- ═══ 3. VIRTUAL NUMBER PURCHASES & ANALYTICS ═══ -->
     <section id="section-orders" class="section">
-      <div class="page-header">
+      <div class="page-header" style="flex-wrap:wrap; gap:14px;">
         <div>
-          <h1>Virtual Number Management &amp; Orders</h1>
-          <p class="section-sub" style="font-size:13px;color:var(--muted);margin-top:4px;">Monitor live 5sim activations, OTP verification codes, country allocations, and refund states.</p>
+          <h1 id="ordersSectionTitle">Virtual Number Purchases</h1>
+          <p class="section-sub" style="font-size:13px;color:var(--muted);margin-top:4px;">Audit virtual number purchase history, live activation status, country allocations, and SMS verification deliveries.</p>
         </div>
-        <div class="header-actions">
-          <div class="search-wrap">
-            <i class="ph ph-magnifying-glass"></i>
-            <input type="text" id="orderSearch" placeholder="Search orders, phone, service..." oninput="filterOrders()">
-          </div>
-          <select id="orderStatusFilter" onchange="filterOrders()" class="filter-select">
-            <option value="">All Statuses</option>
-            <option value="RECEIVED">Received</option>
-            <option value="FINISHED">Finished / Completed</option>
-            <option value="CANCELED">Canceled</option>
-            <option value="BANNED">Banned</option>
-            <option value="PENDING">Pending</option>
-          </select>
+        <div class="header-actions" style="flex-wrap:wrap; gap:8px;">
           <button class="btn-outline" onclick="refreshOrdersData()"><i class="ph ph-arrows-clockwise"></i> Refresh</button>
         </div>
       </div>
 
       <!-- Virtual Number Summary KPI Cards -->
-      <div class="stat-grid" style="margin-bottom:20px;">
+      <div class="stat-grid" style="margin-bottom:20px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));">
         <div class="stat-card purple">
           <div class="stat-icon"><i class="ph ph-sim-card"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Total Numbers Ordered</div>
+            <div class="stat-label">Total Numbers Purchased</div>
             <div class="stat-value" id="orderKpiTotal">0</div>
             <div class="stat-sub">Lifetime orders</div>
-          </div>
-        </div>
-        <div class="stat-card amber">
-          <div class="stat-icon"><i class="ph ph-hourglass-medium"></i></div>
-          <div class="stat-body">
-            <div class="stat-label">Active / Pending OTP</div>
-            <div class="stat-value" id="orderKpiActive">0</div>
-            <div class="stat-sub">Waiting for SMS</div>
           </div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon"><i class="ph ph-check-circle"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Finished / Completed</div>
-            <div class="stat-value" id="orderKpiCompleted">0</div>
+            <div class="stat-label">Successful Activations</div>
+            <div class="stat-value" id="orderKpiSuccess">0</div>
             <div class="stat-sub">SMS successfully delivered</div>
           </div>
         </div>
         <div class="stat-card red">
+          <div class="stat-icon"><i class="ph ph-prohibit"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Banned Activations</div>
+            <div class="stat-value" id="orderKpiBanned">0</div>
+            <div class="stat-sub">Flagged by provider</div>
+          </div>
+        </div>
+        <div class="stat-card amber">
           <div class="stat-icon"><i class="ph ph-x-circle"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Cancelled / Banned</div>
+            <div class="stat-label">Cancelled Activations</div>
             <div class="stat-value" id="orderKpiCancelled">0</div>
             <div class="stat-sub">Refunded automatically</div>
           </div>
         </div>
+        <div class="stat-card purple" style="border-left: 3px solid #6366f1;">
+          <div class="stat-icon"><i class="ph ph-hourglass-medium"></i></div>
+          <div class="stat-body">
+            <div class="stat-label">Pending Activations</div>
+            <div class="stat-value" id="orderKpiPending">0</div>
+            <div class="stat-sub">Awaiting verification SMS</div>
+          </div>
+        </div>
       </div>
 
+      <!-- Advanced Search & Filter Controls -->
+      <div class="panel" style="margin-bottom:20px; padding:16px;">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+          <div class="search-wrap" style="flex:1; min-width:220px;">
+            <i class="ph ph-magnifying-glass"></i>
+            <input type="text" id="orderSearch" placeholder="Search username, email, phone, activation ID..." oninput="debounceOrderFilter()">
+          </div>
+          <select id="orderStatusFilter" onchange="applyOrderFilters()" class="filter-select" style="min-width:140px;">
+            <option value="">All Statuses</option>
+            <option value="successful">Successful</option>
+            <option value="pending">Pending</option>
+            <option value="cancelled">Cancelled</option>
+            <option value="banned">Banned</option>
+          </select>
+          <input type="text" id="orderCountryFilter" placeholder="Country" class="filter-input" style="width:110px; padding:8px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px;" oninput="debounceOrderFilter()">
+          <input type="text" id="orderOperatorFilter" placeholder="Operator" class="filter-input" style="width:100px; padding:8px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px;" oninput="debounceOrderFilter()">
+          <div style="display:inline-flex; align-items:center; gap:6px;">
+            <input type="date" id="orderFromDate" class="filter-input" title="From Date" style="padding:7px 10px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12.5px;" onchange="applyOrderFilters()">
+            <span style="color:var(--muted); font-size:12px;">to</span>
+            <input type="date" id="orderToDate" class="filter-input" title="To Date" style="padding:7px 10px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12.5px;" onchange="applyOrderFilters()">
+          </div>
+          <button type="button" class="btn-outline" onclick="resetOrderFilters()" title="Reset all filters"><i class="ph ph-arrow-counter-clockwise"></i> Reset</button>
+        </div>
+      </div>
+
+      <!-- Virtual Number Purchase History Table -->
       <div class="panel">
         <div class="panel-body" style="padding:0;">
           <div class="table-responsive">
@@ -497,22 +519,34 @@
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Order Reference</th>
-                  <th>User</th>
-                  <th>Service</th>
+                  <th>Activation ID</th>
+                  <th>Username</th>
+                  <th>User Email</th>
+                  <th>Purchased Phone</th>
                   <th>Country</th>
-                  <th>Assigned Phone</th>
-                  <th>Amount (₦)</th>
-                  <th>Status</th>
-                  <th>SMS OTP</th>
-                  <th>Created Date</th>
-                  <th>Actions</th>
+                  <th>Operator</th>
+                  <th>Purchase Amount</th>
+                  <th>Activation Status</th>
+                  <th>Purchase Date</th>
+                  <th>Actions / OTP</th>
                 </tr>
               </thead>
               <tbody id="ordersTbody">
-                <tr><td colspan="11" class="empty-cell">Loading orders...</td></tr>
+                <tr><td colspan="11" class="empty-cell">Loading virtual number purchases...</td></tr>
               </tbody>
             </table>
+          </div>
+          <!-- Pagination -->
+          <div class="pagination-bar" id="orderPagination" style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-top:1px solid var(--border);">
+            <span class="pagination-info" id="orderPageLabel" style="font-size:13px; color:var(--muted);">Showing page 1 of 1</span>
+            <div style="display:inline-flex; gap:8px;">
+              <button type="button" class="btn-outline" id="orderPrevBtn" onclick="changeOrderPage(-1)" disabled style="padding:6px 12px; font-size:12.5px;">
+                <i class="ph ph-caret-left"></i> Previous
+              </button>
+              <button type="button" class="btn-outline" id="orderNextBtn" onclick="changeOrderPage(1)" disabled style="padding:6px 12px; font-size:12.5px;">
+                Next <i class="ph ph-caret-right"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1214,7 +1248,7 @@
   <div id="adminToast" class="admin-toast"></div>
 
   <script src="config.js"></script>
-  <script src="api.js?v=2.4"></script>
-  <script src="admin.js?v=2.4"></script>
+  <script src="api.js?v=2.6"></script>
+  <script src="admin.js?v=2.6"></script>
 </body>
 </html>

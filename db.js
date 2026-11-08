@@ -971,20 +971,49 @@ async function updateOrderStatus(orderId, status, smsCode = null, extraData = nu
 }
 
 async function getAdminOrders(params = {}) {
-  const page = parseInt(params.page || 1, 10);
-  const limit = parseInt(params.limit || 50, 10);
-  const status = params.status ? String(params.status).toUpperCase().trim() : null;
+  const page = Math.max(1, parseInt(params.page || 1, 10));
+  const limit = Math.max(1, parseInt(params.limit || 50, 10));
+  const status = params.status ? String(params.status).toLowerCase().trim() : null;
   const search = params.search ? String(params.search).toLowerCase().trim() : null;
+  const country = params.country ? String(params.country).toLowerCase().trim() : null;
+  const operator = params.operator ? String(params.operator).toLowerCase().trim() : null;
+  const from = params.from ? new Date(params.from) : null;
+  const to = params.to ? new Date(params.to) : null;
 
   if (pool) {
     try {
+      // Safe idempotent sync of any purchases in transactions table into orders
+      try {
+        await pool.query(`
+          INSERT INTO orders (order_id, user_id, user_email, country, service, operator, amount, status, created_at, updated_at)
+          SELECT 
+            SUBSTRING(t.reference FROM 5),
+            t.user_id,
+            t.user_email,
+            COALESCE(NULLIF(SUBSTRING(t.reason FROM '\\(([^)]+)\\)'), ''), 'usa'),
+            COALESCE(NULLIF(SUBSTRING(t.reason FROM 'for\\s+([A-Za-z0-9_]+)'), ''), 'any'),
+            'any',
+            ABS(t.amount),
+            CASE WHEN LOWER(t.status) IN ('success', 'completed') THEN 'FINISHED' ELSE 'PENDING' END,
+            t.created_at,
+            t.created_at
+          FROM transactions t
+          WHERE (t.reference LIKE 'BUY-%' OR LOWER(t.type) = 'purchase')
+            AND LENGTH(t.reference) > 4
+            AND NOT EXISTS (
+              SELECT 1 FROM orders o WHERE o.order_id = SUBSTRING(t.reference FROM 5) OR o.order_id = t.reference
+            )
+          ON CONFLICT (order_id) DO NOTHING;
+        `);
+      } catch (_) {}
+
       let query = `
         SELECT 
           o.id,
           o.order_id AS "orderId",
           o.user_id AS "userId",
-          o.user_email AS "userEmail",
-          COALESCE(u.username, o.user_email) AS "userName",
+          COALESCE(u.username, o.user_email, 'User') AS "username",
+          COALESCE(u.email, o.user_email, '—') AS "userEmail",
           o.phone,
           o.country,
           o.service,
@@ -1001,9 +1030,19 @@ async function getAdminOrders(params = {}) {
       `;
       const qParams = [];
 
-      if (status) {
-        qParams.push(status);
-        query += ` AND UPPER(o.status) = $${qParams.length}`;
+      if (status && status !== 'all') {
+        if (status === 'successful' || status === 'completed') {
+          query += ` AND UPPER(o.status) IN ('FINISHED', 'COMPLETED', 'SUCCESS', '6', '10')`;
+        } else if (status === 'banned') {
+          query += ` AND UPPER(o.status) IN ('BANNED', '8')`;
+        } else if (status === 'cancelled' || status === 'canceled') {
+          query += ` AND UPPER(o.status) IN ('CANCELED', 'CANCELLED', 'TIMEOUT', 'EXPIRED', 'FAILED', '2')`;
+        } else if (status === 'pending' || status === 'received' || status === 'active') {
+          query += ` AND UPPER(o.status) IN ('RECEIVED', 'PENDING', 'ACTIVE', 'WAITING', '1', '3')`;
+        } else {
+          qParams.push(status.toUpperCase());
+          query += ` AND UPPER(o.status) = $${qParams.length}`;
+        }
       }
 
       if (search) {
@@ -1012,10 +1051,31 @@ async function getAdminOrders(params = {}) {
           LOWER(o.order_id) LIKE $${qParams.length} OR
           LOWER(COALESCE(o.user_email, '')) LIKE $${qParams.length} OR
           LOWER(COALESCE(u.username, '')) LIKE $${qParams.length} OR
+          LOWER(COALESCE(u.email, '')) LIKE $${qParams.length} OR
           LOWER(o.service) LIKE $${qParams.length} OR
           LOWER(o.country) LIKE $${qParams.length} OR
           LOWER(COALESCE(o.phone, '')) LIKE $${qParams.length}
         )`;
+      }
+
+      if (country && country !== 'all') {
+        qParams.push(country.toLowerCase());
+        query += ` AND LOWER(o.country) = $${qParams.length}`;
+      }
+
+      if (operator && operator !== 'all') {
+        qParams.push(operator.toLowerCase());
+        query += ` AND LOWER(o.operator) = $${qParams.length}`;
+      }
+
+      if (from && !isNaN(from.getTime())) {
+        qParams.push(from.toISOString());
+        query += ` AND o.created_at >= $${qParams.length}`;
+      }
+
+      if (to && !isNaN(to.getTime())) {
+        qParams.push(to.toISOString());
+        query += ` AND o.created_at <= $${qParams.length}`;
       }
 
       const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM (${query}) AS filtered`, qParams);
@@ -1042,17 +1102,34 @@ async function getAdminOrders(params = {}) {
 
   // Fallback to in-memory
   let filtered = [...inMemory.orders];
-  if (status) {
-    filtered = filtered.filter(o => String(o.status).toUpperCase() === status);
+  if (status && status !== 'all') {
+    if (status === 'successful' || status === 'completed') {
+      filtered = filtered.filter(o => ['FINISHED', 'COMPLETED', 'SUCCESS', '6', '10'].includes(String(o.status).toUpperCase()));
+    } else if (status === 'banned') {
+      filtered = filtered.filter(o => ['BANNED', '8'].includes(String(o.status).toUpperCase()));
+    } else if (status === 'cancelled' || status === 'canceled') {
+      filtered = filtered.filter(o => ['CANCELED', 'CANCELLED', 'TIMEOUT', 'EXPIRED', 'FAILED', '2'].includes(String(o.status).toUpperCase()));
+    } else if (status === 'pending' || status === 'received' || status === 'active') {
+      filtered = filtered.filter(o => ['RECEIVED', 'PENDING', 'ACTIVE', 'WAITING', '1', '3'].includes(String(o.status).toUpperCase()));
+    } else {
+      filtered = filtered.filter(o => String(o.status).toUpperCase() === status.toUpperCase());
+    }
   }
   if (search) {
     filtered = filtered.filter(o =>
       String(o.order_id || '').toLowerCase().includes(search) ||
       String(o.user_email || '').toLowerCase().includes(search) ||
+      String(o.username || '').toLowerCase().includes(search) ||
       String(o.service || '').toLowerCase().includes(search) ||
       String(o.country || '').toLowerCase().includes(search) ||
       String(o.phone || '').toLowerCase().includes(search)
     );
+  }
+  if (country && country !== 'all') {
+    filtered = filtered.filter(o => String(o.country || '').toLowerCase() === country.toLowerCase());
+  }
+  if (operator && operator !== 'all') {
+    filtered = filtered.filter(o => String(o.operator || '').toLowerCase() === operator.toLowerCase());
   }
 
   const total = filtered.length;
@@ -1062,7 +1139,8 @@ async function getAdminOrders(params = {}) {
     orderId: o.order_id,
     userId: o.user_id,
     userEmail: o.user_email,
-    userName: o.user_email || 'User',
+    username: o.username || o.user_email || 'User',
+    userName: o.username || o.user_email || 'User',
     phone: o.phone,
     country: o.country,
     service: o.service,
@@ -1148,14 +1226,38 @@ async function getUserOrders(userId, userEmail = null) {
 async function getOrderStats() {
   if (pool) {
     try {
+      // Safe idempotent sync of any purchases in transactions table into orders
+      try {
+        await pool.query(`
+          INSERT INTO orders (order_id, user_id, user_email, country, service, operator, amount, status, created_at, updated_at)
+          SELECT 
+            SUBSTRING(t.reference FROM 5),
+            t.user_id,
+            t.user_email,
+            COALESCE(NULLIF(SUBSTRING(t.reason FROM '\\(([^)]+)\\)'), ''), 'usa'),
+            COALESCE(NULLIF(SUBSTRING(t.reason FROM 'for\\s+([A-Za-z0-9_]+)'), ''), 'any'),
+            'any',
+            ABS(t.amount),
+            CASE WHEN LOWER(t.status) IN ('success', 'completed') THEN 'FINISHED' ELSE 'PENDING' END,
+            t.created_at,
+            t.created_at
+          FROM transactions t
+          WHERE (t.reference LIKE 'BUY-%' OR LOWER(t.type) = 'purchase')
+            AND LENGTH(t.reference) > 4
+            AND NOT EXISTS (
+              SELECT 1 FROM orders o WHERE o.order_id = SUBSTRING(t.reference FROM 5) OR o.order_id = t.reference
+            )
+          ON CONFLICT (order_id) DO NOTHING;
+        `);
+      } catch (_) {}
+
       const q = `
         SELECT 
           COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE UPPER(status) IN ('RECEIVED', 'PENDING', 'ACTIVE'))::int AS active,
-          COUNT(*) FILTER (WHERE UPPER(status) IN ('FINISHED', 'COMPLETED', 'SUCCESS'))::int AS completed,
-          COUNT(*) FILTER (WHERE UPPER(status) IN ('CANCELED', 'CANCELLED'))::int AS cancelled,
-          COUNT(*) FILTER (WHERE UPPER(status) = 'BANNED')::int AS banned,
-          COUNT(*) FILTER (WHERE UPPER(status) IN ('FAILED', 'TIMEOUT'))::int AS failed,
+          COUNT(*) FILTER (WHERE UPPER(status) IN ('RECEIVED', 'PENDING', 'ACTIVE', 'WAITING', '1', '3'))::int AS pending,
+          COUNT(*) FILTER (WHERE UPPER(status) IN ('FINISHED', 'COMPLETED', 'SUCCESS', '6', '10'))::int AS successful,
+          COUNT(*) FILTER (WHERE UPPER(status) IN ('CANCELED', 'CANCELLED', 'TIMEOUT', 'EXPIRED', 'FAILED', '2'))::int AS cancelled,
+          COUNT(*) FILTER (WHERE UPPER(status) IN ('BANNED', '8'))::int AS banned,
           COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE)::int AS today,
           COALESCE(SUM(amount), 0)::numeric AS total_revenue,
           COALESCE(SUM(amount) FILTER (WHERE created_at >= CURRENT_DATE), 0)::numeric AS today_revenue
@@ -1163,13 +1265,21 @@ async function getOrderStats() {
       `;
       const res = await pool.query(q);
       const row = res.rows[0] || {};
+      const total = row.total || 0;
+      const successful = row.successful || 0;
+      const banned = row.banned || 0;
+      const cancelled = row.cancelled || 0;
+      const pending = row.pending || 0;
+
       return {
-        total: row.total || 0,
-        active: row.active || 0,
-        completed: row.completed || 0,
-        cancelled: row.cancelled || 0,
-        banned: row.banned || 0,
-        failed: row.failed || 0,
+        total,
+        successful,
+        completed: successful,
+        banned,
+        cancelled,
+        pending,
+        active: pending,
+        failed: 0,
         today: row.today || 0,
         totalRevenue: parseFloat(row.total_revenue || 0),
         todayRevenue: parseFloat(row.today_revenue || 0)
@@ -1181,11 +1291,10 @@ async function getOrderStats() {
 
   // In-memory stats
   const total = inMemory.orders.length;
-  const active = inMemory.orders.filter(o => ['RECEIVED', 'PENDING', 'ACTIVE'].includes(String(o.status).toUpperCase())).length;
-  const completed = inMemory.orders.filter(o => ['FINISHED', 'COMPLETED', 'SUCCESS'].includes(String(o.status).toUpperCase())).length;
-  const cancelled = inMemory.orders.filter(o => ['CANCELED', 'CANCELLED'].includes(String(o.status).toUpperCase())).length;
-  const banned = inMemory.orders.filter(o => String(o.status).toUpperCase() === 'BANNED').length;
-  const failed = inMemory.orders.filter(o => ['FAILED', 'TIMEOUT'].includes(String(o.status).toUpperCase())).length;
+  const pending = inMemory.orders.filter(o => ['RECEIVED', 'PENDING', 'ACTIVE', 'WAITING', '1', '3'].includes(String(o.status).toUpperCase())).length;
+  const successful = inMemory.orders.filter(o => ['FINISHED', 'COMPLETED', 'SUCCESS', '6', '10'].includes(String(o.status).toUpperCase())).length;
+  const cancelled = inMemory.orders.filter(o => ['CANCELED', 'CANCELLED', 'TIMEOUT', 'EXPIRED', 'FAILED', '2'].includes(String(o.status).toUpperCase())).length;
+  const banned = inMemory.orders.filter(o => ['BANNED', '8'].includes(String(o.status).toUpperCase())).length;
   const today = inMemory.orders.filter(o => String(o.created_at || '').slice(0, 10) === new Date().toISOString().slice(0, 10)).length;
   const totalRevenue = inMemory.orders.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
   const todayRevenue = inMemory.orders
@@ -1194,11 +1303,13 @@ async function getOrderStats() {
 
   return {
     total,
-    active,
-    completed,
-    cancelled,
+    successful,
+    completed: successful,
     banned,
-    failed,
+    cancelled,
+    pending,
+    active: pending,
+    failed: 0,
     today,
     totalRevenue,
     todayRevenue

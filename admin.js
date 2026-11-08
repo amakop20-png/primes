@@ -356,6 +356,9 @@ function showSection(id, btn) {
       filterBackendTransactions();
     }
   }
+  if (id === 'orders') {
+    loadAdminOrders();
+  }
   if (id === 'payments') {
     loadPaymentsData();
   }
@@ -515,19 +518,12 @@ async function loadAllData() {
       } catch (_) {}
     }
 
-    // 5.1 Fetch live orders & virtual numbers from Admin API (GET /api/admin/orders)
-    if (typeof adminGetOrders === 'function') {
-      try {
-        const ordersRes = await adminGetOrders({ limit: 100 });
-        const oList = ordersRes?.orders || ordersRes?.data || (Array.isArray(ordersRes) ? ordersRes : null);
-        if (Array.isArray(oList)) {
-          allOrders = oList;
-          setText('navOrdersBadge', allOrders.length);
-        }
-      } catch (ordErr) {
-        if (!ordErr?.suppressed) {
-          console.warn('[Admin] Live orders API notice:', ordErr.message);
-        }
+    // 5.1 Fetch live virtual number orders & analytics from Admin API
+    try {
+      await loadAdminOrders(1);
+    } catch (ordErr) {
+      if (!ordErr?.suppressed) {
+        console.warn('[Admin] Live orders API notice:', ordErr.message);
       }
     }
 
@@ -1177,80 +1173,220 @@ async function toggleWalletFreeze(userId, currentlyFrozen) {
 }
 
 /* ════════════════════════════════════
-   ORDER AUDITING & LIVE 5SIM CHECK
+   VIRTUAL NUMBER PURCHASES & ANALYTICS
+   Complete Database-Driven Analytics & Management
 ════════════════════════════════════ */
-function renderOrdersTable(orders = allOrders) {
+let currentOrderPage = 1;
+const orderPageSize = 25;
+let orderPaginationMeta = { page: 1, limit: 25, total: 0, totalPages: 1 };
+let orderSearchDebounce = null;
+
+function normalizeActivationStatus(rawStatus) {
+  const s = String(rawStatus || '').toUpperCase().trim();
+  if (['FINISHED', 'COMPLETED', 'SUCCESS', '6', '10'].includes(s)) {
+    return { category: 'successful', label: 'Successful', badgeClass: 'badge-finished' };
+  }
+  if (['BANNED', '8'].includes(s)) {
+    return { category: 'banned', label: 'Banned', badgeClass: 'badge-banned' };
+  }
+  if (['CANCELED', 'CANCELLED', 'TIMEOUT', 'EXPIRED', 'FAILED', '2'].includes(s)) {
+    return { category: 'cancelled', label: 'Cancelled', badgeClass: 'badge-canceled' };
+  }
+  return { category: 'pending', label: 'Pending', badgeClass: 'badge-received' };
+}
+
+function renderOrdersTable(orders = allOrders, stats = null) {
   const tbody = document.getElementById('ordersTbody');
   if (!tbody) return;
 
-  // Update Orders KPI cards
-  const total = allOrders.length;
-  const active = allOrders.filter(o => ['RECEIVED', 'PENDING', 'ACTIVE'].includes(String(o.status || '').toUpperCase())).length;
-  const completed = allOrders.filter(o => ['FINISHED', 'COMPLETED', 'SUCCESS'].includes(String(o.status || '').toUpperCase())).length;
-  const cancelled = allOrders.filter(o => ['CANCELED', 'CANCELLED', 'BANNED', 'FAILED'].includes(String(o.status || '').toUpperCase())).length;
+  // 1. Update the 4 core KPI statistics cards (+ Pending) directly from database figures
+  const total = stats?.total ?? allOrders.length;
+  const successful = stats?.successful ?? stats?.completed ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'successful').length;
+  const banned = stats?.banned ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'banned').length;
+  const cancelled = stats?.cancelled ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'cancelled').length;
+  const pending = stats?.pending ?? stats?.active ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'pending').length;
 
-  setText('orderKpiTotal', total.toLocaleString());
-  setText('orderKpiActive', active.toLocaleString());
-  setText('orderKpiCompleted', completed.toLocaleString());
-  setText('orderKpiCancelled', cancelled.toLocaleString());
+  setText('orderKpiTotal', Number(total || 0).toLocaleString());
+  setText('orderKpiSuccess', Number(successful || 0).toLocaleString());
+  setText('orderKpiBanned', Number(banned || 0).toLocaleString());
+  setText('orderKpiCancelled', Number(cancelled || 0).toLocaleString());
+  setText('orderKpiPending', Number(pending || 0).toLocaleString());
+  setText('navOrdersBadge', Number(total || 0).toLocaleString());
 
-  if (!orders.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-cell">No matching virtual number orders found.</td></tr>';
+  if (!orders || !orders.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-cell">No matching virtual number purchases found.</td></tr>';
     return;
   }
 
   tbody.innerHTML = orders.map((o, i) => {
-    const sms = o.smsCode || (o.sms && o.sms[0] && o.sms[0].code) || '—';
-    const hasSms = sms && sms !== '—';
+    const activationId = String(o.orderId || o.id || '—');
+    const username = escapeHTML(o.username || o.userName || 'User');
+    const userEmail = escapeHTML(o.userEmail || o.email || '—');
+    const phone = escapeHTML(o.phone || '—');
+    const country = escapeHTML(String(o.country || '—').toUpperCase());
+    const operator = escapeHTML(String(o.operator || 'any').toLowerCase());
+    const service = escapeHTML(String(o.service || o.product || '—'));
+    const amountVal = parseFloat(o.amountNGN || o.amount || 0);
+    const amountStr = '₦' + amountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const norm = normalizeActivationStatus(o.status);
+
+    const sms = o.smsCode || (o.sms && o.sms[0] && o.sms[0].code) || '';
+    const hasSms = Boolean(sms && sms !== '—');
+
+    const displayIndex = (currentOrderPage - 1) * orderPageSize + (i + 1);
 
     return `
       <tr>
-        <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
+        <td style="color:var(--muted);font-size:12px;">${displayIndex}</td>
         <td>
-          <span style="font-family:monospace;font-size:12px;color:var(--text);">${escapeHTML(String(o.orderId || o.id || '—'))}</span>
-          <button class="copy-btn" onclick="copyToClipboard('${escapeHTML(String(o.orderId || o.id || ''))}', 'Order ID')" title="Copy ID"><i class="ph ph-copy"></i></button>
+          <span style="font-family:monospace;font-size:12px;font-weight:700;color:var(--text);">${escapeHTML(activationId)}</span>
+          <button class="copy-btn" onclick="copyToClipboard('${escapeHTML(activationId)}', 'Activation ID')" title="Copy Activation ID"><i class="ph ph-copy"></i></button>
         </td>
-        <td style="font-size:12px;color:var(--muted);">${escapeHTML(o.userName || o.userEmail || o.userId || 'User')}</td>
-        <td><strong style="text-transform:capitalize;">${escapeHTML(o.service || o.product || '—')}</strong></td>
-        <td style="font-size:12px;text-transform:capitalize;color:var(--muted);">${escapeHTML(o.country || '—')}</td>
-        <td style="font-family:monospace;font-size:12px;color:var(--text);">${escapeHTML(o.phone || '—')}</td>
-        <td style="color:var(--amber);font-weight:700;">₦${parseFloat(o.amountNGN || o.amount || 0).toLocaleString()}</td>
-        <td>${statusBadge(o.status)}</td>
+        <td><strong style="color:var(--text);font-size:13px;">${username}</strong></td>
+        <td style="font-size:12px;color:var(--muted);">${userEmail}</td>
         <td>
-          ${hasSms ? `<span style="font-family:monospace;font-weight:800;color:var(--green);font-size:13px;background:var(--surface-2);padding:2px 6px;border-radius:4px;">${escapeHTML(sms)}</span>` : '<span style="color:var(--muted);font-size:12px;">Waiting...</span>'}
+          <span style="font-family:monospace;font-size:12.5px;color:var(--text);">${phone}</span>
+          ${phone !== '—' ? `<button class="copy-btn" onclick="copyToClipboard('${phone}', 'Phone Number')" title="Copy Phone Number"><i class="ph ph-copy"></i></button>` : ''}
+        </td>
+        <td><span style="font-size:12px;font-weight:700;color:var(--muted);">${country}</span></td>
+        <td><span style="font-size:12px;text-transform:capitalize;color:var(--muted);">${operator}</span></td>
+        <td style="color:var(--amber);font-weight:700;font-size:13px;">${amountStr}</td>
+        <td>
+          <span class="status-badge ${norm.badgeClass}" style="text-transform:capitalize;">${norm.label}</span>
         </td>
         <td style="font-size:11px;color:var(--muted);">${fmt(o.createdAt)}</td>
         <td>
-          <button class="tbl-btn tbl-btn-view" onclick="checkLiveOrderStatus('${escapeHTML(String(o.orderId || o.id || ''))}')" title="Check live 5sim status"><i class="ph ph-arrow-clockwise"></i> Check</button>
+          <div style="display:inline-flex;align-items:center;gap:6px;">
+            ${hasSms ? `<span style="font-family:monospace;font-weight:800;color:var(--green);font-size:12px;background:var(--surface-2);padding:2px 6px;border-radius:4px;" title="Received OTP">${escapeHTML(sms)}</span>` : ''}
+            <button class="tbl-btn tbl-btn-view" onclick="checkLiveOrderStatus('${escapeHTML(activationId)}')" title="Check live provider status"><i class="ph ph-arrow-clockwise"></i> Check</button>
+          </div>
         </td>
       </tr>
     `;
   }).join('');
 }
 
-function filterOrders() {
-  const q      = (document.getElementById('orderSearch')?.value || '').toLowerCase().trim();
-  const status = (document.getElementById('orderStatusFilter')?.value || '').toUpperCase().trim();
+async function loadAdminOrders(page = 1) {
+  currentOrderPage = page;
+  const tbody = document.getElementById('ordersTbody');
+  if (tbody && !allOrders.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-cell"><i class="ph ph-spinner spinning"></i> Loading virtual number purchases...</td></tr>';
+  }
 
-  const filtered = allOrders.filter(o => {
-    const matchQ = !q ||
-      (o.service || o.product || '').toLowerCase().includes(q) ||
-      (o.country || '').toLowerCase().includes(q) ||
-      (o.phone || '').toLowerCase().includes(q) ||
-      (o.userName || o.userEmail || '').toLowerCase().includes(q) ||
-      String(o.orderId || o.id || '').includes(q);
+  const q = (document.getElementById('orderSearch')?.value || '').trim();
+  const status = (document.getElementById('orderStatusFilter')?.value || '').trim();
+  const country = (document.getElementById('orderCountryFilter')?.value || '').trim();
+  const operator = (document.getElementById('orderOperatorFilter')?.value || '').trim();
+  const from = (document.getElementById('orderFromDate')?.value || '').trim();
+  const to = (document.getElementById('orderToDate')?.value || '').trim();
 
-    const matchStatus = !status || String(o.status || '').toUpperCase() === status;
-    return matchQ && matchStatus;
-  });
+  let statsData = null;
+  try {
+    if (typeof adminGetOrderStats === 'function') {
+      const statsRes = await adminGetOrderStats();
+      statsData = statsRes?.stats || statsRes?.data || null;
+    }
+  } catch (_) {}
 
-  renderOrdersTable(filtered);
+  try {
+    let result = null;
+    if (typeof adminGetOrders === 'function') {
+      result = await adminGetOrders({
+        page: currentOrderPage,
+        limit: orderPageSize,
+        search: q,
+        status: status,
+        country: country,
+        operator: operator,
+        from: from,
+        to: to
+      });
+    }
+
+    const oList = result?.orders || result?.data || (Array.isArray(result) ? result : []);
+    orderPaginationMeta = result?.pagination || {
+      page: currentOrderPage,
+      limit: orderPageSize,
+      total: oList.length,
+      totalPages: Math.max(1, Math.ceil(oList.length / orderPageSize))
+    };
+
+    allOrders = oList;
+    renderOrdersTable(allOrders, statsData);
+    renderOrderPagination();
+  } catch (err) {
+    console.error('Error loading admin orders:', err);
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="11" class="empty-cell" style="color:var(--red);"><i class="ph ph-warning-circle"></i> Failed to load purchase history: ${escapeHTML(err.message || 'Server error')}</td></tr>`;
+    }
+  }
 }
 
-function refreshOrdersData() {
-  loadAllData();
-  renderOrdersTable(allOrders);
-  adminToast('Orders refreshed.', 'info');
+function renderOrderPagination() {
+  const pagEl = document.getElementById('orderPagination');
+  const label = document.getElementById('orderPageLabel');
+  const prev = document.getElementById('orderPrevBtn');
+  const next = document.getElementById('orderNextBtn');
+  if (!pagEl) return;
+
+  const total = orderPaginationMeta.total || allOrders.length;
+  const totalPages = Math.max(1, orderPaginationMeta.totalPages || 1);
+  const current = orderPaginationMeta.page || currentOrderPage;
+
+  if (label) {
+    label.textContent = `Showing page ${current} of ${totalPages} (${total.toLocaleString()} total purchases)`;
+  }
+  if (prev) {
+    prev.disabled = current <= 1;
+  }
+  if (next) {
+    next.disabled = current >= totalPages;
+  }
+}
+
+function changeOrderPage(delta) {
+  const next = currentOrderPage + delta;
+  if (next >= 1 && next <= (orderPaginationMeta.totalPages || 1)) {
+    loadAdminOrders(next);
+  }
+}
+
+function applyOrderFilters() {
+  loadAdminOrders(1);
+}
+
+function debounceOrderFilter() {
+  clearTimeout(orderSearchDebounce);
+  orderSearchDebounce = setTimeout(() => {
+    loadAdminOrders(1);
+  }, 350);
+}
+
+function resetOrderFilters() {
+  const search = document.getElementById('orderSearch');
+  const status = document.getElementById('orderStatusFilter');
+  const country = document.getElementById('orderCountryFilter');
+  const operator = document.getElementById('orderOperatorFilter');
+  const from = document.getElementById('orderFromDate');
+  const to = document.getElementById('orderToDate');
+
+  if (search) search.value = '';
+  if (status) status.value = '';
+  if (country) country.value = '';
+  if (operator) operator.value = '';
+  if (from) from.value = '';
+  if (to) to.value = '';
+
+  loadAdminOrders(1);
+}
+
+function filterOrders() {
+  applyOrderFilters();
+}
+
+async function refreshOrdersData() {
+  await loadAdminOrders(1);
+  adminToast('Virtual number purchases refreshed from database.', 'info');
 }
 
 async function checkLiveOrderStatus(orderId) {

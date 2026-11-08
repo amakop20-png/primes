@@ -1342,6 +1342,10 @@ async function adminGetOrders(params = {}) {
     if (params.limit !== undefined && params.limit !== null) q.set('limit', params.limit);
     if (params.status) q.set('status', params.status);
     if (params.search) q.set('search', params.search);
+    if (params.country) q.set('country', params.country);
+    if (params.operator) q.set('operator', params.operator);
+    if (params.from) q.set('from', params.from);
+    if (params.to) q.set('to', params.to);
     const qs = q.toString() ? ('?' + q.toString()) : '';
     return await adminApiRequest('/orders' + qs);
 }
@@ -1349,6 +1353,10 @@ async function adminGetOrders(params = {}) {
 async function adminGetOrder(orderId) {
     if (!orderId) throw new Error('Order ID is required');
     return await adminApiRequest('/orders/' + encodeURIComponent(orderId));
+}
+
+async function adminGetOrderStats() {
+    return await adminApiRequest('/orders/stats');
 }
 
 // ── Announcement Storage System (Application State) ──
@@ -1444,7 +1452,8 @@ const adminApi = {
 
     // Orders & Virtual Numbers Auditing
     getOrders: adminGetOrders,
-    getOrder: adminGetOrder
+    getOrder: adminGetOrder,
+    getOrderStats: adminGetOrderStats
 };
 
 // Global exports
@@ -1479,6 +1488,7 @@ window.adminGetVirtualAccounts        = adminGetVirtualAccounts;
 window.adminGetUserVirtualAccount     = adminGetUserVirtualAccount;
 window.adminGetOrders                 = adminGetOrders;
 window.adminGetOrder                  = adminGetOrder;
+window.adminGetOrderStats             = adminGetOrderStats;
 window.fetchActiveAnnouncementFromApi = fetchActiveAnnouncementFromApi;
 window.publishAnnouncementToApi       = publishAnnouncementToApi;
 window.isAdmin                        = isAdmin;

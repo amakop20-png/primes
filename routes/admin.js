@@ -629,9 +629,13 @@ router.get('/orders', adminAuth, async (req, res) => {
   const limit = parseInt(req.query.limit || 50, 10);
   const status = req.query.status;
   const search = req.query.search;
+  const country = req.query.country;
+  const operator = req.query.operator;
+  const from = req.query.from;
+  const to = req.query.to;
 
   try {
-    const result = await db.getAdminOrders({ page, limit, status, search });
+    const result = await db.getAdminOrders({ page, limit, status, search, country, operator, from, to });
     return res.status(200).json({
       success: true,
       data: result.orders,
@@ -641,6 +645,21 @@ router.get('/orders', adminAuth, async (req, res) => {
   } catch (err) {
     console.error('Admin orders retrieval error:', err);
     return res.status(500).json({ success: false, error: 'Failed to retrieve order records' });
+  }
+});
+
+// GET /api/admin/orders/stats
+router.get('/orders/stats', adminAuth, async (req, res) => {
+  try {
+    const stats = await db.getOrderStats();
+    return res.status(200).json({
+      success: true,
+      stats,
+      data: stats
+    });
+  } catch (err) {
+    console.error('Admin order stats error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to calculate order statistics' });
   }
 });
 
