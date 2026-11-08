@@ -40,6 +40,23 @@
 
     // 4. Initial live data fetch
     await fetchLiveHeaderBalance();
+    if (typeof getUserOrders === 'function') {
+      try {
+        const remOrders = await getUserOrders();
+        if (Array.isArray(remOrders) && remOrders.length > 0) {
+          let loc = JSON.parse(localStorage.getItem('primes_orders') || '[]');
+          if (!Array.isArray(loc)) loc = [];
+          remOrders.forEach(ro => {
+            const rId = String(ro.orderId || ro.id);
+            const idx = loc.findIndex(o => String(o.orderId || o.id) === rId);
+            if (idx !== -1) loc[idx] = { ...loc[idx], ...ro };
+            else loc.push(ro);
+          });
+          localStorage.setItem('primes_orders', JSON.stringify(loc));
+          localStorage.setItem('primes_total_numbers', String(loc.length));
+        }
+      } catch (_) {}
+    }
     await fetchTransactions(1);
   }
 
@@ -302,6 +319,27 @@
       return true;
     });
 
+    let storedOrders = [];
+    try {
+      storedOrders = JSON.parse(localStorage.getItem('primes_orders') || '[]');
+      if (!Array.isArray(storedOrders)) storedOrders = [];
+    } catch (_) {}
+
+    // Fallback if backend ledger has no purchases recorded yet but stored orders exist
+    if (currentFilter === 'purchase' && filtered.length === 0 && storedOrders.length > 0) {
+      filtered = storedOrders.map((o, i) => ({
+        id: o.orderId || o.id || (i + 1),
+        reference: `BUY-${o.orderId || o.id}`,
+        amount: -(parseFloat(o.amountNGN || o.price || 0) || 0),
+        currency: 'NGN',
+        reason: `Virtual number for ${(o.service || o.product || 'SMS').toUpperCase()} (${(o.country || 'USA').toUpperCase()})`,
+        type: 'purchase',
+        status: ['FINISHED', 'COMPLETED', 'SUCCESS'].includes(String(o.status).toUpperCase()) ? 'success' : (['CANCELED', 'CANCELLED', 'BANNED', 'TIMEOUT', 'EXPIRED'].includes(String(o.status).toUpperCase()) ? 'failed' : 'pending'),
+        createdAt: o.createdAt || new Date().toISOString(),
+        orderData: o
+      }));
+    }
+
     // 2. Filter by search query
     if (searchQuery) {
       filtered = filtered.filter((tx, idx) => {
@@ -399,13 +437,36 @@
       const statusClass = isSuccess ? 'status-success' : (isPending ? 'status-pending' : 'status-failed');
       const statusLabel = isSuccess ? 'Success' : (isPending ? 'Pending' : 'Failed');
 
-      const desc = tx.description || tx.reason || tx.reference || (isCredit ? 'Wallet Top-up' : 'Virtual Number');
+      // Cross-reference purchase order for Phone number and SMS OTP code
+      let matchedOrder = tx.orderData || null;
+      if (!matchedOrder && tx.reference) {
+        const cleanRef = String(tx.reference).replace(/^BUY-?/i, '').trim();
+        matchedOrder = storedOrders.find(o => String(o.orderId || o.id) === cleanRef);
+      }
+      const phone = matchedOrder?.phone || tx.phone || null;
+      const smsCode = matchedOrder?.smsCode || tx.smsCode || tx.code || null;
 
       return `
         <tr class="tn-tx-row" data-id="${tx.id || displayId}">
           <td class="col-id">${displayId}</td>
           <td>
-            <span class="tn-type-pill ${typeClass}">${typeLabel}</span>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span class="tn-type-pill ${typeClass}">${typeLabel}</span>
+                ${(phone && phone !== '—') ? `
+                  <span style="font-family:monospace; font-size:12px; font-weight:700; color:var(--text);">${escapeHTML(phone)}</span>
+                  <button type="button" class="btn-copy-mini" onclick="event.stopPropagation(); navigator.clipboard.writeText('${escapeHTML(phone)}');" title="Copy Number" style="background:none; border:none; color:inherit; cursor:pointer; padding:0 2px;"><i class="ph ph-copy"></i></button>
+                ` : ''}
+              </div>
+              ${smsCode ? `
+                <div style="display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:800; color:var(--tn-success, #10b981);">
+                  <i class="ph ph-shield-check"></i> Code: ${escapeHTML(smsCode)}
+                  <button type="button" class="btn-copy-mini" onclick="event.stopPropagation(); navigator.clipboard.writeText('${escapeHTML(smsCode)}'); alert('Code copied: ${escapeHTML(smsCode)}');" title="Copy OTP" style="background:none; border:none; color:#10b981; cursor:pointer; padding:0 2px;"><i class="ph ph-copy"></i></button>
+                </div>
+              ` : (rawType === 'purchase' && !isSuccess ? `
+                <span style="font-size:11px; color:var(--tn-text-muted);"><i class="ph ph-circle-notch tn-spin"></i> Waiting for SMS...</span>
+              ` : '')}
+            </div>
           </td>
           <td class="col-amount ${isCredit ? 'amount-credit' : 'amount-debit'}">${formattedAmt}</td>
           <td class="tn-hide-mobile" style="color:var(--tn-text-muted); font-size:13px;">${dateStr}</td>

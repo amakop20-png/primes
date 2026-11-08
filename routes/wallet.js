@@ -343,6 +343,33 @@ router.post('/buy/activation', authenticate, async (req, res) => {
   }
 });
 
+/* ======================================================================
+   USER VIRTUAL NUMBERS & ORDERS HISTORY
+   GET /api/orders
+   GET /api/user/orders
+====================================================================== */
+async function handleGetUserOrders(req, res) {
+  const userId = req.user.id || req.user._id;
+  const userEmail = req.user.email;
+  try {
+    const orders = await db.getUserOrders(userId, userEmail);
+    return res.status(200).json({
+      success: true,
+      orders: orders || [],
+      data: orders || []
+    });
+  } catch (err) {
+    console.error('[Orders] Error fetching user orders:', err.message);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve orders.'
+    });
+  }
+}
+
+router.get('/orders', authenticate, handleGetUserOrders);
+router.get('/user/orders', authenticate, handleGetUserOrders);
+
 router.get('/order/:id', authenticate, async (req, res) => {
   const orderId = req.params.id;
   if (!orderId) {

@@ -1086,6 +1086,65 @@ async function getAdminOrders(params = {}) {
   };
 }
 
+async function getUserOrders(userId, userEmail = null) {
+  if (pool) {
+    try {
+      let query = `
+        SELECT 
+          o.id,
+          o.order_id AS "orderId",
+          o.user_id AS "userId",
+          o.user_email AS "userEmail",
+          o.phone,
+          o.country,
+          o.service,
+          o.operator,
+          o.amount AS "amountNGN",
+          o.status,
+          o.sms_code AS "smsCode",
+          o.provider,
+          o.created_at AS "createdAt",
+          o.updated_at AS "updatedAt"
+        FROM orders o
+        WHERE o.user_id::text = $1
+      `;
+      const params = [String(userId)];
+      if (userEmail) {
+        params.push(String(userEmail).toLowerCase());
+        query += ` OR LOWER(COALESCE(o.user_email, '')) = $${params.length}`;
+      }
+      query += ` ORDER BY o.created_at DESC`;
+
+      const rows = (await pool.query(query, params)).rows;
+      if (rows && rows.length > 0) return rows;
+    } catch (err) {
+      console.error('[DB] Error querying user orders from PostgreSQL:', err.message);
+    }
+  }
+
+  // Fallback to in-memory store
+  const matched = inMemory.orders.filter(o => 
+    (userId && String(o.user_id) === String(userId)) ||
+    (userEmail && String(o.user_email || '').toLowerCase() === String(userEmail).toLowerCase())
+  );
+  return matched.map(o => ({
+    id: o.id,
+    orderId: o.order_id,
+    userId: o.user_id,
+    userEmail: o.user_email,
+    phone: o.phone,
+    country: o.country,
+    service: o.service,
+    operator: o.operator,
+    amountNGN: o.amount,
+    status: o.status,
+    smsCode: o.sms_code,
+    provider: o.provider,
+    createdAt: o.created_at,
+    updatedAt: o.updated_at
+  }));
+}
+
 async function getOrderStats() {
   if (pool) {
     try {
@@ -1167,6 +1226,7 @@ module.exports = {
   saveUserVirtualAccount,
   saveOrder,
   updateOrderStatus,
+  getUserOrders,
   getAdminOrders,
   getOrderStats,
   inMemory,

@@ -207,6 +207,34 @@
       }
     }
 
+    // 1.1 Fetch authoritative backend orders (from database via GET /api/orders)
+    try {
+      if (typeof getUserOrders === 'function') {
+        const remoteOrders = await getUserOrders();
+        if (Array.isArray(remoteOrders) && remoteOrders.length > 0) {
+          remoteOrders.forEach(rem => {
+            const remId = String(rem.orderId || rem.id);
+            const existing = candidateOrders.find(o => String(o.orderId || o.id) === remId);
+            if (existing) {
+              if (!existing.phone || existing.phone === '—') existing.phone = rem.phone;
+              if (!existing.smsCode && rem.smsCode) existing.smsCode = rem.smsCode;
+              if (rem.status) existing.status = rem.status;
+            } else {
+              candidateOrders.push({
+                ...rem,
+                orderId: remId,
+                phone: rem.phone || '—',
+                country: rem.country || 'usa',
+                service: rem.service || rem.product || 'Service',
+                status: rem.status || 'PENDING',
+                smsCode: rem.smsCode || ''
+              });
+            }
+          });
+        }
+      }
+    } catch (_) {}
+
     // 2. Poll API /api/order/:id for any pending/active orders
     const terminalStatuses = ['FINISHED', 'CANCELED', 'CANCELLED', 'BANNED', 'TIMEOUT', 'EXPIRED'];
     const promises = candidateOrders.map(async (item) => {
@@ -275,6 +303,7 @@
       const stillActive = allOrdersList.filter(o => !terminalStatuses.includes(String(o.status || '').toUpperCase()));
       localStorage.setItem('primes_active_orders', JSON.stringify(stillActive));
       localStorage.setItem('primes_active_count', String(stillActive.length));
+      localStorage.setItem('primes_total_numbers', String(allOrdersList.length));
     } catch (_) {
       allOrdersList = candidateOrders;
     } finally {

@@ -894,10 +894,30 @@ function renderCachedTransactions() {
     const sourceList = Array.isArray(currentTransactionsList) ? currentTransactionsList : [];
     let filtered = sourceList;
 
+    let storedOrders = [];
+    try {
+        storedOrders = JSON.parse(localStorage.getItem('primes_orders') || '[]');
+        if (!Array.isArray(storedOrders)) storedOrders = [];
+    } catch (_) {}
+
     if (activeTxFilter === 'deposit') {
         filtered = sourceList.filter(tx => classifyTransaction(tx).isDeposit);
     } else if (activeTxFilter === 'purchase') {
         filtered = sourceList.filter(tx => classifyTransaction(tx).isPurchase);
+
+        // If backend ledger has no purchase records yet, fallback to stored purchased orders so user sees them
+        if (filtered.length === 0 && storedOrders.length > 0) {
+            filtered = storedOrders.map(o => ({
+                reference: `BUY-${o.orderId || o.id}`,
+                amount: -(parseFloat(o.amountNGN || o.price || o.cost || 0) || 0),
+                currency: 'NGN',
+                reason: `Virtual Number for ${(o.service || o.product || 'SMS').toUpperCase()} (${(o.country || 'USA').toUpperCase()})`,
+                type: 'purchase',
+                status: ['FINISHED', 'COMPLETED', 'SUCCESS'].includes(String(o.status).toUpperCase()) ? 'success' : (['CANCELED', 'CANCELLED', 'BANNED', 'TIMEOUT', 'EXPIRED'].includes(String(o.status).toUpperCase()) ? 'failed' : 'pending'),
+                createdAt: o.createdAt || new Date().toISOString(),
+                orderData: o
+            }));
+        }
     }
 
     if (!filtered || filtered.length === 0) {
@@ -946,6 +966,39 @@ function renderCachedTransactions() {
 
         const refBadge = tx.reference ? `<span class="tx-ref-badge">${escapeHTML(String(tx.reference))}</span>` : '';
 
+        // Cross-reference purchase order for Phone number and SMS OTP code
+        let matchedOrder = tx.orderData || null;
+        if (!matchedOrder && tx.reference) {
+            const cleanRef = String(tx.reference).replace(/^BUY-?/i, '').trim();
+            matchedOrder = storedOrders.find(o => String(o.orderId || o.id) === cleanRef);
+        }
+        const phone = matchedOrder?.phone || tx.phone || null;
+        const smsCode = matchedOrder?.smsCode || tx.smsCode || tx.code || null;
+
+        let vnumMetaHtml = '';
+        if (classified.isPurchase || phone || smsCode) {
+            const displayPhone = (phone && phone !== '—') ? phone : null;
+            vnumMetaHtml = `
+            <div class="tx-vnum-details" style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
+                ${displayPhone ? `
+                    <span class="tx-phone-chip" style="font-family:monospace; font-weight:700; font-size:12px; background:rgba(255,255,255,0.06); padding:2px 7px; border-radius:5px; color:var(--text); display:inline-flex; align-items:center; gap:4px;">
+                        <i class="ph ph-phone" style="color:var(--primary);"></i> ${escapeHTML(displayPhone)}
+                        <button type="button" class="btn-copy-mini" onclick="event.stopPropagation(); navigator.clipboard.writeText('${escapeHTML(displayPhone)}');" title="Copy Number" style="background:none; border:none; color:inherit; cursor:pointer; padding:0 2px;"><i class="ph ph-copy"></i></button>
+                    </span>
+                ` : ''}
+                ${smsCode ? `
+                    <span class="tx-code-chip" style="font-size:12px; font-weight:800; background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.3); color:#22c55e; padding:2px 8px; border-radius:5px; display:inline-flex; align-items:center; gap:5px; letter-spacing:0.5px;">
+                        <i class="ph ph-shield-check"></i> Code: ${escapeHTML(smsCode)}
+                        <button type="button" class="btn-copy-mini" onclick="event.stopPropagation(); navigator.clipboard.writeText('${escapeHTML(smsCode)}'); alert('Code copied: ${escapeHTML(smsCode)}');" title="Copy OTP" style="background:none; border:none; color:#22c55e; cursor:pointer; padding:0 2px;"><i class="ph ph-copy"></i></button>
+                    </span>
+                ` : ((status === 'pending' || !isSuccess) ? `
+                    <span class="tx-code-waiting" style="font-size:11.5px; font-weight:700; color:var(--primary); background:rgba(99,102,241,0.12); padding:2px 7px; border-radius:5px; display:inline-flex; align-items:center; gap:4px;">
+                        <i class="ph ph-circle-notch tx-spin"></i> Waiting for SMS...
+                    </span>
+                ` : '')}
+            </div>`;
+        }
+
         return `
         <li class="tx-card-row">
             <div class="tx-left-col">
@@ -958,6 +1011,7 @@ function renderCachedTransactions() {
                         <span>${dateStr}</span>
                         ${refBadge}
                     </div>
+                    ${vnumMetaHtml}
                 </div>
             </div>
             <div class="tx-right-col">
@@ -1309,20 +1363,23 @@ function updateVirtualNumbersStats(numbersCount = null) {
     // 2. Total Numbers
     const totalEl = document.getElementById('dashTotalNumbers');
     if (totalEl) {
-        if (numbersCount !== null && numbersCount !== undefined) {
-            totalEl.textContent = String(numbersCount);
-            localStorage.setItem('primes_total_numbers', String(numbersCount));
-        } else {
-            const cachedTotal = localStorage.getItem('primes_total_numbers');
-            if (cachedTotal !== null) {
-                totalEl.textContent = cachedTotal;
-            } else {
-                const popupCount = document.getElementById('popupNumbersPurchased')?.textContent;
-                if (popupCount && popupCount !== '0' && popupCount !== '—') {
-                    totalEl.textContent = popupCount;
-                }
-            }
+        let totalCount = 0;
+        try {
+            const stored = JSON.parse(localStorage.getItem('primes_orders') || '[]');
+            if (Array.isArray(stored)) totalCount = stored.length;
+        } catch (_) {}
+
+        if (numbersCount !== null && numbersCount !== undefined && numbersCount > totalCount) {
+            totalCount = numbersCount;
         }
+
+        const cachedTotal = localStorage.getItem('primes_total_numbers');
+        if (totalCount === 0 && cachedTotal !== null && parseInt(cachedTotal, 10) > 0) {
+            totalCount = parseInt(cachedTotal, 10);
+        }
+
+        totalEl.textContent = String(totalCount);
+        localStorage.setItem('primes_total_numbers', String(totalCount));
     }
 
     // 3. Available Numbers
@@ -1333,6 +1390,37 @@ function updateVirtualNumbersStats(numbersCount = null) {
 }
 window.loadActiveNumbers = loadActiveNumbers;
 window.updateVirtualNumbersStats = updateVirtualNumbersStats;
+
+async function syncUserOrdersFromBackend() {
+    try {
+        if (typeof getUserOrders === 'function') {
+            const remote = await getUserOrders();
+            if (Array.isArray(remote) && remote.length > 0) {
+                let localOrders = [];
+                try {
+                    localOrders = JSON.parse(localStorage.getItem('primes_orders') || '[]');
+                } catch (_) {}
+                if (!Array.isArray(localOrders)) localOrders = [];
+
+                remote.forEach(rem => {
+                    const rId = String(rem.orderId || rem.id);
+                    const idx = localOrders.findIndex(o => String(o.orderId || o.id) === rId);
+                    if (idx !== -1) {
+                        localOrders[idx] = { ...localOrders[idx], ...rem };
+                    } else {
+                        localOrders.push(rem);
+                    }
+                });
+
+                localStorage.setItem('primes_orders', JSON.stringify(localOrders));
+                localStorage.setItem('primes_total_numbers', String(localOrders.length));
+                updateVirtualNumbersStats(localOrders.length);
+                renderCachedTransactions();
+            }
+        }
+    } catch (_) {}
+}
+window.syncUserOrdersFromBackend = syncUserOrdersFromBackend;
 
 function renderUserInfo() {
     const session      = getSession() || {};
@@ -1356,6 +1444,7 @@ function renderUserInfo() {
     // Load referral balance & virtual numbers stats
     loadReferralBalance();
     updateVirtualNumbersStats();
+    syncUserOrdersFromBackend();
 }
 
 async function loadReferralBalance() {

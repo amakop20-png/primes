@@ -2155,6 +2155,52 @@ function updateOrderUI(order) {
         if (statusText) {
             statusText.textContent = currentStatus === 'FINISHED' ? 'Order Completed' : 'SMS Received';
         }
+
+        // Sync received SMS code into primes_orders & primes_active_orders for numbers and admin pages
+        try {
+            const strId = String(orderId);
+            let allOrders = JSON.parse(localStorage.getItem('primes_orders') || '[]');
+            const oTarget = allOrders.find(o => String(o.orderId || o.id) === strId);
+            if (oTarget) {
+                oTarget.smsCode = otp || oTarget.smsCode;
+                oTarget.status = currentStatus;
+                if (order.phone && (!oTarget.phone || oTarget.phone === '—')) oTarget.phone = order.phone;
+            } else {
+                allOrders.unshift({
+                    id: strId,
+                    orderId: strId,
+                    phone: order.phone || '—',
+                    service: order.product || 'Service',
+                    country: order.country || 'usa',
+                    status: currentStatus,
+                    smsCode: otp || '',
+                    createdAt: new Date().toISOString()
+                });
+            }
+            localStorage.setItem('primes_orders', JSON.stringify(allOrders));
+            localStorage.setItem('primes_total_numbers', String(allOrders.length));
+
+            let activeOrders = JSON.parse(localStorage.getItem('primes_active_orders') || '[]');
+            const aTarget = activeOrders.find(o => String(o.orderId || o.id) === strId);
+            if (aTarget) {
+                aTarget.smsCode = otp || aTarget.smsCode;
+                aTarget.status = currentStatus;
+                if (order.phone && (!aTarget.phone || aTarget.phone === '—')) aTarget.phone = order.phone;
+            } else if (currentStatus !== 'FINISHED' && currentStatus !== 'CANCELED') {
+                activeOrders.unshift({
+                    id: strId,
+                    orderId: strId,
+                    phone: order.phone || '—',
+                    service: order.product || 'Service',
+                    country: order.country || 'usa',
+                    status: currentStatus,
+                    smsCode: otp || '',
+                    createdAt: new Date().toISOString()
+                });
+            }
+            localStorage.setItem('primes_active_orders', JSON.stringify(activeOrders));
+            localStorage.setItem('primes_active_count', String(activeOrders.length));
+        } catch (_) {}
     } else {
         if (otpBox) {
             otpBox.classList.remove('code-received');

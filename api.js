@@ -612,6 +612,20 @@ async function banOrder(orderId) {
     });
 }
 
+async function getUserOrders() {
+    try {
+        const res = await apiRequest('/api/orders', { method: 'GET' });
+        return res?.orders || res?.data || (Array.isArray(res) ? res : []);
+    } catch (_) {
+        try {
+            const fallback = await apiRequest('/api/user/orders', { method: 'GET' });
+            return fallback?.orders || fallback?.data || (Array.isArray(fallback) ? fallback : []);
+        } catch (_) {
+            return [];
+        }
+    }
+}
+
 async function loginUser(identifier, password) {
     let id = identifier;
     let pwd = password;
@@ -897,6 +911,7 @@ window.getProducts = getProducts;
 window.getPrices = getPrices;
 window.buyActivation = buyActivation;
 window.getOrder = getOrder;
+window.getUserOrders = getUserOrders;
 window.finishOrder = finishOrder;
 window.cancelOrder = cancelOrder;
 window.banOrder = banOrder;
@@ -1317,7 +1332,8 @@ async function adminGetVirtualAccounts(params = {}) {
 
 async function adminGetUserVirtualAccount(userId) {
     if (!userId) throw new Error('User ID is required');
-    return await adminApiRequest(`/virtual-accounts/${encodeURIComponent(userId)}
+    return await adminApiRequest(`/virtual-accounts/${encodeURIComponent(userId)}`);
+}
 
 // ── Admin Orders & Virtual Numbers Auditing ──
 async function adminGetOrders(params = {}) {
@@ -1333,7 +1349,6 @@ async function adminGetOrders(params = {}) {
 async function adminGetOrder(orderId) {
     if (!orderId) throw new Error('Order ID is required');
     return await adminApiRequest('/orders/' + encodeURIComponent(orderId));
-}`);
 }
 
 // ── Announcement Storage System (Application State) ──
@@ -1425,7 +1440,11 @@ const adminApi = {
 
     // Virtual Accounts (PDF Page 5)
     getVirtualAccounts: adminGetVirtualAccounts,
-    getUserVirtualAccount: adminGetUserVirtualAccount
+    getUserVirtualAccount: adminGetUserVirtualAccount,
+
+    // Orders & Virtual Numbers Auditing
+    getOrders: adminGetOrders,
+    getOrder: adminGetOrder
 };
 
 // Global exports
@@ -1458,6 +1477,8 @@ window.adminGetTransaction            = adminGetTransaction;
 window.adminUpdateTransactionStatus   = adminUpdateTransactionStatus;
 window.adminGetVirtualAccounts        = adminGetVirtualAccounts;
 window.adminGetUserVirtualAccount     = adminGetUserVirtualAccount;
+window.adminGetOrders                 = adminGetOrders;
+window.adminGetOrder                  = adminGetOrder;
 window.fetchActiveAnnouncementFromApi = fetchActiveAnnouncementFromApi;
 window.publishAnnouncementToApi       = publishAnnouncementToApi;
 window.isAdmin                        = isAdmin;
