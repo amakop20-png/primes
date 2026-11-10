@@ -613,7 +613,8 @@ function renderOverview() {
 
   setText('navUsersBadge',      allUsers.length);
   setText('navWalletsBadge',    allWallets.length);
-  setText('navOrdersBadge',     allOrders.length);
+  const ordersTotal = orderPaginationMeta?.total || allOrders.length;
+  setText('navOrdersBadge',     ordersTotal.toLocaleString());
   setText('navTxBadge',         allTransactions.length);
   setText('navPaymentsBadge',   allTransactions.filter(t => String(t.type).toLowerCase() === 'credit' || String(t.reference || '').startsWith('PAY-') || String(t.reference || '').startsWith('VDA-')).length);
 
@@ -1208,9 +1209,11 @@ function renderOrdersTable(orders = allOrders, stats = null) {
 
   setText('orderKpiTotal', Number(total || 0).toLocaleString());
   setText('orderKpiSuccess', Number(successful || 0).toLocaleString());
+  setText('orderKpiCompleted', Number(successful || 0).toLocaleString());
   setText('orderKpiBanned', Number(banned || 0).toLocaleString());
   setText('orderKpiCancelled', Number(cancelled || 0).toLocaleString());
   setText('orderKpiPending', Number(pending || 0).toLocaleString());
+  setText('orderKpiActive', Number(pending || 0).toLocaleString());
   setText('navOrdersBadge', Number(total || 0).toLocaleString());
 
   if (!orders || !orders.length) {
