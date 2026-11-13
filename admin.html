@@ -491,17 +491,18 @@
         <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
           <div class="search-wrap" style="flex:1; min-width:220px;">
             <i class="ph ph-magnifying-glass"></i>
-            <input type="text" id="orderSearch" placeholder="Search username, email, phone, activation ID..." oninput="debounceOrderFilter()">
+            <input type="text" id="orderSearch" placeholder="Search customer, username, email, phone, order ID..." oninput="debounceOrderFilter()">
           </div>
           <select id="orderStatusFilter" onchange="applyOrderFilters()" class="filter-select" style="min-width:140px;">
             <option value="">All Statuses</option>
-            <option value="successful">Successful</option>
+            <option value="successful">Successful (Finished)</option>
             <option value="pending">Pending</option>
             <option value="cancelled">Cancelled</option>
             <option value="banned">Banned</option>
           </select>
-          <input type="text" id="orderCountryFilter" placeholder="Country" class="filter-input" style="width:110px; padding:8px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px;" oninput="debounceOrderFilter()">
-          <input type="text" id="orderOperatorFilter" placeholder="Operator" class="filter-input" style="width:100px; padding:8px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px;" oninput="debounceOrderFilter()">
+          <input type="text" id="orderProductFilter" placeholder="Product/Service" class="filter-input" style="width:110px; padding:8px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px;" oninput="debounceOrderFilter()">
+          <input type="text" id="orderCountryFilter" placeholder="Country" class="filter-input" style="width:100px; padding:8px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px;" oninput="debounceOrderFilter()">
+          <input type="text" id="orderOperatorFilter" placeholder="Operator" class="filter-input" style="width:95px; padding:8px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px;" oninput="debounceOrderFilter()">
           <div style="display:inline-flex; align-items:center; gap:6px;">
             <input type="date" id="orderFromDate" class="filter-input" title="From Date" style="padding:7px 10px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12.5px;" onchange="applyOrderFilters()">
             <span style="color:var(--muted); font-size:12px;">to</span>
@@ -519,20 +520,21 @@
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Activation ID</th>
-                  <th>Username</th>
-                  <th>User Email</th>
+                  <th>Order ID</th>
+                  <th>Transaction ID</th>
+                  <th>Customer</th>
+                  <th>Email</th>
                   <th>Purchased Phone</th>
                   <th>Country</th>
-                  <th>Operator</th>
-                  <th>Purchase Amount</th>
-                  <th>Activation Status</th>
-                  <th>Purchase Date</th>
+                  <th>Service / Op</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Purchased At</th>
                   <th>Actions / OTP</th>
                 </tr>
               </thead>
               <tbody id="ordersTbody">
-                <tr><td colspan="11" class="empty-cell">Loading virtual number purchases...</td></tr>
+                <tr><td colspan="12" class="empty-cell">Loading 5sim virtual number orders...</td></tr>
               </tbody>
             </table>
           </div>
@@ -554,9 +556,13 @@
 
     <!-- ═══ 4. TRANSACTIONS (PDF Pages 4-5) ═══ -->
     <section id="section-transactions" class="section">
-      <div class="page-header">
-        <h1>Platform Transactions</h1>
-        <div class="header-actions">
+      <div class="page-header" style="flex-wrap:wrap; gap:12px;">
+        <div>
+          <h1>Platform Transactions</h1>
+          <p class="section-sub" style="font-size:13px;color:var(--muted);margin-top:4px;">Audit, filter, and manage database ledger transactions.</p>
+        </div>
+        <div class="header-actions" style="flex-wrap:wrap; gap:8px;">
+          <input type="text" id="txUserFilter" placeholder="User ID / Email" class="filter-input" style="width:130px; padding:7px 10px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12.5px;" oninput="filterBackendTransactions()">
           <select id="txTypeFilter" onchange="filterBackendTransactions()" class="filter-select">
             <option value="">All Types</option>
             <option value="credit">Credits (Deposits)</option>
@@ -568,7 +574,12 @@
             <option value="pending">Pending</option>
             <option value="failed">Failed</option>
           </select>
-          <button class="btn-outline" onclick="loadBackendTransactions()"><i class="ph ph-arrows-clockwise"></i> Sync Backend Transactions</button>
+          <div style="display:inline-flex; align-items:center; gap:4px;">
+            <input type="date" id="txFromDate" class="filter-input" title="From Date" style="padding:6px 8px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px;" onchange="filterBackendTransactions()">
+            <span style="color:var(--muted); font-size:11px;">to</span>
+            <input type="date" id="txToDate" class="filter-input" title="To Date" style="padding:6px 8px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px;" onchange="filterBackendTransactions()">
+          </div>
+          <button class="btn-outline" onclick="loadBackendTransactions()"><i class="ph ph-arrows-clockwise"></i> Sync Transactions</button>
         </div>
       </div>
 

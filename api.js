@@ -15,7 +15,7 @@ const API_BASE_URL = (function() {
         if (injected) {
             return String(injected).trim();
         }
-        return '';
+        return 'https://api.nuraxq.com';
     }
 
     if (typeof process !== 'undefined' && process.env) {
@@ -24,7 +24,7 @@ const API_BASE_URL = (function() {
         }
     }
 
-    return 'https://api.nuraxq.com/api';
+    return 'https://api.nuraxq.com';
 })();
 
 const API_URL = API_BASE_URL;
@@ -1335,24 +1335,59 @@ async function adminGetUserVirtualAccount(userId) {
     return await adminApiRequest(`/virtual-accounts/${encodeURIComponent(userId)}`);
 }
 
-// ── Admin Orders & Virtual Numbers Auditing ──
-async function adminGetOrders(params = {}) {
+// ── Admin 5SIM Orders Management (PDF Pages 6-7) ──
+async function adminGetFivesimOrders(params = {}) {
     const q = new URLSearchParams();
     if (params.page !== undefined && params.page !== null) q.set('page', params.page);
     if (params.limit !== undefined && params.limit !== null) q.set('limit', params.limit);
-    if (params.status) q.set('status', params.status);
-    if (params.search) q.set('search', params.search);
+    if (params.user) q.set('user', params.user);
     if (params.country) q.set('country', params.country);
-    if (params.operator) q.set('operator', params.operator);
-    if (params.from) q.set('from', params.from);
-    if (params.to) q.set('to', params.to);
+    if (params.product) q.set('product', params.product);
+    if (params.search) q.set('search', params.search);
     const qs = q.toString() ? ('?' + q.toString()) : '';
-    return await adminApiRequest('/orders' + qs);
+    return await adminApiRequest('/fivesim/orders' + qs);
+}
+
+async function adminGetFivesimOrder(orderId) {
+    if (!orderId) throw new Error('5sim order ID is required');
+    return await adminApiRequest('/fivesim/orders/' + encodeURIComponent(orderId));
+}
+
+// ── Admin Orders & Virtual Numbers Auditing ──
+async function adminGetOrders(params = {}) {
+    try {
+        const fivesimRes = await adminGetFivesimOrders(params);
+        if (fivesimRes && (fivesimRes.data || fivesimRes.orders)) {
+            return {
+                orders: fivesimRes.data || fivesimRes.orders,
+                data: fivesimRes.data || fivesimRes.orders,
+                pagination: fivesimRes.pagination
+            };
+        }
+        return fivesimRes;
+    } catch (_) {
+        const q = new URLSearchParams();
+        if (params.page !== undefined && params.page !== null) q.set('page', params.page);
+        if (params.limit !== undefined && params.limit !== null) q.set('limit', params.limit);
+        if (params.status) q.set('status', params.status);
+        if (params.search) q.set('search', params.search);
+        if (params.country) q.set('country', params.country);
+        if (params.operator) q.set('operator', params.operator);
+        if (params.from) q.set('from', params.from);
+        if (params.to) q.set('to', params.to);
+        const qs = q.toString() ? ('?' + q.toString()) : '';
+        return await adminApiRequest('/orders' + qs);
+    }
 }
 
 async function adminGetOrder(orderId) {
     if (!orderId) throw new Error('Order ID is required');
-    return await adminApiRequest('/orders/' + encodeURIComponent(orderId));
+    try {
+        const res = await adminGetFivesimOrder(orderId);
+        return res?.order || res?.data || res;
+    } catch (_) {
+        return await adminApiRequest('/orders/' + encodeURIComponent(orderId));
+    }
 }
 
 async function adminGetOrderStats() {
@@ -1450,7 +1485,9 @@ const adminApi = {
     getVirtualAccounts: adminGetVirtualAccounts,
     getUserVirtualAccount: adminGetUserVirtualAccount,
 
-    // Orders & Virtual Numbers Auditing
+    // Orders & Virtual Numbers Auditing (5SIM Orders PDF Pages 6-7)
+    getFivesimOrders: adminGetFivesimOrders,
+    getFivesimOrder: adminGetFivesimOrder,
     getOrders: adminGetOrders,
     getOrder: adminGetOrder,
     getOrderStats: adminGetOrderStats
@@ -1486,6 +1523,8 @@ window.adminGetTransaction            = adminGetTransaction;
 window.adminUpdateTransactionStatus   = adminUpdateTransactionStatus;
 window.adminGetVirtualAccounts        = adminGetVirtualAccounts;
 window.adminGetUserVirtualAccount     = adminGetUserVirtualAccount;
+window.adminGetFivesimOrders          = adminGetFivesimOrders;
+window.adminGetFivesimOrder           = adminGetFivesimOrder;
 window.adminGetOrders                 = adminGetOrders;
 window.adminGetOrder                  = adminGetOrder;
 window.adminGetOrderStats             = adminGetOrderStats;

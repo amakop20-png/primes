@@ -428,13 +428,14 @@ async function loadAllData() {
     // 1. Fetch live dashboard statistics directly from Admin API (GET /api/admin/dashboard/stats - PDF Page 2)
     if (typeof adminGetDashboardStats === 'function') {
       try {
-        const stats = await adminGetDashboardStats();
+        const statsRes = await adminGetDashboardStats();
+        const stats = statsRes?.data || statsRes;
         if (stats) {
           latestDashboardStats = stats;
-          if (Array.isArray(stats.recentUsers) && stats.recentUsers.length) {
+          if (Array.isArray(stats.recentUsers) && stats.recentUsers.length && !allUsers.length) {
             allUsers = stats.recentUsers;
           }
-          if (Array.isArray(stats.recentTransactions) && stats.recentTransactions.length) {
+          if (Array.isArray(stats.recentTransactions) && stats.recentTransactions.length && !allTransactions.length) {
             allTransactions = stats.recentTransactions;
             setText('navTxBadge', allTransactions.length);
           }
@@ -518,7 +519,7 @@ async function loadAllData() {
       } catch (_) {}
     }
 
-    // 5.1 Fetch live virtual number orders & analytics from Admin API
+    // 5.1 Fetch live virtual number orders & analytics from Admin API (GET /api/admin/fivesim/orders)
     try {
       await loadAdminOrders(1);
     } catch (ordErr) {
@@ -562,47 +563,58 @@ function renderOverview() {
     }
   });
 
-  const ordersToday = allOrders.filter(o => isToday(o.createdAt)).length;
-  const totalRev    = ordersFiltered.reduce((s, o) => s + (parseFloat(o.amountNGN) || 0), 0);
-  const todayRev    = allOrders.filter(o => isToday(o.createdAt)).reduce((s, o) => s + (parseFloat(o.amountNGN) || 0), 0);
+  const ordersToday = allOrders.filter(o => isToday(o.createdAt || o.purchasedAt)).length;
+  const totalRev    = ordersFiltered.reduce((s, o) => s + (parseFloat(o.amount || o.amountNGN) || 0), 0);
+  const todayRev    = allOrders.filter(o => isToday(o.createdAt || o.purchasedAt)).reduce((s, o) => s + (parseFloat(o.amount || o.amountNGN) || 0), 0);
   const totalUserWallets = allUsers.reduce((s, u) => s + (parseFloat(u.balance) || 0), 0);
 
-  const displayUserCount = latestDashboardStats?.usersCount ?? latestDashboardStats?.totalUsers ?? usersFiltered.length;
-  const displayWalletTotal = latestDashboardStats?.walletsTotal ?? latestDashboardStats?.totalWalletsBalance ?? totalUserWallets;
+  // Authoritative statistics directly from GET /api/admin/dashboard/stats (PDF Page 2)
+  const s = latestDashboardStats?.data || latestDashboardStats || {};
+  const usersStats = s.users || {};
+  const walletsStats = s.wallets || {};
+  const txStats = s.transactions || {};
+  const vaStats = s.virtualAccounts || {};
 
-  // Calculate blocked/suspended users, transaction success rate, and active virtual numbers
-  const blockedCount = allUsers.filter(u => u.isSuspended || u.is_suspended).length;
+  const displayUserCount = usersStats.total ?? s.usersCount ?? s.totalUsers ?? usersFiltered.length;
+  const displaySignupsToday = usersStats.newToday ?? signupsToday;
+  const displayBlockedCount = usersStats.suspended ?? allUsers.filter(u => u.isSuspended || u.is_suspended).length;
+  const displayWalletTotal = walletsStats.totalBalance ?? s.walletsTotal ?? s.totalWalletsBalance ?? totalUserWallets;
+
+  // Transaction metrics
   const successfulTx = allTransactions.filter(t => String(t.status).toLowerCase() === 'success');
-  const successRatioStr = allTransactions.length ? `${successfulTx.length}/${allTransactions.length} successful` : '0 completed';
-  const successRatePct = allTransactions.length ? Math.round((successfulTx.length / allTransactions.length) * 100) + '%' : '100%';
+  const totalTxCount = txStats.total ?? allTransactions.length;
+  const successTxCount = txStats.success ?? successfulTx.length;
+  const successRatioStr = totalTxCount > 0 ? `${successTxCount}/${totalTxCount} successful` : '0 completed';
+  const successRatePct = totalTxCount > 0 ? Math.round((successTxCount / totalTxCount) * 100) + '%' : '100%';
+
   const activeOrders = allOrders.filter(o => {
-    const s = String(o.status || '').toUpperCase();
-    return s === 'RECEIVED' || s === 'PENDING' || s === 'ACTIVE';
+    const st = String(o.status || '').toUpperCase();
+    return st === 'RECEIVED' || st === 'PENDING' || st === 'ACTIVE';
   });
 
-  // Calculate authoritative order metrics
-  const dbOrders = latestDashboardStats?.orders || {};
-  const totalOrdersCount = latestDashboardStats?.totalOrders ?? dbOrders.total ?? ordersFiltered.length;
-  const activeOrdersCount = latestDashboardStats?.activeOrders ?? dbOrders.active ?? activeOrders.length;
-  const completedOrdersCount = dbOrders.completed ?? allOrders.filter(o => ['FINISHED', 'COMPLETED', 'SUCCESS'].includes(String(o.status || '').toUpperCase())).length;
-  const cancelledOrdersCount = dbOrders.cancelled ?? allOrders.filter(o => ['CANCELED', 'CANCELLED'].includes(String(o.status || '').toUpperCase())).length;
-  const bannedOrdersCount = dbOrders.banned ?? allOrders.filter(o => String(o.status || '').toUpperCase() === 'BANNED').length;
+  // Order metrics
+  const dbOrders = s.orders || {};
+  const totalOrdersCount = s.totalOrders ?? dbOrders.total ?? ordersFiltered.length;
+  const activeOrdersCount = s.activeOrders ?? dbOrders.active ?? activeOrders.length;
+  const completedOrdersCount = dbOrders.completed ?? allOrders.filter(o => ['FINISHED', 'COMPLETED', 'SUCCESS', '6', '10'].includes(String(o.status || '').toUpperCase())).length;
+  const cancelledOrdersCount = dbOrders.cancelled ?? allOrders.filter(o => ['CANCELED', 'CANCELLED', 'TIMEOUT', 'EXPIRED', 'FAILED', '2'].includes(String(o.status || '').toUpperCase())).length;
+  const bannedOrdersCount = dbOrders.banned ?? allOrders.filter(o => ['BANNED', '8'].includes(String(o.status || '').toUpperCase())).length;
   const failedOrdersCount = dbOrders.failed ?? allOrders.filter(o => ['FAILED', 'TIMEOUT'].includes(String(o.status || '').toUpperCase())).length;
   const ordersTodayCount = dbOrders.today ?? ordersToday;
   const displayRevenue = dbOrders.totalRevenue ? ('₦' + Math.round(dbOrders.totalRevenue).toLocaleString()) : ('₦' + Math.round(totalRev).toLocaleString());
   const displayTodayRev = dbOrders.todayRevenue ? ('+₦' + Math.round(dbOrders.todayRevenue).toLocaleString() + ' today') : ('+₦' + Math.round(todayRev).toLocaleString() + ' today');
 
   setText('totalUsers',          displayUserCount.toLocaleString());
-  setText('activeUsers',         (latestDashboardStats?.activeUsersCount ?? activeSet.size).toLocaleString());
+  setText('activeUsers',         (s.activeUsersCount ?? activeSet.size).toLocaleString());
   setText('totalOrders',         totalOrdersCount.toLocaleString());
   setText('totalUserWallets',    '₦' + Math.round(displayWalletTotal).toLocaleString());
-  setText('signupsToday',        signupsToday.toLocaleString());
+  setText('signupsToday',        displaySignupsToday.toLocaleString());
   setText('newUsersThisWeek',    '+' + newThisWeek + ' this week');
   setText('signupsWeek',         '+' + newThisWeek + ' this week');
   setText('ordersToday',         '+' + ordersTodayCount + ' today');
   setText('totalRevenue',        displayRevenue);
   setText('revenueToday',        displayTodayRev);
-  setText('blockedUsersCount',   blockedCount.toLocaleString());
+  setText('blockedUsersCount',   displayBlockedCount.toLocaleString());
   setText('txSuccessRate',       successRatePct);
   setText('txSuccessRatio',      successRatioStr);
   setText('activeOrdersCount',   activeOrdersCount.toLocaleString());
@@ -610,16 +622,17 @@ function renderOverview() {
   setText('cancelledOrdersCount', cancelledOrdersCount.toLocaleString());
   setText('bannedOrdersCount',    bannedOrdersCount.toLocaleString());
   setText('failedOrdersCount',    failedOrdersCount.toLocaleString());
+  setText('payVdaCount',         (vaStats.total ?? allVirtualAccounts.length).toLocaleString());
 
-  setText('navUsersBadge',      allUsers.length);
-  setText('navWalletsBadge',    allWallets.length);
-  const ordersTotal = orderPaginationMeta?.total || allOrders.length;
+  setText('navUsersBadge',      displayUserCount);
+  setText('navWalletsBadge',    (walletsStats.totalWallets ?? allWallets.length));
+  const ordersTotal = orderPaginationMeta?.total || totalOrdersCount;
   setText('navOrdersBadge',     ordersTotal.toLocaleString());
-  setText('navTxBadge',         allTransactions.length);
+  setText('navTxBadge',         totalTxCount);
   setText('navPaymentsBadge',   allTransactions.filter(t => String(t.type).toLowerCase() === 'credit' || String(t.reference || '').startsWith('PAY-') || String(t.reference || '').startsWith('VDA-')).length);
 
-  renderRecentUsers(latestDashboardStats?.recentUsers || usersFiltered);
-  renderRecentOrders(ordersFiltered);
+  renderRecentUsers(s.recentUsers && s.recentUsers.length ? s.recentUsers : usersFiltered);
+  renderRecentOrders(s.recentTransactions && s.recentTransactions.length ? s.recentTransactions : ordersFiltered);
 }
 
 function setText(id, val) {
@@ -1217,24 +1230,26 @@ function renderOrdersTable(orders = allOrders, stats = null) {
   setText('navOrdersBadge', Number(total || 0).toLocaleString());
 
   if (!orders || !orders.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-cell">No matching virtual number purchases found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-cell">No matching 5sim virtual number orders found.</td></tr>';
     return;
   }
 
   tbody.innerHTML = orders.map((o, i) => {
     const activationId = String(o.orderId || o.id || '—');
-    const username = escapeHTML(o.username || o.userName || 'User');
-    const userEmail = escapeHTML(o.userEmail || o.email || '—');
+    const txId = String(o.transactionId || o.reference || '—');
+    const cName = o.customer?.name || o.username || o.userName || 'Customer';
+    const cUsername = o.customer?.username || (o.customer?.email ? o.customer.email.split('@')[0] : 'user');
+    const userEmail = escapeHTML(o.customer?.email || o.userEmail || o.email || '—');
     const phone = escapeHTML(o.phone || '—');
     const country = escapeHTML(String(o.country || '—').toUpperCase());
     const operator = escapeHTML(String(o.operator || 'any').toLowerCase());
     const service = escapeHTML(String(o.service || o.product || '—'));
-    const amountVal = parseFloat(o.amountNGN || o.amount || 0);
+    const amountVal = parseFloat(o.amount || o.amountNGN || 0);
     const amountStr = '₦' + amountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const norm = normalizeActivationStatus(o.status);
 
-    const sms = o.smsCode || (o.sms && o.sms[0] && o.sms[0].code) || '';
-    const hasSms = Boolean(sms && sms !== '—');
+    const smsCode = o.otp || o.smsCode || (o.sms && o.sms[0] && o.sms[0].code) || '';
+    const hasSms = Boolean(smsCode && smsCode !== '—');
 
     const displayIndex = (currentOrderPage - 1) * orderPageSize + (i + 1);
 
@@ -1243,25 +1258,35 @@ function renderOrdersTable(orders = allOrders, stats = null) {
         <td style="color:var(--muted);font-size:12px;">${displayIndex}</td>
         <td>
           <span style="font-family:monospace;font-size:12px;font-weight:700;color:var(--text);">${escapeHTML(activationId)}</span>
-          <button class="copy-btn" onclick="copyToClipboard('${escapeHTML(activationId)}', 'Activation ID')" title="Copy Activation ID"><i class="ph ph-copy"></i></button>
+          <button class="copy-btn" onclick="copyToClipboard('${escapeHTML(activationId)}', 'Order ID')" title="Copy 5sim Order ID"><i class="ph ph-copy"></i></button>
         </td>
-        <td><strong style="color:var(--text);font-size:13px;">${username}</strong></td>
+        <td>
+          <span style="font-family:monospace;font-size:11.5px;color:var(--muted);">${escapeHTML(txId)}</span>
+        </td>
+        <td>
+          <strong style="color:var(--text);font-size:13px;">${escapeHTML(cName)}</strong>
+          <div style="font-size:11px;color:var(--muted);">@${escapeHTML(cUsername)}</div>
+        </td>
         <td style="font-size:12px;color:var(--muted);">${userEmail}</td>
         <td>
           <span style="font-family:monospace;font-size:12.5px;color:var(--text);">${phone}</span>
           ${phone !== '—' ? `<button class="copy-btn" onclick="copyToClipboard('${phone}', 'Phone Number')" title="Copy Phone Number"><i class="ph ph-copy"></i></button>` : ''}
         </td>
         <td><span style="font-size:12px;font-weight:700;color:var(--muted);">${country}</span></td>
-        <td><span style="font-size:12px;text-transform:capitalize;color:var(--muted);">${operator}</span></td>
+        <td>
+          <span style="font-size:12px;font-weight:600;color:var(--text);text-transform:capitalize;">${service}</span>
+          <div style="font-size:11px;color:var(--muted);text-transform:lowercase;">${operator}</div>
+        </td>
         <td style="color:var(--amber);font-weight:700;font-size:13px;">${amountStr}</td>
         <td>
           <span class="status-badge ${norm.badgeClass}" style="text-transform:capitalize;">${norm.label}</span>
         </td>
-        <td style="font-size:11px;color:var(--muted);">${fmt(o.createdAt)}</td>
+        <td style="font-size:11px;color:var(--muted);">${fmt(o.purchasedAt || o.createdAt)}</td>
         <td>
           <div style="display:inline-flex;align-items:center;gap:6px;">
-            ${hasSms ? `<span style="font-family:monospace;font-weight:800;color:var(--green);font-size:12px;background:var(--surface-2);padding:2px 6px;border-radius:4px;" title="Received OTP">${escapeHTML(sms)}</span>` : ''}
-            <button class="tbl-btn tbl-btn-view" onclick="checkLiveOrderStatus('${escapeHTML(activationId)}')" title="Check live provider status"><i class="ph ph-arrow-clockwise"></i> Check</button>
+            ${hasSms ? `<span style="font-family:monospace;font-weight:800;color:var(--green);font-size:12px;background:var(--surface-2);padding:2px 6px;border-radius:4px;" title="Received OTP">${escapeHTML(smsCode)}</span>` : ''}
+            <button class="tbl-btn tbl-btn-view" onclick="viewOrderDetail('${escapeHTML(activationId)}')" title="View complete order details"><i class="ph ph-eye"></i> Details</button>
+            <button class="tbl-btn" onclick="checkLiveOrderStatus('${escapeHTML(activationId)}')" title="Check live provider status"><i class="ph ph-arrows-clockwise"></i> Check</button>
           </div>
         </td>
       </tr>
@@ -1273,12 +1298,13 @@ async function loadAdminOrders(page = 1) {
   currentOrderPage = page;
   const tbody = document.getElementById('ordersTbody');
   if (tbody && !allOrders.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-cell"><i class="ph ph-spinner spinning"></i> Loading virtual number purchases...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-cell"><i class="ph ph-spinner spinning"></i> Loading 5sim orders from Admin API (GET /api/admin/fivesim/orders)...</td></tr>';
   }
 
   const q = (document.getElementById('orderSearch')?.value || '').trim();
   const status = (document.getElementById('orderStatusFilter')?.value || '').trim();
   const country = (document.getElementById('orderCountryFilter')?.value || '').trim();
+  const product = (document.getElementById('orderProductFilter')?.value || '').trim();
   const operator = (document.getElementById('orderOperatorFilter')?.value || '').trim();
   const from = (document.getElementById('orderFromDate')?.value || '').trim();
   const to = (document.getElementById('orderToDate')?.value || '').trim();
@@ -1293,20 +1319,27 @@ async function loadAdminOrders(page = 1) {
 
   try {
     let result = null;
-    if (typeof adminGetOrders === 'function') {
-      result = await adminGetOrders({
-        page: currentOrderPage,
-        limit: orderPageSize,
-        search: q,
-        status: status,
-        country: country,
-        operator: operator,
-        from: from,
-        to: to
-      });
+    const queryParams = {
+      page: currentOrderPage,
+      limit: orderPageSize
+    };
+    if (q) queryParams.search = q;
+    if (country) queryParams.country = country.toLowerCase();
+    if (product) queryParams.product = product.toLowerCase();
+    if (status) queryParams.status = status;
+    if (operator) queryParams.operator = operator.toLowerCase();
+    if (from) queryParams.from = from;
+    if (to) queryParams.to = to;
+
+    if (typeof adminGetFivesimOrders === 'function') {
+      result = await adminGetFivesimOrders(queryParams);
+    } else if (typeof adminGetOrders === 'function') {
+      result = await adminGetOrders(queryParams);
+    } else {
+      result = await adminApi.getFivesimOrders(queryParams);
     }
 
-    const oList = result?.orders || result?.data || (Array.isArray(result) ? result : []);
+    const oList = result?.data || result?.orders || (Array.isArray(result) ? result : []);
     orderPaginationMeta = result?.pagination || {
       page: currentOrderPage,
       limit: orderPageSize,
@@ -1320,7 +1353,7 @@ async function loadAdminOrders(page = 1) {
   } catch (err) {
     console.error('Error loading admin orders:', err);
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="11" class="empty-cell" style="color:var(--red);"><i class="ph ph-warning-circle"></i> Failed to load purchase history: ${escapeHTML(err.message || 'Server error')}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" class="empty-cell" style="color:var(--red);"><i class="ph ph-warning-circle"></i> Failed to load 5sim orders: ${escapeHTML(err.message || 'Server error')}</td></tr>`;
     }
   }
 }
