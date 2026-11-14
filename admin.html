@@ -353,7 +353,14 @@
     <!-- ═══ 2. USERS ═══ -->
     <section id="section-users" class="section">
       <div class="page-header">
-        <h1>User Management</h1>
+        <div>
+          <h1>User Management</h1>
+          <p class="section-sub" id="usersSummarySubtitle" style="font-size:13px;color:var(--muted);margin-top:4px;">
+            Total Registered Users: <strong id="usersTotalCount" style="color:var(--text);">0</strong> &bull;
+            Displayed on Page: <strong id="usersShowingCount" style="color:var(--text);">0</strong> &bull;
+            Page <strong id="usersCurrentPageNum" style="color:var(--text);">1</strong> of <strong id="usersTotalPagesNum" style="color:var(--text);">1</strong>
+          </p>
+        </div>
         <div class="header-actions">
           <div class="search-wrap">
             <i class="ph ph-magnifying-glass"></i>
@@ -388,6 +395,18 @@
                 <tr><td colspan="8" class="empty-cell">Loading users...</td></tr>
               </tbody>
             </table>
+          </div>
+          <!-- Users Pagination -->
+          <div class="pagination-bar" id="userPagination" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:14px 18px; border-top:1px solid var(--border);">
+            <span class="pagination-info" id="userPageLabel" style="font-size:13px; color:var(--muted);">Showing page 1 of 1 (0 of 0 total registered users)</span>
+            <div style="display:inline-flex; gap:8px; align-items:center;">
+              <button type="button" class="btn-outline" id="userPrevBtn" onclick="changeUserPage(-1)" disabled style="padding:6px 12px; font-size:12.5px;">
+                <i class="ph ph-caret-left"></i> Previous
+              </button>
+              <button type="button" class="btn-outline" id="userNextBtn" onclick="changeUserPage(1)" disabled style="padding:6px 12px; font-size:12.5px;">
+                Next <i class="ph ph-caret-right"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -496,8 +515,10 @@
           <select id="orderStatusFilter" onchange="applyOrderFilters()" class="filter-select" style="min-width:140px;">
             <option value="">All Statuses</option>
             <option value="successful">Successful (Finished)</option>
+            <option value="received">Received</option>
             <option value="pending">Pending</option>
             <option value="cancelled">Cancelled</option>
+            <option value="expired">Expired</option>
             <option value="banned">Banned</option>
           </select>
           <input type="text" id="orderProductFilter" placeholder="Product/Service" class="filter-input" style="width:110px; padding:8px 12px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:13px;" oninput="debounceOrderFilter()">
@@ -1176,14 +1197,15 @@
     </div>
   </div>
 
-  <!-- ── Order Status Check Modal ── -->
+  <!-- ── Order Details & Live Verification Modal ── -->
   <div class="modal-overlay" id="orderModal">
-    <div class="modal">
+    <div class="modal" style="max-width:680px; max-height:calc(100vh - 40px); display:flex; flex-direction:column;">
       <button class="modal-close" onclick="closeModal('orderModal')" aria-label="Close modal"><i class="ph ph-x"></i></button>
-      <h2 class="modal-title"><i class="ph ph-receipt"></i> Live Order Verification</h2>
-      <div id="orderModalBody" class="modal-body-grid"></div>
-      <div class="modal-actions">
-        <button class="btn-outline" onclick="closeModal('orderModal')">Close</button>
+      <h2 class="modal-title" id="orderModalTitle"><i class="ph ph-receipt"></i> Virtual Number Order Details</h2>
+      <div id="orderModalBody" class="modal-body-grid" style="overflow-y:auto; padding-right:4px; flex:1;"></div>
+      <div class="modal-actions" id="orderModalActions" style="margin-top:18px; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+        <button type="button" class="btn-outline" id="orderModalCheckBtn" style="display:none;"><i class="ph ph-arrows-clockwise"></i> Check Latest Info</button>
+        <button type="button" class="btn-outline" onclick="closeModal('orderModal')">Close</button>
       </div>
     </div>
   </div>

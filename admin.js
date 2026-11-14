@@ -95,11 +95,12 @@ function copyToClipboard(text, label = 'Copied') {
 }
 
 function statusBadge(status) {
-  const s = String(status || '').toUpperCase();
+  const s = String(status || '').toUpperCase().trim();
   let cls = 'badge-pending';
   if (s === 'RECEIVED' || s === 'SUCCESS' || s === 'ACTIVE') cls = 'badge-received';
   else if (s === 'FINISHED' || s === 'COMPLETED') cls = 'badge-finished';
   else if (s === 'CANCELED' || s === 'CANCELLED') cls = 'badge-canceled';
+  else if (s === 'TIMEOUT' || s === 'EXPIRED') cls = 'badge-expired';
   else if (s === 'BANNED' || s === 'FAILED') cls = 'badge-banned';
   return '<span class="status-badge ' + cls + '">' + escapeHTML(status || 'Pending') + '</span>';
 }
@@ -342,6 +343,9 @@ function showSection(id, btn) {
   }
 
   // Section specific triggers
+  if (id === 'users') {
+    loadAdminUsers({ page: currentUsersPage });
+  }
   if (id === 'wallets') {
     if (!allWallets.length && (!window.isAdminEndpointUnavailable || !window.isAdminEndpointUnavailable('/api/admin/wallets'))) {
       loadAdminWallets();
@@ -450,25 +454,25 @@ async function loadAllData() {
     // 2. Fetch live users directly from Admin API (GET /api/admin/users - PDF Page 2)
     if (typeof adminGetUsers === 'function') {
       try {
-        const usersRes = await adminGetUsers({ limit: 100 });
-        const uList = usersRes?.users || usersRes?.data || (Array.isArray(usersRes) ? usersRes : null);
-        if (Array.isArray(uList) && uList.length) {
-          allUsers = uList.map(u => ({
-            id: u._id || u.id,
-            _id: u._id || u.id,
-            firstName: u.firstName || '',
-            lastName: u.lastName || '',
-            username: u.username || '',
-            name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || u.username || 'User',
-            email: u.email || '',
-            phone: u.phoneNumber || u.phone || '—',
-            phoneNumber: u.phoneNumber || u.phone || '',
-            balance: String(u.balance || (u.wallet ? u.wallet.balance : 0) || 0),
-            role: u.role || 'user',
-            isSuspended: Boolean(u.isSuspended),
-            createdAt: u.createdAt || new Date().toISOString()
-          }));
+        const usersRes = await adminGetUsers({ page: currentUsersPage, limit: currentUsersLimit });
+        const uList = usersRes?.users || usersRes?.data?.users || usersRes?.data || (Array.isArray(usersRes) ? usersRes : null);
+        if (Array.isArray(uList)) {
+          allUsers = uList.map(normalizeUserRecord);
         }
+        const pag = usersRes?.pagination || usersRes?.data?.pagination || null;
+        const statsTotal = latestDashboardStats?.users?.total ?? latestDashboardStats?.data?.users?.total ?? null;
+        const totalCount = pag?.total !== undefined ? Number(pag.total) : (statsTotal !== null ? Number(statsTotal) : allUsers.length);
+        const limitVal = Number(pag?.limit || currentUsersLimit || 100);
+        const pageVal = Number(pag?.page || currentUsersPage || 1);
+        const totalPagesVal = Math.max(1, Number(pag?.totalPages || Math.ceil(totalCount / limitVal) || 1));
+
+        userPaginationMeta = {
+          page: pageVal,
+          limit: limitVal,
+          total: totalCount,
+          totalPages: totalPagesVal
+        };
+        unfilteredUsersTotal = totalCount;
       } catch (err) {
         if (!err?.suppressed) {
           console.warn('[Admin] Live users API notice:', err.message);
@@ -575,7 +579,7 @@ function renderOverview() {
   const txStats = s.transactions || {};
   const vaStats = s.virtualAccounts || {};
 
-  const displayUserCount = usersStats.total ?? s.usersCount ?? s.totalUsers ?? usersFiltered.length;
+  const displayUserCount = usersStats.total ?? s.usersCount ?? s.totalUsers ?? (unfilteredUsersTotal || userPaginationMeta?.total || usersFiltered.length);
   const displaySignupsToday = usersStats.newToday ?? signupsToday;
   const displayBlockedCount = usersStats.suspended ?? allUsers.filter(u => u.isSuspended || u.is_suspended).length;
   const displayWalletTotal = walletsStats.totalBalance ?? s.walletsTotal ?? s.totalWalletsBalance ?? totalUserWallets;
@@ -696,21 +700,57 @@ function renderRecentOrders(list = allOrders) {
 /* ════════════════════════════════════
    USER MANAGEMENT (Admin API PDF Page 2-3)
 ════════════════════════════════════ */
+let userSearchTimeout = null;
+let currentUsersPage = 1;
+let currentUsersLimit = 100;
+let userPaginationMeta = { page: 1, limit: 100, total: 0, totalPages: 1 };
+let unfilteredUsersTotal = 0;
+
+function normalizeUserRecord(u) {
+  if (!u || typeof u !== 'object') return {};
+  const firstName = u.firstName || u.first_name || '';
+  const lastName = u.lastName || u.last_name || '';
+  const username = u.username || '';
+  const phoneVal = u.phoneNumber || u.phone_number || u.phone || '';
+  const isSusp = Boolean(u.isSuspended !== undefined ? u.isSuspended : u.is_suspended);
+  const createdVal = u.createdAt || u.created_at || new Date().toISOString();
+  return {
+    id: u.id || u._id || '',
+    _id: u._id || u.id || '',
+    firstName,
+    lastName,
+    username,
+    name: [firstName, lastName].filter(Boolean).join(' ') || u.name || username || 'User',
+    email: u.email || '',
+    phone: phoneVal || '—',
+    phoneNumber: phoneVal,
+    balance: String(u.balance ?? (u.wallet ? u.wallet.balance : 0) ?? 0),
+    role: u.role || 'user',
+    isSuspended: isSusp,
+    createdAt: createdVal
+  };
+}
+
 function renderUsersTable(users = allUsers) {
   const tbody = document.getElementById('usersTbody');
   if (!tbody) return;
 
   if (!users.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No matching users found.</td></tr>';
+    renderUserPagination();
     return;
   }
 
+  const pageNum = Math.max(1, Number(userPaginationMeta?.page || currentUsersPage || 1));
+  const limitNum = Math.max(1, Number(userPaginationMeta?.limit || currentUsersLimit || 100));
+
   tbody.innerHTML = users.map((u, i) => {
-    const isSusp = Boolean(u.isSuspended);
+    const isSusp = Boolean(u.isSuspended ?? u.is_suspended);
     const uid = u.id || u._id || u.email;
+    const displayIndex = (pageNum - 1) * limitNum + (i + 1);
     return `
     <tr>
-      <td style="color:var(--muted);font-size:12px;">${i + 1}</td>
+      <td style="color:var(--muted);font-size:12px;">${displayIndex}</td>
       <td>
         <div style="font-weight:600;color:var(--text);">${escapeHTML(u.name || u.username || 'User')}</div>
         <div style="font-size:12px;color:var(--muted);">${escapeHTML(u.email || '—')}</div>
@@ -723,7 +763,7 @@ function renderUsersTable(users = allUsers) {
           ? '<span class="status-badge badge-banned"><i class="ph ph-prohibit"></i> Suspended</span>'
           : '<span class="status-badge badge-received"><i class="ph ph-check-circle"></i> Active</span>'}
       </td>
-      <td style="font-size:12px;color:var(--muted);">${fmtDate(u.createdAt)}</td>
+      <td style="font-size:12px;color:var(--muted);">${fmtDate(u.createdAt || u.created_at)}</td>
       <td style="text-align:right;">
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
           <button class="tbl-btn tbl-btn-view" onclick="viewUser('${escapeHTML(uid)}')"><i class="ph ph-eye"></i> View</button>
@@ -737,11 +777,53 @@ function renderUsersTable(users = allUsers) {
     </tr>
   `;
   }).join('');
+
+  renderUserPagination();
 }
 
-let userSearchTimeout = null;
-let currentUsersPage = 1;
-let currentUsersLimit = 50;
+function renderUserPagination() {
+  const pagEl = document.getElementById('userPagination');
+  const label = document.getElementById('userPageLabel');
+  const prev = document.getElementById('userPrevBtn');
+  const next = document.getElementById('userNextBtn');
+
+  const showingCount = Array.isArray(allUsers) ? allUsers.length : 0;
+  const total = userPaginationMeta?.total !== undefined ? Number(userPaginationMeta.total) : (unfilteredUsersTotal || showingCount);
+  const limitNum = Math.max(1, Number(userPaginationMeta?.limit || currentUsersLimit || 100));
+  const totalPages = Math.max(1, Number(userPaginationMeta?.totalPages || Math.ceil(total / limitNum) || 1));
+  const current = Math.min(Math.max(1, Number(userPaginationMeta?.page || currentUsersPage || 1)), totalPages);
+
+  setText('usersTotalCount', total.toLocaleString());
+  setText('usersShowingCount', showingCount.toLocaleString());
+  setText('usersCurrentPageNum', current.toLocaleString());
+  setText('usersTotalPagesNum', totalPages.toLocaleString());
+
+  if (!pagEl) return;
+
+  if (label) {
+    if (showingCount > 0) {
+      const startIdx = (current - 1) * limitNum + 1;
+      const endIdx = startIdx + showingCount - 1;
+      label.textContent = `Showing ${startIdx.toLocaleString()}–${endIdx.toLocaleString()} of ${total.toLocaleString()} registered users (Page ${current} of ${totalPages})`;
+    } else {
+      label.textContent = `Showing 0 of ${total.toLocaleString()} registered users (Page ${current} of ${totalPages})`;
+    }
+  }
+  if (prev) {
+    prev.disabled = current <= 1;
+  }
+  if (next) {
+    next.disabled = current >= totalPages;
+  }
+}
+
+function changeUserPage(delta) {
+  const totalPages = Math.max(1, Number(userPaginationMeta?.totalPages || 1));
+  const next = currentUsersPage + delta;
+  if (next >= 1 && next <= totalPages) {
+    loadAdminUsers({ page: next });
+  }
+}
 
 async function loadAdminUsers(params = {}) {
   const tbody = document.getElementById('usersTbody');
@@ -749,8 +831,8 @@ async function loadAdminUsers(params = {}) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty-cell"><i class="ph ph-spinner spinning"></i> Loading users from Admin API (GET /api/admin/users)...</td></tr>';
   }
 
-  currentUsersPage = params.page !== undefined ? params.page : currentUsersPage;
-  currentUsersLimit = params.limit !== undefined ? params.limit : currentUsersLimit;
+  currentUsersPage = params.page !== undefined ? Math.max(1, Number(params.page) || 1) : currentUsersPage;
+  currentUsersLimit = params.limit !== undefined ? Math.max(1, Number(params.limit) || 100) : currentUsersLimit;
 
   const queryParams = {
     page: currentUsersPage,
@@ -770,23 +852,34 @@ async function loadAdminUsers(params = {}) {
   try {
     const res = await (typeof adminGetUsers === 'function' ? adminGetUsers(queryParams) : adminApi.getUsers(queryParams));
     const list = res?.users || res?.data?.users || res?.data || (Array.isArray(res) ? res : []);
-    allUsers = Array.isArray(list) ? list.map(u => ({
-      id: u.id || u._id || '',
-      _id: u._id || u.id || '',
-      firstName: u.firstName || '',
-      lastName: u.lastName || '',
-      username: u.username || '',
-      name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.name || u.username || 'User',
-      email: u.email || '',
-      phone: u.phoneNumber || u.phone || '—',
-      phoneNumber: u.phoneNumber || u.phone || '',
-      balance: String(u.balance || (u.wallet ? u.wallet.balance : 0) || 0),
-      role: u.role || 'user',
-      isSuspended: Boolean(u.isSuspended),
-      createdAt: u.createdAt || new Date().toISOString()
-    })) : [];
+    allUsers = Array.isArray(list) ? list.map(normalizeUserRecord) : [];
 
-    setText('navUsersBadge', allUsers.length);
+    const pag = res?.pagination || res?.data?.pagination || null;
+    const statsTotal = latestDashboardStats?.users?.total ?? latestDashboardStats?.data?.users?.total ?? null;
+    const isFiltered = Boolean(queryParams.search || queryParams.isSuspended !== undefined);
+    const totalCount = pag?.total !== undefined
+      ? Number(pag.total)
+      : (!isFiltered && statsTotal !== null ? Number(statsTotal) : allUsers.length);
+    const limitVal = Number(pag?.limit || currentUsersLimit || 100);
+    const pageVal = Number(pag?.page || currentUsersPage || 1);
+    const totalPagesVal = Math.max(1, Number(pag?.totalPages || Math.ceil(totalCount / limitVal) || 1));
+
+    userPaginationMeta = {
+      page: pageVal,
+      limit: limitVal,
+      total: totalCount,
+      totalPages: totalPagesVal
+    };
+    currentUsersPage = pageVal;
+
+    if (!isFiltered) {
+      unfilteredUsersTotal = totalCount;
+      setText('totalUsers', totalCount.toLocaleString());
+    }
+
+    const badgeTotal = unfilteredUsersTotal || (statsTotal !== null ? Number(statsTotal) : totalCount);
+    setText('navUsersBadge', badgeTotal.toLocaleString());
+
     renderUsersTable(allUsers);
   } catch (err) {
     console.error('[Admin] loadAdminUsers error:', err.message);
@@ -1193,32 +1286,58 @@ async function toggleWalletFreeze(userId, currentlyFrozen) {
 let currentOrderPage = 1;
 const orderPageSize = 25;
 let orderPaginationMeta = { page: 1, limit: 25, total: 0, totalPages: 1 };
+let latestOrderStats = null;
 let orderSearchDebounce = null;
+let currentViewingOrderId = null;
+const checkingOrderIds = new Set();
+
+function getFiveSimOrderId(o) {
+  if (!o || typeof o !== 'object') return '';
+  if (o.orderId && String(o.orderId).trim() && String(o.orderId).trim() !== '—') {
+    return String(o.orderId).trim();
+  }
+  const txId = o.transactionId ? String(o.transactionId).trim() : '';
+  const candidateId = o.id ? String(o.id).trim() : '';
+  if (candidateId && candidateId !== '—' && candidateId !== txId) {
+    return candidateId;
+  }
+  return '';
+}
 
 function normalizeActivationStatus(rawStatus) {
-  const s = String(rawStatus || '').toUpperCase().trim();
+  const raw = String(rawStatus || '').trim();
+  const s = raw.toUpperCase();
   if (['FINISHED', 'COMPLETED', 'SUCCESS', '6', '10'].includes(s)) {
     return { category: 'successful', label: 'Successful', badgeClass: 'badge-finished' };
+  }
+  if (s === 'RECEIVED') {
+    return { category: 'received', label: 'Received', badgeClass: 'badge-received' };
   }
   if (['BANNED', '8'].includes(s)) {
     return { category: 'banned', label: 'Banned', badgeClass: 'badge-banned' };
   }
-  if (['CANCELED', 'CANCELLED', 'TIMEOUT', 'EXPIRED', 'FAILED', '2'].includes(s)) {
+  if (['CANCELED', 'CANCELLED', '2'].includes(s)) {
     return { category: 'cancelled', label: 'Cancelled', badgeClass: 'badge-canceled' };
   }
-  return { category: 'pending', label: 'Pending', badgeClass: 'badge-received' };
+  if (['TIMEOUT', 'EXPIRED'].includes(s)) {
+    return { category: 'expired', label: 'Expired', badgeClass: 'badge-expired' };
+  }
+  if (s === 'FAILED') {
+    return { category: 'failed', label: 'Failed', badgeClass: 'badge-banned' };
+  }
+  if (['PENDING', 'WAITING', 'ACTIVE', '1', ''].includes(s)) {
+    return { category: 'pending', label: 'Pending', badgeClass: 'badge-pending' };
+  }
+  return { category: 'pending', label: raw, badgeClass: 'badge-pending' };
 }
 
-function renderOrdersTable(orders = allOrders, stats = null) {
-  const tbody = document.getElementById('ordersTbody');
-  if (!tbody) return;
-
-  // 1. Update the 4 core KPI statistics cards (+ Pending) directly from database figures
-  const total = stats?.total ?? allOrders.length;
-  const successful = stats?.successful ?? stats?.completed ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'successful').length;
-  const banned = stats?.banned ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'banned').length;
-  const cancelled = stats?.cancelled ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'cancelled').length;
-  const pending = stats?.pending ?? stats?.active ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'pending').length;
+function updateOrderKpiCards(stats = null) {
+  const s = stats || latestOrderStats || null;
+  const total = s?.total ?? orderPaginationMeta?.total ?? allOrders.length;
+  const successful = s?.successful ?? s?.completed ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'successful').length;
+  const banned = s?.banned ?? allOrders.filter(o => normalizeActivationStatus(o.status).category === 'banned').length;
+  const cancelled = s?.cancelled ?? allOrders.filter(o => ['cancelled', 'expired', 'failed'].includes(normalizeActivationStatus(o.status).category)).length;
+  const pending = s?.pending ?? s?.active ?? allOrders.filter(o => ['pending', 'received'].includes(normalizeActivationStatus(o.status).category)).length;
 
   setText('orderKpiTotal', Number(total || 0).toLocaleString());
   setText('orderKpiSuccess', Number(successful || 0).toLocaleString());
@@ -1228,6 +1347,78 @@ function renderOrdersTable(orders = allOrders, stats = null) {
   setText('orderKpiPending', Number(pending || 0).toLocaleString());
   setText('orderKpiActive', Number(pending || 0).toLocaleString());
   setText('navOrdersBadge', Number(total || 0).toLocaleString());
+}
+
+function buildOrderRowCellsHtml(o, displayIndex) {
+  const activationId = getFiveSimOrderId(o) || '—';
+  const txId = String(o.transactionId || o.reference || '—');
+  const hasCustomerObj = o.customer && typeof o.customer === 'object';
+  const cName = hasCustomerObj
+    ? (o.customer.name || [o.customer.firstName, o.customer.lastName].filter(Boolean).join(' ') || o.customer.username || 'Customer')
+    : (o.username || o.userName || (o.customer === null ? 'Unavailable' : 'Customer'));
+  const cUsername = hasCustomerObj
+    ? (o.customer.username || (o.customer.email ? o.customer.email.split('@')[0] : ''))
+    : (o.username || (o.userEmail ? o.userEmail.split('@')[0] : ''));
+  const userEmail = escapeHTML((hasCustomerObj ? o.customer.email : null) || o.userEmail || o.email || '—');
+  const phone = escapeHTML(o.phone || '—');
+  const country = escapeHTML(String(o.country || '—').toUpperCase());
+  const operator = escapeHTML(String(o.operator || 'any').toLowerCase());
+  const service = escapeHTML(String(o.service || o.product || '—'));
+  const amountVal = parseFloat(o.amount ?? o.amountNGN ?? 0);
+  const amountStr = '₦' + amountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const norm = normalizeActivationStatus(o.status);
+
+  const smsList = Array.isArray(o.sms) ? o.sms : [];
+  const smsCode = o.otp || o.smsCode || (smsList[0] && (smsList[0].code || smsList[0].otp)) || '';
+  const hasSms = Boolean(smsCode && smsCode !== '—');
+  const isChecking = checkingOrderIds.has(activationId);
+
+  return `
+    <td style="color:var(--muted);font-size:12px;">${displayIndex}</td>
+    <td>
+      <span style="font-family:monospace;font-size:12px;font-weight:700;color:var(--text);">${escapeHTML(activationId)}</span>
+      ${activationId !== '—' ? `<button class="copy-btn" onclick="copyToClipboard('${escapeHTML(activationId)}', 'Order ID')" title="Copy 5sim Order ID"><i class="ph ph-copy"></i></button>` : ''}
+    </td>
+    <td>
+      <span style="font-family:monospace;font-size:11.5px;color:var(--muted);">${escapeHTML(txId)}</span>
+    </td>
+    <td>
+      <strong style="color:var(--text);font-size:13px;">${escapeHTML(cName)}</strong>
+      ${cUsername ? `<div style="font-size:11px;color:var(--muted);">@${escapeHTML(cUsername)}</div>` : ''}
+    </td>
+    <td style="font-size:12px;color:var(--muted);">${userEmail}</td>
+    <td>
+      <span style="font-family:monospace;font-size:12.5px;color:var(--text);">${phone}</span>
+      ${phone !== '—' ? `<button class="copy-btn" onclick="copyToClipboard('${phone}', 'Phone Number')" title="Copy Phone Number"><i class="ph ph-copy"></i></button>` : ''}
+    </td>
+    <td><span style="font-size:12px;font-weight:700;color:var(--muted);">${country}</span></td>
+    <td>
+      <span style="font-size:12px;font-weight:600;color:var(--text);text-transform:capitalize;">${service}</span>
+      <div style="font-size:11px;color:var(--muted);text-transform:lowercase;">${operator}</div>
+    </td>
+    <td style="color:var(--amber);font-weight:700;font-size:13px;">${amountStr}</td>
+    <td>
+      <span class="status-badge ${norm.badgeClass}" style="text-transform:capitalize;">${escapeHTML(norm.label)}</span>
+    </td>
+    <td style="font-size:11px;color:var(--muted);">${fmt(o.purchasedAt || o.createdAt)}</td>
+    <td>
+      <div style="display:inline-flex;align-items:center;gap:6px;">
+        ${hasSms ? `<span style="font-family:monospace;font-weight:800;color:var(--green);font-size:12px;background:var(--surface-2);padding:2px 6px;border-radius:4px;" title="Received OTP">${escapeHTML(String(smsCode))}</span>` : ''}
+        <button type="button" class="tbl-btn tbl-btn-view" data-details-order-id="${escapeHTML(activationId)}" onclick="viewOrderDetail('${escapeHTML(activationId)}')" title="View complete order details"><i class="ph ph-eye"></i> Details</button>
+        <button type="button" class="tbl-btn" data-check-order-id="${escapeHTML(activationId)}" onclick="checkLiveOrderStatus('${escapeHTML(activationId)}', this)" ${isChecking ? 'disabled' : ''} title="Check live provider status">${isChecking ? '<i class="ph ph-spinner spinning"></i> Checking...' : '<i class="ph ph-arrows-clockwise"></i> Check'}</button>
+      </div>
+    </td>
+  `;
+}
+
+function renderOrdersTable(orders = allOrders, stats = null) {
+  const tbody = document.getElementById('ordersTbody');
+  if (!tbody) return;
+
+  if (stats) {
+    latestOrderStats = stats;
+  }
+  updateOrderKpiCards(stats);
 
   if (!orders || !orders.length) {
     tbody.innerHTML = '<tr><td colspan="12" class="empty-cell">No matching 5sim virtual number orders found.</td></tr>';
@@ -1235,63 +1426,391 @@ function renderOrdersTable(orders = allOrders, stats = null) {
   }
 
   tbody.innerHTML = orders.map((o, i) => {
-    const activationId = String(o.orderId || o.id || '—');
-    const txId = String(o.transactionId || o.reference || '—');
-    const cName = o.customer?.name || o.username || o.userName || 'Customer';
-    const cUsername = o.customer?.username || (o.customer?.email ? o.customer.email.split('@')[0] : 'user');
-    const userEmail = escapeHTML(o.customer?.email || o.userEmail || o.email || '—');
-    const phone = escapeHTML(o.phone || '—');
-    const country = escapeHTML(String(o.country || '—').toUpperCase());
-    const operator = escapeHTML(String(o.operator || 'any').toLowerCase());
-    const service = escapeHTML(String(o.service || o.product || '—'));
-    const amountVal = parseFloat(o.amount || o.amountNGN || 0);
-    const amountStr = '₦' + amountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const norm = normalizeActivationStatus(o.status);
-
-    const smsCode = o.otp || o.smsCode || (o.sms && o.sms[0] && o.sms[0].code) || '';
-    const hasSms = Boolean(smsCode && smsCode !== '—');
-
+    const activationId = getFiveSimOrderId(o) || '—';
     const displayIndex = (currentOrderPage - 1) * orderPageSize + (i + 1);
-
-    return `
-      <tr>
-        <td style="color:var(--muted);font-size:12px;">${displayIndex}</td>
-        <td>
-          <span style="font-family:monospace;font-size:12px;font-weight:700;color:var(--text);">${escapeHTML(activationId)}</span>
-          <button class="copy-btn" onclick="copyToClipboard('${escapeHTML(activationId)}', 'Order ID')" title="Copy 5sim Order ID"><i class="ph ph-copy"></i></button>
-        </td>
-        <td>
-          <span style="font-family:monospace;font-size:11.5px;color:var(--muted);">${escapeHTML(txId)}</span>
-        </td>
-        <td>
-          <strong style="color:var(--text);font-size:13px;">${escapeHTML(cName)}</strong>
-          <div style="font-size:11px;color:var(--muted);">@${escapeHTML(cUsername)}</div>
-        </td>
-        <td style="font-size:12px;color:var(--muted);">${userEmail}</td>
-        <td>
-          <span style="font-family:monospace;font-size:12.5px;color:var(--text);">${phone}</span>
-          ${phone !== '—' ? `<button class="copy-btn" onclick="copyToClipboard('${phone}', 'Phone Number')" title="Copy Phone Number"><i class="ph ph-copy"></i></button>` : ''}
-        </td>
-        <td><span style="font-size:12px;font-weight:700;color:var(--muted);">${country}</span></td>
-        <td>
-          <span style="font-size:12px;font-weight:600;color:var(--text);text-transform:capitalize;">${service}</span>
-          <div style="font-size:11px;color:var(--muted);text-transform:lowercase;">${operator}</div>
-        </td>
-        <td style="color:var(--amber);font-weight:700;font-size:13px;">${amountStr}</td>
-        <td>
-          <span class="status-badge ${norm.badgeClass}" style="text-transform:capitalize;">${norm.label}</span>
-        </td>
-        <td style="font-size:11px;color:var(--muted);">${fmt(o.purchasedAt || o.createdAt)}</td>
-        <td>
-          <div style="display:inline-flex;align-items:center;gap:6px;">
-            ${hasSms ? `<span style="font-family:monospace;font-weight:800;color:var(--green);font-size:12px;background:var(--surface-2);padding:2px 6px;border-radius:4px;" title="Received OTP">${escapeHTML(smsCode)}</span>` : ''}
-            <button class="tbl-btn tbl-btn-view" onclick="viewOrderDetail('${escapeHTML(activationId)}')" title="View complete order details"><i class="ph ph-eye"></i> Details</button>
-            <button class="tbl-btn" onclick="checkLiveOrderStatus('${escapeHTML(activationId)}')" title="Check live provider status"><i class="ph ph-arrows-clockwise"></i> Check</button>
-          </div>
-        </td>
-      </tr>
-    `;
+    return `<tr data-order-row-id="${escapeHTML(activationId)}" data-order-index="${displayIndex}">${buildOrderRowCellsHtml(o, displayIndex)}</tr>`;
   }).join('');
+}
+
+function mergeOrderData(existing, incoming, fallbackOrderId) {
+  const base = existing && typeof existing === 'object' ? existing : {};
+  const next = incoming && typeof incoming === 'object' ? incoming : {};
+  const resolvedOrderId = getFiveSimOrderId(next) || getFiveSimOrderId(base) || String(fallbackOrderId || '');
+  const resolvedTxId = next.transactionId || base.transactionId || null;
+
+  return {
+    ...base,
+    ...next,
+    orderId: resolvedOrderId,
+    transactionId: resolvedTxId,
+    reference: next.reference || base.reference || resolvedTxId || null,
+    customer: next.customer !== undefined ? next.customer : (base.customer !== undefined ? base.customer : null),
+    service: next.service || next.product || base.service || base.product || '—',
+    country: next.country || base.country || '—',
+    operator: next.operator || base.operator || 'any',
+    phone: next.phone || base.phone || '—',
+    amount: next.amount !== undefined && next.amount !== null ? next.amount : (base.amount ?? base.amountNGN ?? 0),
+    purchasedAt: next.purchasedAt || base.purchasedAt || next.createdAt || base.createdAt || null,
+    expiresAt: next.expiresAt !== undefined ? next.expiresAt : (base.expiresAt || null),
+    status: next.status || base.status || 'PENDING',
+    otp: next.otp !== undefined ? next.otp : (base.otp ?? null),
+    sms: Array.isArray(next.sms) ? next.sms : (Array.isArray(base.sms) ? base.sms : [])
+  };
+}
+
+function updateSingleOrderRowInDOM(orderId, incomingOrder) {
+  const targetId = String(orderId || '').trim();
+  if (!targetId || targetId === '—') return null;
+
+  const idx = allOrders.findIndex(o => getFiveSimOrderId(o) === targetId);
+  const existing = idx !== -1 ? allOrders[idx] : null;
+  const merged = mergeOrderData(existing, incomingOrder, targetId);
+
+  if (idx !== -1) {
+    allOrders[idx] = merged;
+  }
+
+  const tbody = document.getElementById('ordersTbody');
+  if (tbody) {
+    const rows = tbody.querySelectorAll('tr[data-order-row-id]');
+    for (const tr of rows) {
+      if (tr.getAttribute('data-order-row-id') === targetId) {
+        const displayIndex = Number(tr.getAttribute('data-order-index')) || (idx !== -1 ? (currentOrderPage - 1) * orderPageSize + (idx + 1) : 1);
+        tr.innerHTML = buildOrderRowCellsHtml(merged, displayIndex);
+        break;
+      }
+    }
+  }
+
+  updateOrderKpiCards();
+  return merged;
+}
+
+async function fetchSingleAdminFivesimOrder(orderId) {
+  const cleanOrderId = String(orderId || '').trim();
+  if (!cleanOrderId || cleanOrderId === '—') {
+    throw new Error('A valid 5SIM Order ID is required.');
+  }
+  if (typeof adminGetFivesimOrder === 'function') {
+    return await adminGetFivesimOrder(cleanOrderId);
+  }
+  if (window.adminApi && typeof window.adminApi.getFivesimOrder === 'function') {
+    return await window.adminApi.getFivesimOrder(cleanOrderId);
+  }
+  if (typeof adminApiRequest === 'function') {
+    return await adminApiRequest(`/api/admin/fivesim/orders/${encodeURIComponent(cleanOrderId)}`, { method: 'GET' });
+  }
+  throw new Error('Admin API client is not initialized.');
+}
+
+function renderOrderDetailsModalContent(orderObj) {
+  const body = document.getElementById('orderModalBody');
+  if (!body) return;
+
+  const o = orderObj || {};
+  const orderId = getFiveSimOrderId(o) || '—';
+  const txId = o.transactionId || '—';
+  const reference = o.reference || '—';
+  const service = o.service || o.product || '—';
+  const country = o.country ? String(o.country).toUpperCase() : '—';
+  const operator = o.operator ? String(o.operator).toLowerCase() : '—';
+  const phone = o.phone || '—';
+  const amountVal = parseFloat(o.amount ?? o.amountNGN ?? 0);
+  const amountStr = '₦' + amountVal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const purchasedAtStr = o.purchasedAt || o.createdAt ? fmt(o.purchasedAt || o.createdAt) : '—';
+  const expiresAtStr = o.expiresAt ? fmt(o.expiresAt) : '—';
+  const norm = normalizeActivationStatus(o.status);
+
+  // 1. Customer Information Section
+  const cust = o.customer && typeof o.customer === 'object' ? o.customer : null;
+  const hasCustomerData = Boolean(cust && (cust.email || cust.name || cust.username || cust.id || cust._id));
+  let customerSectionHtml = '';
+
+  if (!hasCustomerData) {
+    customerSectionHtml = `
+      <div class="order-detail-section">
+        <div class="order-detail-section-header">
+          <i class="ph ph-user"></i> Customer Information
+        </div>
+        <div style="padding:10px 12px; border-radius:8px; background:var(--surface); border:1px dashed var(--border); color:var(--muted); font-size:12.5px;">
+          <i class="ph ph-info"></i> Customer information is unavailable for this order.
+        </div>
+      </div>
+    `;
+  } else {
+    const custName = cust.name || [cust.firstName, cust.lastName].filter(Boolean).join(' ') || '—';
+    const custUsername = cust.username ? `@${cust.username}` : '—';
+    const custEmail = cust.email || '—';
+    const custId = cust.id || cust._id || '—';
+
+    customerSectionHtml = `
+      <div class="order-detail-section">
+        <div class="order-detail-section-header">
+          <i class="ph ph-user"></i> Customer Information
+        </div>
+        <div class="order-detail-grid">
+          <div class="order-detail-item">
+            <div class="order-detail-label">Customer Name</div>
+            <div class="order-detail-value">${escapeHTML(custName)}</div>
+          </div>
+          <div class="order-detail-item">
+            <div class="order-detail-label">Username</div>
+            <div class="order-detail-value">${escapeHTML(custUsername)}</div>
+          </div>
+          <div class="order-detail-item">
+            <div class="order-detail-label">Email Address</div>
+            <div class="order-detail-value">${escapeHTML(custEmail)}</div>
+          </div>
+          <div class="order-detail-item">
+            <div class="order-detail-label">Customer ID</div>
+            <div class="order-detail-value" style="font-family:monospace; font-size:12px;">${escapeHTML(String(custId))}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // 2. Order Information Section
+  const orderSectionHtml = `
+    <div class="order-detail-section">
+      <div class="order-detail-section-header">
+        <i class="ph ph-phone-call"></i> Order Information
+      </div>
+      <div class="order-detail-grid">
+        <div class="order-detail-item">
+          <div class="order-detail-label">5SIM Order ID</div>
+          <div class="order-detail-value" style="font-family:monospace;">
+            ${escapeHTML(String(orderId))}
+            ${orderId !== '—' ? `<button type="button" class="copy-btn" onclick="copyToClipboard('${escapeHTML(String(orderId))}', '5SIM Order ID')" title="Copy 5SIM Order ID"><i class="ph ph-copy"></i></button>` : ''}
+          </div>
+        </div>
+        <div class="order-detail-item">
+          <div class="order-detail-label">Transaction ID</div>
+          <div class="order-detail-value" style="font-family:monospace; font-size:12px;">${escapeHTML(String(txId))}</div>
+        </div>
+        <div class="order-detail-item full-width">
+          <div class="order-detail-label">Order Reference</div>
+          <div class="order-detail-value" style="font-family:monospace; font-size:12px;">${escapeHTML(String(reference))}</div>
+        </div>
+        <div class="order-detail-item">
+          <div class="order-detail-label">Service</div>
+          <div class="order-detail-value" style="text-transform:capitalize;">${escapeHTML(String(service))}</div>
+        </div>
+        <div class="order-detail-item">
+          <div class="order-detail-label">Country</div>
+          <div class="order-detail-value">${escapeHTML(country)}</div>
+        </div>
+        <div class="order-detail-item">
+          <div class="order-detail-label">Operator</div>
+          <div class="order-detail-value" style="text-transform:lowercase;">${escapeHTML(operator)}</div>
+        </div>
+        <div class="order-detail-item">
+          <div class="order-detail-label">Phone Number</div>
+          <div class="order-detail-value" style="font-family:monospace;">
+            ${escapeHTML(String(phone))}
+            ${phone !== '—' ? `<button type="button" class="copy-btn" onclick="copyToClipboard('${escapeHTML(String(phone))}', 'Phone Number')" title="Copy Phone Number"><i class="ph ph-copy"></i></button>` : ''}
+          </div>
+        </div>
+        <div class="order-detail-item">
+          <div class="order-detail-label">Purchase Amount</div>
+          <div class="order-detail-value" style="color:var(--amber); font-weight:700;">${amountStr}</div>
+        </div>
+        <div class="order-detail-item">
+          <div class="order-detail-label">Current Status</div>
+          <div class="order-detail-value">
+            <span class="status-badge ${norm.badgeClass}">${escapeHTML(norm.label)}</span>
+            ${o.status ? `<span style="font-size:11px; color:var(--muted); margin-left:6px; font-family:monospace;">(${escapeHTML(String(o.status))})</span>` : ''}
+          </div>
+        </div>
+        <div class="order-detail-item">
+          <div class="order-detail-label">Purchase Date</div>
+          <div class="order-detail-value" style="font-size:12px;">${escapeHTML(purchasedAtStr)}</div>
+        </div>
+        <div class="order-detail-item">
+          <div class="order-detail-label">Expiration Date</div>
+          <div class="order-detail-value" style="font-size:12px;">${escapeHTML(expiresAtStr)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // 3. Verification Information Section
+  const smsArray = Array.isArray(o.sms) ? o.sms : [];
+  const primarySms = smsArray.length > 0 ? smsArray[0] : null;
+  const otpVal = o.otp || (primarySms && (primarySms.code || primarySms.otp)) || null;
+  const hasVerificationData = Boolean(otpVal || smsArray.length > 0);
+
+  let verificationInnerHtml = '';
+  if (!hasVerificationData) {
+    verificationInnerHtml = `
+      <div style="padding:12px 14px; border-radius:8px; background:var(--surface); border:1px dashed var(--border); color:var(--muted); font-size:12.5px;">
+        <i class="ph ph-chat-Slash"></i> No OTP or SMS verification messages are available for this order yet.
+      </div>
+    `;
+  } else {
+    const smsItemsHtml = smsArray.length > 0
+      ? smsArray.map((msg, idx) => {
+          const sender = msg.sender || msg.from || '—';
+          const text = msg.message || msg.text || '—';
+          const code = msg.code || msg.otp || otpVal || '—';
+          const smsDate = msg.date || msg.created_at || msg.createdAt || msg.receivedAt ? fmt(msg.date || msg.created_at || msg.createdAt || msg.receivedAt) : '—';
+          return `
+            <div class="order-sms-card">
+              <div class="order-detail-grid">
+                <div class="order-detail-item">
+                  <div class="order-detail-label">SMS Sender ${smsArray.length > 1 ? `#${idx + 1}` : ''}</div>
+                  <div class="order-detail-value">${escapeHTML(String(sender))}</div>
+                </div>
+                <div class="order-detail-item">
+                  <div class="order-detail-label">SMS Verification Code</div>
+                  <div class="order-detail-value" style="font-family:monospace; color:var(--green); font-weight:800;">
+                    ${escapeHTML(String(code))}
+                    ${code !== '—' ? `<button type="button" class="copy-btn" onclick="copyToClipboard('${escapeHTML(String(code))}', 'OTP Code')" title="Copy Code"><i class="ph ph-copy"></i></button>` : ''}
+                  </div>
+                </div>
+                <div class="order-detail-item full-width">
+                  <div class="order-detail-label">SMS Message</div>
+                  <div class="order-detail-value" style="font-size:12.5px; line-height:1.45;">${escapeHTML(String(text))}</div>
+                </div>
+                <div class="order-detail-item full-width">
+                  <div class="order-detail-label">SMS Date</div>
+                  <div class="order-detail-value" style="font-size:12px; color:var(--muted);">${escapeHTML(String(smsDate))}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')
+      : `
+        <div class="order-detail-grid" style="margin-top:8px;">
+          <div class="order-detail-item">
+            <div class="order-detail-label">SMS Sender</div>
+            <div class="order-detail-value">—</div>
+          </div>
+          <div class="order-detail-item">
+            <div class="order-detail-label">SMS Verification Code</div>
+            <div class="order-detail-value" style="font-family:monospace; color:var(--green); font-weight:800;">${escapeHTML(String(otpVal || '—'))}</div>
+          </div>
+          <div class="order-detail-item full-width">
+            <div class="order-detail-label">SMS Message</div>
+            <div class="order-detail-value" style="color:var(--muted); font-size:12px;">Full SMS text unavailable</div>
+          </div>
+          <div class="order-detail-item full-width">
+            <div class="order-detail-label">SMS Date</div>
+            <div class="order-detail-value" style="color:var(--muted); font-size:12px;">—</div>
+          </div>
+        </div>
+      `;
+
+    verificationInnerHtml = `
+      <div class="order-detail-grid">
+        <div class="order-detail-item full-width">
+          <div class="order-detail-label">OTP Code</div>
+          <div class="order-detail-value" style="font-family:monospace; font-size:16px; font-weight:800; color:${otpVal ? 'var(--green)' : 'var(--muted)'};">
+            ${otpVal ? escapeHTML(String(otpVal)) : 'Unavailable'}
+            ${otpVal ? `<button type="button" class="copy-btn" onclick="copyToClipboard('${escapeHTML(String(otpVal))}', 'OTP Code')" title="Copy OTP Code"><i class="ph ph-copy"></i></button>` : ''}
+          </div>
+        </div>
+      </div>
+      ${smsItemsHtml}
+    `;
+  }
+
+  const verificationSectionHtml = `
+    <div class="order-detail-section">
+      <div class="order-detail-section-header">
+        <i class="ph ph-shield-check"></i> Verification Information
+      </div>
+      ${verificationInnerHtml}
+    </div>
+  `;
+
+  body.innerHTML = customerSectionHtml + orderSectionHtml + verificationSectionHtml;
+}
+
+async function viewOrderDetail(orderId) {
+  const cleanOrderId = String(orderId || '').trim();
+  const body = document.getElementById('orderModalBody');
+  const titleEl = document.getElementById('orderModalTitle');
+  const modalCheckBtn = document.getElementById('orderModalCheckBtn');
+
+  if (titleEl) {
+    titleEl.innerHTML = '<i class="ph ph-receipt"></i> Virtual Number Order Details';
+  }
+
+  if (!cleanOrderId || cleanOrderId === '—') {
+    currentViewingOrderId = null;
+    if (modalCheckBtn) modalCheckBtn.style.display = 'none';
+    if (body) {
+      body.innerHTML = `
+        <div class="order-detail-section" style="border-color:rgba(239,68,68,0.35);">
+          <div style="padding:18px; text-align:center; color:var(--red);">
+            <i class="ph ph-warning-circle" style="font-size:28px; display:block; margin-bottom:8px;"></i>
+            <strong>Unable to Load Order Details</strong>
+            <div style="font-size:12.5px; color:var(--muted); margin-top:6px;">This record does not have a valid 5SIM Order ID.</div>
+          </div>
+        </div>
+      `;
+    }
+    showModal('orderModal');
+    adminToast('Order record does not have a valid 5SIM Order ID.', 'error');
+    return;
+  }
+
+  currentViewingOrderId = cleanOrderId;
+  if (modalCheckBtn) {
+    modalCheckBtn.style.display = 'inline-flex';
+    modalCheckBtn.disabled = true;
+    modalCheckBtn.onclick = () => checkLiveOrderStatus(cleanOrderId, modalCheckBtn);
+  }
+
+  if (body) {
+    body.innerHTML = `
+      <div class="order-detail-section" style="text-align:center; padding:32px 16px;">
+        <i class="ph ph-spinner spinning" style="font-size:26px; color:var(--primary); display:block; margin-bottom:10px;"></i>
+        <div style="font-weight:700; color:var(--text); font-size:13.5px;">Loading order #${escapeHTML(cleanOrderId)} details...</div>
+        <div style="font-size:12px; color:var(--muted); margin-top:4px;">Fetching order &amp; live 5SIM verification data from Admin API</div>
+      </div>
+    `;
+  }
+  showModal('orderModal');
+
+  try {
+    const res = await fetchSingleAdminFivesimOrder(cleanOrderId);
+    const liveOrder = res?.order || res?.data?.order || res?.data || res;
+
+    if (!liveOrder || typeof liveOrder !== 'object' || (!liveOrder.orderId && !liveOrder.id && !liveOrder.status)) {
+      throw new Error('Order details response was empty or invalid.');
+    }
+
+    const mergedOrder = updateSingleOrderRowInDOM(cleanOrderId, liveOrder) || mergeOrderData(null, liveOrder, cleanOrderId);
+    renderOrderDetailsModalContent(mergedOrder);
+
+    if (modalCheckBtn) {
+      modalCheckBtn.disabled = false;
+    }
+  } catch (err) {
+    console.error('[Admin] viewOrderDetail error:', err);
+    if (modalCheckBtn) {
+      modalCheckBtn.disabled = false;
+    }
+    if (body) {
+      body.innerHTML = `
+        <div class="order-detail-section" style="border-color:rgba(239,68,68,0.35);">
+          <div style="padding:20px; text-align:center;">
+            <i class="ph ph-warning-circle" style="font-size:28px; color:var(--red); display:block; margin-bottom:8px;"></i>
+            <div style="font-weight:700; color:var(--red); font-size:14px;">Failed to Retrieve Order Details</div>
+            <div style="font-size:12.5px; color:var(--muted); margin-top:6px;">${escapeHTML(err.message || 'Unable to load order details from the server.')}</div>
+            <div style="margin-top:14px;">
+              <button type="button" class="btn-outline" onclick="viewOrderDetail('${escapeHTML(cleanOrderId)}')">
+                <i class="ph ph-arrows-clockwise"></i> Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    adminToast(err.message || 'Failed to load order details.', 'error');
+  }
 }
 
 async function loadAdminOrders(page = 1) {
@@ -1402,6 +1921,7 @@ function resetOrderFilters() {
   const search = document.getElementById('orderSearch');
   const status = document.getElementById('orderStatusFilter');
   const country = document.getElementById('orderCountryFilter');
+  const product = document.getElementById('orderProductFilter');
   const operator = document.getElementById('orderOperatorFilter');
   const from = document.getElementById('orderFromDate');
   const to = document.getElementById('orderToDate');
@@ -1409,6 +1929,7 @@ function resetOrderFilters() {
   if (search) search.value = '';
   if (status) status.value = '';
   if (country) country.value = '';
+  if (product) product.value = '';
   if (operator) operator.value = '';
   if (from) from.value = '';
   if (to) to.value = '';
@@ -1425,69 +1946,81 @@ async function refreshOrdersData() {
   adminToast('Virtual number purchases refreshed from database.', 'info');
 }
 
-async function checkLiveOrderStatus(orderId) {
-  if (!orderId || orderId === '—') {
-    adminToast('Invalid order reference.', 'error');
-    return;
+function setOrderCheckButtonsLoading(orderId, isLoading) {
+  const cleanId = String(orderId || '').trim();
+  document.querySelectorAll('button[data-check-order-id]').forEach(btn => {
+    if (btn.getAttribute('data-check-order-id') === cleanId) {
+      btn.disabled = isLoading;
+      btn.innerHTML = isLoading
+        ? '<i class="ph ph-spinner spinning"></i> Checking...'
+        : '<i class="ph ph-arrows-clockwise"></i> Check';
+    }
+  });
+  const modalBtn = document.getElementById('orderModalCheckBtn');
+  if (modalBtn && currentViewingOrderId === cleanId) {
+    modalBtn.disabled = isLoading;
+    modalBtn.innerHTML = isLoading
+      ? '<i class="ph ph-spinner spinning"></i> Checking...'
+      : '<i class="ph ph-arrows-clockwise"></i> Check Latest Info';
+  }
+}
+
+async function checkLiveOrderStatus(orderId, btnEl) {
+  const cleanOrderId = String(orderId || '').trim();
+  if (!cleanOrderId || cleanOrderId === '—') {
+    adminToast('Invalid 5SIM Order ID. Cannot check order status.', 'error');
+    return null;
   }
 
-  adminToast('Querying live provider order...', 'info');
+  // Ensure a transactionId was not accidentally passed instead of the 5SIM orderId
+  const matchingByTxOnly = allOrders.find(
+    o => String(o.transactionId || '') === cleanOrderId && getFiveSimOrderId(o) && getFiveSimOrderId(o) !== cleanOrderId
+  );
+  const resolvedOrderId = matchingByTxOnly ? getFiveSimOrderId(matchingByTxOnly) : cleanOrderId;
+
+  if (checkingOrderIds.has(resolvedOrderId)) {
+    return null;
+  }
+
+  checkingOrderIds.add(resolvedOrderId);
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="ph ph-spinner spinning"></i> Checking...';
+  }
+  setOrderCheckButtonsLoading(resolvedOrderId, true);
 
   try {
-    let orderData = null;
-    if (typeof apiRequest === 'function') {
-      orderData = await apiRequest(`/api/order/${encodeURIComponent(orderId)}`, {
-        method: 'GET',
-        suppressAuthRedirect: true
-      });
+    const res = await fetchSingleAdminFivesimOrder(resolvedOrderId);
+    const liveOrder = res?.order || res?.data?.order || res?.data || res;
+
+    if (!liveOrder || typeof liveOrder !== 'object' || (!liveOrder.orderId && !liveOrder.id && !liveOrder.status)) {
+      throw new Error('Received empty or invalid order data from server.');
+    }
+
+    checkingOrderIds.delete(resolvedOrderId);
+    const mergedOrder = updateSingleOrderRowInDOM(resolvedOrderId, liveOrder) || mergeOrderData(null, liveOrder, resolvedOrderId);
+    setOrderCheckButtonsLoading(resolvedOrderId, false);
+
+    // If the details modal is currently open for this order, refresh its content too
+    const orderModalEl = document.getElementById('orderModal');
+    if (orderModalEl && orderModalEl.classList.contains('show') && currentViewingOrderId === resolvedOrderId) {
+      renderOrderDetailsModalContent(mergedOrder);
+    }
+
+    const norm = normalizeActivationStatus(mergedOrder.status);
+    const otpCode = mergedOrder.otp || (Array.isArray(mergedOrder.sms) && mergedOrder.sms[0] && mergedOrder.sms[0].code) || null;
+    if (otpCode) {
+      adminToast(`Order #${resolvedOrderId} checked: ${norm.label} (OTP: ${otpCode})`, 'success');
     } else {
-      const token = typeof getAuthToken === 'function' ? getAuthToken() : localStorage.getItem('primes_token');
-      const orderUrl = typeof buildApiUrl === 'function' ? buildApiUrl(`/order/${encodeURIComponent(orderId)}`) : `${window.API_BASE_URL || (window.ENV && window.ENV.API_BASE_URL) || ''}/order/${encodeURIComponent(orderId)}`;
-      const res = await fetch(orderUrl, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-      const text = await res.text().catch(() => '');
-      try { orderData = JSON.parse(text); } catch (_) { orderData = null; }
+      adminToast(`Order #${resolvedOrderId} checked: Status is ${norm.label}`, 'info');
     }
 
-    const o = orderData?.order || orderData;
-    const body = document.getElementById('orderModalBody');
-    if (body) {
-      body.innerHTML = `
-        <div class="modal-field">
-          <div class="modal-field-label">Order ID</div>
-          <div class="modal-field-value" style="font-family:monospace;">${escapeHTML(String(o?.id || orderId))}</div>
-        </div>
-        <div class="modal-field">
-          <div class="modal-field-label">Live Status</div>
-          <div class="modal-field-value">${statusBadge(o?.status || 'PENDING')}</div>
-        </div>
-        <div class="modal-field">
-          <div class="modal-field-label">Phone Number</div>
-          <div class="modal-field-value" style="font-family:monospace;">${escapeHTML(o?.phone || '—')}</div>
-        </div>
-        <div class="modal-field">
-          <div class="modal-field-label">Received SMS Code</div>
-          <div class="modal-field-value" style="color:var(--green);font-size:16px;font-weight:800;">${escapeHTML(o?.sms?.[0]?.code || o?.code || 'None yet')}</div>
-        </div>
-        <div class="modal-field full-width">
-          <div class="modal-field-label">Full SMS Payload</div>
-          <div class="modal-field-value" style="font-size:12px;color:var(--muted);">${escapeHTML(o?.sms?.[0]?.text || o?.text || 'Waiting for provider transmission...')}</div>
-        </div>
-      `;
-    }
-    showModal('orderModal');
-
-    // Sync updated status to local array
-    if (o?.status) {
-      const existing = allOrders.find(x => String(x.orderId || x.id) === String(orderId));
-      if (existing) {
-        existing.status = o.status;
-        renderOrdersTable(allOrders);
-      }
-    }
+    return mergedOrder;
   } catch (err) {
-    adminToast(`Provider status: ${err.message || 'Unable to fetch status'}`, 'info');
+    checkingOrderIds.delete(resolvedOrderId);
+    setOrderCheckButtonsLoading(resolvedOrderId, false);
+    adminToast(`Failed to check order #${resolvedOrderId}: ${err.message || 'Request failed'}`, 'error');
+    return null;
   }
 }
 

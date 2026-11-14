@@ -198,9 +198,35 @@ router.post('/auth/register', async (req, res) => {
       });
     }
 
+    const inMemoryId = db.inMemory.users.length + 1;
+    const memAdmin = {
+      id: inMemoryId,
+      _id: String(inMemoryId),
+      email: email.toLowerCase(),
+      username: username || email.split('@')[0],
+      first_name: fName,
+      firstName: fName,
+      last_name: lName,
+      lastName: lName,
+      password_hash: passwordHash,
+      role: adminRole,
+      balance: 0,
+      is_suspended: false,
+      isSuspended: false,
+      created_at: new Date().toISOString()
+    };
+    db.inMemory.users.push(memAdmin);
+
     return res.status(201).json({
       success: true,
-      message: 'Administrator registered.'
+      message: 'Administrator account created successfully.',
+      admin: {
+        id: memAdmin.id,
+        email: memAdmin.email,
+        username: memAdmin.username,
+        role: memAdmin.role,
+        created_at: memAdmin.created_at
+      }
     });
   } catch (err) {
     console.error('Admin registration error:', err);
@@ -278,7 +304,8 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: stats
+      data: stats,
+      ...stats
     });
   } catch (err) {
     console.error('Stats error:', err);
@@ -292,20 +319,22 @@ router.get('/dashboard/stats', adminAuth, async (req, res) => {
 
 // GET /api/admin/users
 router.get('/users', adminAuth, async (req, res) => {
-  const page = parseInt(req.query.page || 1, 10);
-  const limit = parseInt(req.query.limit || 20, 10);
+  const page = Math.max(1, parseInt(req.query.page || 1, 10) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit || 20, 10) || 20);
   const search = req.query.search ? String(req.query.search).trim() : null;
-  const isSuspended = req.query.isSuspended !== undefined ? req.query.isSuspended === 'true' : null;
+  const isSuspended = (req.query.isSuspended !== undefined && req.query.isSuspended !== '')
+    ? (String(req.query.isSuspended).toLowerCase() === 'true' || req.query.isSuspended === true)
+    : null;
 
   try {
     const pool = db.getPool();
     if (pool) {
-      let query = `SELECT id, email, username, first_name, last_name, phone, balance, role, is_suspended, created_at FROM users WHERE 1=1`;
+      let query = `SELECT id, id AS "_id", email, username, first_name, first_name AS "firstName", last_name, last_name AS "lastName", phone, phone AS "phoneNumber", balance, role, is_suspended, is_suspended AS "isSuspended", created_at, created_at AS "createdAt" FROM users WHERE 1=1`;
       const params = [];
 
       if (search) {
         params.push(`%${search.toLowerCase()}%`);
-        query += ` AND (LOWER(email) LIKE $${params.length} OR LOWER(username) LIKE $${params.length} OR LOWER(first_name) LIKE $${params.length} OR LOWER(last_name) LIKE $${params.length} OR phone LIKE $${params.length})`;
+        query += ` AND (LOWER(email) LIKE $${params.length} OR LOWER(username) LIKE $${params.length} OR LOWER(COALESCE(first_name, '')) LIKE $${params.length} OR LOWER(COALESCE(last_name, '')) LIKE $${params.length} OR LOWER(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))) LIKE $${params.length} OR COALESCE(phone, '') LIKE $${params.length})`;
       }
 
       if (isSuspended !== null) {
@@ -315,6 +344,7 @@ router.get('/users', adminAuth, async (req, res) => {
 
       const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM (${query}) AS filtered`, params);
       const total = countRes.rows[0]?.total || 0;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
 
       query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
       params.push(limit, (page - 1) * limit);
@@ -325,11 +355,86 @@ router.get('/users', adminAuth, async (req, res) => {
         success: true,
         data: rows,
         users: rows,
-        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1
+        }
       });
     }
 
-    return res.status(200).json({ success: true, data: [], users: [], pagination: { page, limit, total: 0 } });
+    // In-memory fallback with identical filtering, sorting, and independent count calculation
+    let list = (db.inMemory.users || []).map(u => {
+      const fName = u.first_name || u.firstName || '';
+      const lName = u.last_name || u.lastName || '';
+      const ph = u.phone || u.phoneNumber || null;
+      const susp = Boolean(u.is_suspended || u.isSuspended);
+      const cAt = u.created_at || u.createdAt || new Date().toISOString();
+      return {
+        id: u.id || u._id,
+        _id: String(u._id || u.id),
+        email: u.email || '',
+        username: u.username || '',
+        first_name: fName,
+        firstName: fName,
+        last_name: lName,
+        lastName: lName,
+        phone: ph,
+        phoneNumber: ph,
+        balance: parseFloat(u.balance || 0),
+        role: u.role || 'user',
+        is_suspended: susp,
+        isSuspended: susp,
+        created_at: cAt,
+        createdAt: cAt
+      };
+    });
+
+    if (search) {
+      const sLow = search.toLowerCase();
+      list = list.filter(u => {
+        const fullName = `${u.firstName} ${u.lastName}`.trim().toLowerCase();
+        return (
+          String(u.email || '').toLowerCase().includes(sLow) ||
+          String(u.username || '').toLowerCase().includes(sLow) ||
+          String(u.firstName || '').toLowerCase().includes(sLow) ||
+          String(u.lastName || '').toLowerCase().includes(sLow) ||
+          fullName.includes(sLow) ||
+          String(u.phone || '').toLowerCase().includes(sLow)
+        );
+      });
+    }
+
+    if (isSuspended !== null) {
+      list = list.filter(u => Boolean(u.isSuspended) === isSuspended);
+    }
+
+    list.sort((a, b) => {
+      const timeDiff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+    const total = list.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const paged = list.slice((page - 1) * limit, page * limit);
+
+    return res.status(200).json({
+      success: true,
+      data: paged,
+      users: paged,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
   } catch (err) {
     console.error('Admin users error:', err);
     return res.status(500).json({ success: false, error: 'Failed to retrieve users' });
@@ -354,13 +459,20 @@ router.get('/users/:id', adminAuth, async (req, res) => {
         );
         if (vaRes.rows.length) virtualAccount = vaRes.rows[0];
       } catch (_) {}
+    } else {
+      virtualAccount = await db.getUserVirtualAccount(user.id || req.params.id);
     }
 
     const userData = {
       ...user,
+      firstName: user.firstName || user.first_name || '',
+      lastName: user.lastName || user.last_name || '',
+      phoneNumber: user.phoneNumber || user.phone || '',
+      isSuspended: Boolean(user.is_suspended || user.isSuspended),
+      createdAt: user.createdAt || user.created_at,
       wallet: {
         balance: parseFloat(user.balance || 0),
-        isFrozen: Boolean(user.is_suspended)
+        isFrozen: Boolean(user.is_suspended || user.isSuspended)
       },
       virtualAccount
     };
@@ -391,6 +503,15 @@ router.patch('/users/:id', adminAuth, async (req, res) => {
         const updated = (await pool.query(q, values)).rows[0];
         return res.status(200).json({ success: true, message: 'User updated successfully', data: updated });
       }
+    } else {
+      const memUser = (db.inMemory.users || []).find(u => String(u.id || u._id) === String(req.params.id));
+      if (!memUser) return res.status(404).json({ success: false, error: 'User not found' });
+      if (firstName !== undefined) { memUser.first_name = firstName; memUser.firstName = firstName; }
+      if (lastName !== undefined) { memUser.last_name = lastName; memUser.lastName = lastName; }
+      if (email !== undefined) { memUser.email = email.toLowerCase(); }
+      if (phoneNumber !== undefined) { memUser.phone = phoneNumber; memUser.phoneNumber = phoneNumber; }
+      if (username !== undefined) { memUser.username = username; }
+      return res.status(200).json({ success: true, message: 'User updated successfully', data: memUser });
     }
     return res.status(200).json({ success: true, message: 'No fields provided for update' });
   } catch (err) {
@@ -404,6 +525,11 @@ router.post('/users/:id/suspend', adminAuth, async (req, res) => {
     const pool = db.getPool();
     if (pool) {
       await pool.query(`UPDATE users SET is_suspended = TRUE, updated_at = NOW() WHERE id = $1`, [req.params.id]);
+    } else {
+      const memUser = (db.inMemory.users || []).find(u => String(u.id || u._id) === String(req.params.id));
+      if (!memUser) return res.status(404).json({ success: false, error: 'User not found' });
+      memUser.is_suspended = true;
+      memUser.isSuspended = true;
     }
     return res.status(200).json({ success: true, message: 'User suspended successfully' });
   } catch (err) {
@@ -417,6 +543,11 @@ router.post('/users/:id/unsuspend', adminAuth, async (req, res) => {
     const pool = db.getPool();
     if (pool) {
       await pool.query(`UPDATE users SET is_suspended = FALSE, updated_at = NOW() WHERE id = $1`, [req.params.id]);
+    } else {
+      const memUser = (db.inMemory.users || []).find(u => String(u.id || u._id) === String(req.params.id));
+      if (!memUser) return res.status(404).json({ success: false, error: 'User not found' });
+      memUser.is_suspended = false;
+      memUser.isSuspended = false;
     }
     return res.status(200).json({ success: true, message: 'User suspension removed successfully' });
   } catch (err) {
@@ -679,23 +810,24 @@ router.patch('/transactions/:id/status', adminAuth, async (req, res) => {
 async function reconstructAndEnrichOrder(row, fivesimClient) {
   let orderId = row.order_id;
   if (!orderId) {
-    const match = String(row.reference || '').match(/\d{6,}/);
-    orderId = match ? match[0] : (row.reference ? row.reference.replace(/^(5SIM-ACT-|BUY-)/, '') : String(row.tx_id || row.id));
+    const match = String(row.reference || '').match(/(?:5SIM-ACT-|BUY-)([A-Za-z0-9_-]+)/i) || String(row.reference || '').match(/\d{6,}/);
+    orderId = match ? (match[1] || match[0]) : (row.reference ? row.reference.replace(/^(5SIM-ACT-|BUY-)/, '') : String(row.tx_id || row.id));
   }
 
   let service = row.service || 'whatsapp';
   let country = row.country || 'canada';
   if (row.reason) {
     const svcMatch = row.reason.match(/for\s+([A-Za-z0-9_]+)/i);
-    if (svcMatch) service = svcMatch[1].toLowerCase();
+    if (!row.service && svcMatch) service = svcMatch[1].toLowerCase();
     const cntMatch = row.reason.match(/\(([^)]+)\)/);
-    if (cntMatch) country = cntMatch[1].toLowerCase();
+    if (!row.country && cntMatch) country = cntMatch[1].toLowerCase();
   }
 
-  const customer = (row.user_id || row.username || row.u_email || row.user_email) ? {
+  const hasCustomer = Boolean(row.username || row.u_email || row.user_email || row.first_name || row.last_name);
+  const customer = hasCustomer ? {
     id: String(row.user_id || ''),
     name: [row.first_name, row.last_name].filter(Boolean).join(' ') || row.username || 'Customer',
-    username: row.username || (row.u_email ? row.u_email.split('@')[0] : 'user'),
+    username: row.username || ((row.u_email || row.user_email) ? String(row.u_email || row.user_email).split('@')[0] : 'user'),
     email: row.u_email || row.user_email || ''
   } : null;
 
@@ -705,16 +837,39 @@ async function reconstructAndEnrichOrder(row, fivesimClient) {
   let fallbackStatus = 'PENDING';
   if (row.order_status) {
     fallbackStatus = String(row.order_status).toUpperCase();
-  } else if (String(row.tx_status || row.status).toLowerCase() === 'success') {
+  } else if (String(row.tx_status || row.status).toLowerCase() === 'success' || String(row.tx_status || row.status).toLowerCase() === 'completed') {
     fallbackStatus = 'FINISHED';
+  } else if (row.tx_status || row.status) {
+    fallbackStatus = String(row.tx_status || row.status).toUpperCase();
   }
 
   let fallbackSms = [];
   let fallbackOtp = row.sms_code || null;
-  if (fallbackOtp) {
+  if (row.provider_data) {
+    try {
+      const pData = typeof row.provider_data === 'string' ? JSON.parse(row.provider_data) : row.provider_data;
+      if (pData && Array.isArray(pData.sms) && pData.sms.length > 0) {
+        fallbackSms = pData.sms.map(s => ({
+          sender: s.sender || '5sim',
+          text: s.text || s.message || '',
+          message: s.message || s.text || '',
+          code: s.code || '',
+          date: s.date || s.created_at || purchasedAt
+        }));
+        if (!fallbackOtp && fallbackSms[0].code) {
+          fallbackOtp = String(fallbackSms[0].code);
+        }
+      }
+      if (pData && pData.expires && !row.expires_at) {
+        row.expires_at = pData.expires;
+      }
+    } catch (_) {}
+  }
+  if (fallbackOtp && fallbackSms.length === 0) {
     fallbackSms = [{
       sender: '5sim',
       text: `Your verification code is ${fallbackOtp}`,
+      message: `Your verification code is ${fallbackOtp}`,
       code: String(fallbackOtp),
       date: purchasedAt
     }];
@@ -731,9 +886,9 @@ async function reconstructAndEnrichOrder(row, fivesimClient) {
     phone: row.phone || '—',
     amount: Math.abs(parseFloat(row.amount || 0)),
     purchasedAt,
-    expiresAt,
+    expiresAt: row.expires_at ? new Date(row.expires_at).toISOString() : expiresAt,
     status: fallbackStatus,
-    otp: fallbackOtp,
+    otp: fallbackOtp ? String(fallbackOtp) : null,
     sms: fallbackSms
   };
 
@@ -744,26 +899,39 @@ async function reconstructAndEnrichOrder(row, fivesimClient) {
         fivesimClient.checkOrder(orderId),
         new Promise((_, reject) => setTimeout(() => reject(new Error('5sim timeout')), 1800))
       ]);
-      if (live) {
+      if (live && typeof live === 'object') {
         if (live.status) orderItem.status = String(live.status).toUpperCase();
         if (live.phone) orderItem.phone = live.phone;
+        if (live.operator) orderItem.operator = live.operator;
+        if (live.product) orderItem.service = live.product;
+        if (live.country) orderItem.country = live.country;
         if (live.expires) orderItem.expiresAt = live.expires;
         if (Array.isArray(live.sms) && live.sms.length > 0) {
           orderItem.sms = live.sms.map(s => ({
             sender: s.sender || '5sim',
-            text: s.text || '',
+            text: s.text || s.message || '',
+            message: s.message || s.text || '',
             code: s.code || '',
             date: s.date || s.created_at || new Date().toISOString()
           }));
-          orderItem.otp = live.sms[0].code || null;
+          orderItem.otp = live.sms[0].code ? String(live.sms[0].code) : null;
         } else if (live.sms_code || live.code) {
-          const code = live.sms_code || live.code;
+          const code = String(live.sms_code || live.code);
           orderItem.otp = code;
-          orderItem.sms = [{ sender: '5sim', text: `Verification code: ${code}`, code: code, date: new Date().toISOString() }];
+          orderItem.sms = [{ sender: '5sim', text: `Verification code: ${code}`, message: `Verification code: ${code}`, code: code, date: new Date().toISOString() }];
         }
+        try {
+          if (live.status) {
+            await db.updateOrderStatus(orderId, orderItem.status, orderItem.otp, live);
+          }
+        } catch (_) {}
       }
     } catch (_) {
-      // "If that call fails for a given order (expired or unreachable), status falls back to whatever was last recorded at purchase time, and otp is null."
+      // Documented fallback behaviour:
+      // If the live 5SIM request fails for an individual order:
+      // - Use the last recorded purchase-time status.
+      // - Return otp as null.
+      orderItem.status = fallbackStatus;
       orderItem.otp = null;
     }
   }
@@ -773,11 +941,13 @@ async function reconstructAndEnrichOrder(row, fivesimClient) {
 
 // GET /api/admin/fivesim/orders (PDF Page 6)
 router.get('/fivesim/orders', adminAuth, async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page || 1, 10));
-  const limit = Math.max(1, parseInt(req.query.limit || 20, 10));
+  const page = Math.max(1, parseInt(req.query.page || 1, 10) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit || 20, 10) || 20);
   const filterUser = req.query.user ? String(req.query.user).trim() : null;
   const filterCountry = req.query.country ? String(req.query.country).toLowerCase().trim() : null;
   const filterProduct = req.query.product ? String(req.query.product).toLowerCase().trim() : null;
+  const filterStatus = req.query.status ? String(req.query.status).toLowerCase().trim() : null;
+  const filterOperator = req.query.operator ? String(req.query.operator).toLowerCase().trim() : null;
   const search = req.query.search ? String(req.query.search).toLowerCase().trim() : null;
 
   try {
@@ -806,9 +976,44 @@ router.get('/fivesim/orders', adminAuth, async (req, res) => {
         whereClauses.push(`(LOWER(COALESCE(o.service, t.reason, '')) LIKE $${params.length})`);
       }
 
+      if (filterOperator) {
+        params.push(`%${filterOperator}%`);
+        whereClauses.push(`(LOWER(COALESCE(o.operator, '')) LIKE $${params.length})`);
+      }
+
+      if (filterStatus && filterStatus !== 'all') {
+        if (filterStatus === 'successful' || filterStatus === 'completed' || filterStatus === 'finished') {
+          whereClauses.push(`(UPPER(COALESCE(o.status, t.status, '')) IN ('FINISHED', 'COMPLETED', 'SUCCESS', '6', '10'))`);
+        } else if (filterStatus === 'banned') {
+          whereClauses.push(`(UPPER(COALESCE(o.status, '')) IN ('BANNED', '8'))`);
+        } else if (filterStatus === 'cancelled' || filterStatus === 'canceled' || filterStatus === 'expired') {
+          whereClauses.push(`(UPPER(COALESCE(o.status, t.status, '')) IN ('CANCELED', 'CANCELLED', 'TIMEOUT', 'EXPIRED', 'FAILED', '2'))`);
+        } else if (filterStatus === 'pending' || filterStatus === 'received' || filterStatus === 'active') {
+          whereClauses.push(`(UPPER(COALESCE(o.status, t.status, '')) IN ('RECEIVED', 'PENDING', 'ACTIVE', 'WAITING', '1', '3'))`);
+        } else {
+          params.push(filterStatus.toUpperCase());
+          whereClauses.push(`(UPPER(COALESCE(o.status, t.status, '')) = $${params.length})`);
+        }
+      }
+
+      if (search) {
+        params.push(`%${search}%`);
+        whereClauses.push(`(
+          LOWER(COALESCE(u.username, '')) LIKE $${params.length} OR
+          LOWER(COALESCE(u.email, t.user_email, '')) LIKE $${params.length} OR
+          LOWER(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) LIKE $${params.length} OR
+          LOWER(COALESCE(o.order_id, '')) LIKE $${params.length} OR
+          LOWER(COALESCE(t.reference, '')) LIKE $${params.length} OR
+          LOWER(COALESCE(o.phone, '')) LIKE $${params.length} OR
+          LOWER(COALESCE(o.service, t.reason, '')) LIKE $${params.length} OR
+          LOWER(COALESCE(o.country, t.reason, '')) LIKE $${params.length}
+        )`);
+      }
+
       const countSql = `
         SELECT COUNT(DISTINCT t.id)::int AS total
         FROM transactions t
+        LEFT JOIN users u ON t.user_id = u.id
         LEFT JOIN orders o ON (o.order_id = SUBSTRING(t.reference FROM 5) OR o.order_id = t.reference OR o.order_id = SUBSTRING(t.reference FROM 10))
         WHERE ${whereClauses.join(' AND ')}
       `;
@@ -852,46 +1057,131 @@ router.get('/fivesim/orders', adminAuth, async (req, res) => {
       let txs = (db.inMemory.transactions || []).filter(t => 
         t.type === 'debit' || t.type === 'purchase' || String(t.reference).startsWith('BUY-') || String(t.reference).startsWith('5SIM-')
       );
-      if (filterUser) {
-        txs = txs.filter(t => String(t.user_id) === filterUser || String(t.user_email).toLowerCase() === filterUser.toLowerCase());
-      }
-      totalCount = txs.length;
-      const slice = txs.slice((page - 1) * limit, page * limit);
-      reconstructedList = await Promise.all(slice.map(t => {
-        const u = (db.inMemory.users || []).find(x => String(x.id || x._id) === String(t.user_id));
-        const row = {
+
+      // Join with in-memory orders & users
+      let combinedRows = txs.map(t => {
+        const refStr = String(t.reference || '');
+        const extractedOrderId = refStr.replace(/^(5SIM-ACT-|BUY-)/, '');
+        const memOrder = (db.inMemory.orders || []).find(o =>
+          String(o.order_id) === extractedOrderId ||
+          String(o.order_id) === refStr ||
+          (extractedOrderId && refStr.includes(String(o.order_id)))
+        );
+        const u = (db.inMemory.users || []).find(x => String(x.id || x._id) === String(t.user_id || memOrder?.user_id));
+        return {
           tx_id: t.id,
           reference: t.reference,
-          user_id: t.user_id,
-          user_email: t.user_email,
-          amount: t.amount,
+          user_id: t.user_id || memOrder?.user_id,
+          user_email: t.user_email || memOrder?.user_email,
+          amount: t.amount ?? memOrder?.amount,
           tx_status: t.status,
           reason: t.reason,
           tx_created_at: t.created_at,
           username: u?.username,
-          first_name: u?.firstName,
-          last_name: u?.lastName,
-          u_email: u?.email
+          first_name: u?.first_name || u?.firstName,
+          last_name: u?.last_name || u?.lastName,
+          u_email: u?.email,
+          order_id: memOrder?.order_id || extractedOrderId,
+          phone: memOrder?.phone,
+          country: memOrder?.country,
+          service: memOrder?.service,
+          operator: memOrder?.operator,
+          order_status: memOrder?.status,
+          sms_code: memOrder?.sms_code,
+          provider_data: memOrder?.provider_data,
+          order_created_at: memOrder?.created_at
         };
-        return reconstructAndEnrichOrder(row, fivesim);
-      }));
-    }
-
-    // Apply search filter (applied after fetching page as per specification on page 6)
-    let filteredData = reconstructedList;
-    if (search) {
-      filteredData = reconstructedList.filter(item => {
-        if (!item.customer) return false;
-        const n = (item.customer.name || '').toLowerCase();
-        const u = (item.customer.username || '').toLowerCase();
-        const e = (item.customer.email || '').toLowerCase();
-        return n.includes(search) || u.includes(search) || e.includes(search);
       });
+
+      // Also include any inMemory.orders that didn't have a matching transaction entry
+      for (const o of (db.inMemory.orders || [])) {
+        const alreadyIncluded = combinedRows.some(r => String(r.order_id) === String(o.order_id));
+        if (!alreadyIncluded) {
+          const u = (db.inMemory.users || []).find(x => String(x.id || x._id) === String(o.user_id));
+          combinedRows.push({
+            tx_id: `tx_${o.id || o.order_id}`,
+            reference: `BUY-${o.order_id}`,
+            user_id: o.user_id,
+            user_email: o.user_email,
+            amount: o.amount,
+            tx_status: o.status,
+            reason: `Virtual number for ${o.service || 'whatsapp'} (${o.country || 'canada'})`,
+            tx_created_at: o.created_at,
+            username: u?.username,
+            first_name: u?.first_name || u?.firstName,
+            last_name: u?.last_name || u?.lastName,
+            u_email: u?.email,
+            order_id: o.order_id,
+            phone: o.phone,
+            country: o.country,
+            service: o.service,
+            operator: o.operator,
+            order_status: o.status,
+            sms_code: o.sms_code,
+            provider_data: o.provider_data,
+            order_created_at: o.created_at
+          });
+        }
+      }
+
+      combinedRows.sort((a, b) => new Date(b.tx_created_at || b.order_created_at || 0) - new Date(a.tx_created_at || a.order_created_at || 0));
+
+      let allReconstructed = await Promise.all(combinedRows.map(r => reconstructAndEnrichOrder(r, fivesim)));
+
+      if (filterUser) {
+        allReconstructed = allReconstructed.filter(item =>
+          (item.customer && (String(item.customer.id) === filterUser || String(item.customer.email).toLowerCase() === filterUser.toLowerCase()))
+        );
+      }
+      if (filterCountry) {
+        allReconstructed = allReconstructed.filter(item => String(item.country || '').toLowerCase().includes(filterCountry));
+      }
+      if (filterProduct) {
+        allReconstructed = allReconstructed.filter(item => String(item.service || '').toLowerCase().includes(filterProduct));
+      }
+      if (filterOperator) {
+        allReconstructed = allReconstructed.filter(item => String(item.operator || '').toLowerCase().includes(filterOperator));
+      }
+      if (filterStatus && filterStatus !== 'all') {
+        allReconstructed = allReconstructed.filter(item => {
+          const st = String(item.status || '').toUpperCase();
+          if (filterStatus === 'successful' || filterStatus === 'completed' || filterStatus === 'finished') {
+            return ['FINISHED', 'COMPLETED', 'SUCCESS', '6', '10'].includes(st);
+          }
+          if (filterStatus === 'banned') {
+            return ['BANNED', '8'].includes(st);
+          }
+          if (filterStatus === 'cancelled' || filterStatus === 'canceled' || filterStatus === 'expired') {
+            return ['CANCELED', 'CANCELLED', 'TIMEOUT', 'EXPIRED', 'FAILED', '2'].includes(st);
+          }
+          if (filterStatus === 'pending' || filterStatus === 'received' || filterStatus === 'active') {
+            return ['RECEIVED', 'PENDING', 'ACTIVE', 'WAITING', '1', '3'].includes(st);
+          }
+          return st.toLowerCase() === filterStatus;
+        });
+      }
+      if (search) {
+        allReconstructed = allReconstructed.filter(item => {
+          const n = (item.customer?.name || '').toLowerCase();
+          const u = (item.customer?.username || '').toLowerCase();
+          const e = (item.customer?.email || '').toLowerCase();
+          const oid = String(item.orderId || '').toLowerCase();
+          const ref = String(item.reference || '').toLowerCase();
+          const ph = String(item.phone || '').toLowerCase();
+          const svc = String(item.service || '').toLowerCase();
+          const cnt = String(item.country || '').toLowerCase();
+          return n.includes(search) || u.includes(search) || e.includes(search) || oid.includes(search) || ref.includes(search) || ph.includes(search) || svc.includes(search) || cnt.includes(search);
+        });
+      }
+
+      totalCount = allReconstructed.length;
+      reconstructedList = allReconstructed.slice((page - 1) * limit, page * limit);
     }
 
     const totalPages = Math.ceil(totalCount / limit) || 1;
     return res.status(200).json({
-      data: filteredData,
+      data: reconstructedList,
+      orders: reconstructedList,
       pagination: {
         page,
         limit,
@@ -910,9 +1200,9 @@ router.get('/fivesim/orders', adminAuth, async (req, res) => {
 
 // GET /api/admin/fivesim/orders/:orderId (PDF Page 7)
 router.get('/fivesim/orders/:orderId', adminAuth, async (req, res) => {
-  const orderId = String(req.params.orderId).trim();
-  if (!orderId) {
-    return res.status(400).json({ success: false, error: '5sim order ID is required.' });
+  const orderId = String(req.params.orderId || '').trim();
+  if (!orderId || orderId === 'undefined' || orderId === 'null' || orderId === '—') {
+    return res.status(400).json({ success: false, error: 'Valid 5sim order ID is required.' });
   }
 
   try {
@@ -946,23 +1236,60 @@ router.get('/fivesim/orders/:orderId', adminAuth, async (req, res) => {
         FROM transactions t
         LEFT JOIN users u ON t.user_id = u.id
         LEFT JOIN orders o ON (o.order_id = SUBSTRING(t.reference FROM 5) OR o.order_id = t.reference OR o.order_id = SUBSTRING(t.reference FROM 10))
-        WHERE (o.order_id = $1 OR t.reference LIKE $2 OR t.reference LIKE $3 OR t.reference = $1)
+        WHERE (o.order_id = $1 OR t.reference = $2 OR t.reference = $3 OR t.reference = $1 OR t.reference LIKE $4)
         LIMIT 1
       `;
-      const resQuery = await pool.query(q, [orderId, `%${orderId}%`, `BUY-${orderId}`]);
+      const resQuery = await pool.query(q, [orderId, `BUY-${orderId}`, `5SIM-ACT-${orderId}`, `%${orderId}%`]);
       if (resQuery.rows.length) {
         row = resQuery.rows[0];
+      } else {
+        // Also check orders table directly if not in transactions
+        const qOrd = `
+          SELECT
+            o.id AS tx_id,
+            CONCAT('5SIM-ACT-', o.order_id) AS reference,
+            o.user_id,
+            o.user_email,
+            o.amount,
+            o.status AS tx_status,
+            o.created_at AS tx_created_at,
+            u.username,
+            u.first_name,
+            u.last_name,
+            u.email AS u_email,
+            o.order_id,
+            o.phone,
+            o.country,
+            o.service,
+            o.operator,
+            o.status AS order_status,
+            o.sms_code,
+            o.provider_data,
+            o.created_at AS order_created_at
+          FROM orders o
+          LEFT JOIN users u ON o.user_id = u.id
+          WHERE o.order_id = $1
+          LIMIT 1
+        `;
+        const resOrd = await pool.query(qOrd, [orderId]);
+        if (resOrd.rows.length) {
+          row = resOrd.rows[0];
+        }
       }
     }
 
     if (!row) {
-      const memOrder = (db.inMemory.orders || []).find(o => String(o.order_id) === orderId || String(o.id) === orderId);
-      const memTx = (db.inMemory.transactions || []).find(t => String(t.reference || '').includes(orderId));
+      const memOrder = (db.inMemory.orders || []).find(o => String(o.order_id) === orderId);
+      const memTx = (db.inMemory.transactions || []).find(t => {
+        const ref = String(t.reference || '');
+        const metaOrderId = t.metadata?.orderId ? String(t.metadata.orderId) : '';
+        return metaOrderId === orderId || ref === orderId || ref === `BUY-${orderId}` || ref === `5SIM-ACT-${orderId}` || ref.includes(orderId);
+      });
       if (memOrder || memTx) {
         const u = (db.inMemory.users || []).find(x => String(x.id || x._id) === String(memOrder?.user_id || memTx?.user_id));
         row = {
-          order_id: orderId,
-          tx_id: memTx?.id,
+          order_id: memOrder?.order_id || orderId,
+          tx_id: memTx?.id || (memOrder ? `tx_${memOrder.id || orderId}` : ''),
           reference: memTx?.reference || `5SIM-ACT-${orderId}`,
           user_id: memOrder?.user_id || memTx?.user_id,
           user_email: memOrder?.user_email || memTx?.user_email,
@@ -970,25 +1297,61 @@ router.get('/fivesim/orders/:orderId', adminAuth, async (req, res) => {
           country: memOrder?.country,
           service: memOrder?.service,
           operator: memOrder?.operator,
-          amount: memOrder?.amount || memTx?.amount,
+          amount: memOrder?.amount ?? memTx?.amount,
           order_status: memOrder?.status,
+          tx_status: memTx?.status,
+          reason: memTx?.reason,
           sms_code: memOrder?.sms_code,
+          provider_data: memOrder?.provider_data,
           created_at: memOrder?.created_at || memTx?.created_at,
           username: u?.username,
-          first_name: u?.firstName,
-          last_name: u?.lastName,
+          first_name: u?.first_name || u?.firstName,
+          last_name: u?.last_name || u?.lastName,
           u_email: u?.email
         };
-      } else {
-        // Fallback row for rare order with no matching local transaction
-        row = { order_id: orderId, reference: `5SIM-ACT-${orderId}`, created_at: new Date().toISOString() };
       }
+    }
+
+    if (!row) {
+      // Check if live 5sim has this order before returning 404
+      if (fivesim && typeof fivesim.checkOrder === 'function' && !isNaN(Number(orderId))) {
+        try {
+          const live = await Promise.race([
+            fivesim.checkOrder(orderId),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('5sim timeout')), 1800))
+          ]);
+          if (live && live.id) {
+            row = {
+              order_id: String(live.id),
+              reference: `5SIM-ACT-${live.id}`,
+              phone: live.phone,
+              country: live.country,
+              service: live.product,
+              operator: live.operator,
+              amount: live.price || 0,
+              order_status: live.status,
+              created_at: live.created_at || new Date().toISOString(),
+              expires_at: live.expires,
+              provider_data: live
+            };
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!row) {
+      return res.status(404).json({
+        success: false,
+        error: `5SIM order #${orderId} was not found.`
+      });
     }
 
     const orderObj = await reconstructAndEnrichOrder(row, fivesim);
 
     return res.status(200).json({
-      order: orderObj
+      success: true,
+      order: orderObj,
+      data: orderObj
     });
 
   } catch (err) {
